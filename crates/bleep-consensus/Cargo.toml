@@ -1,0 +1,42 @@
+[package]
+name = "bleep-consensus"
+version = "0.1.0"
+edition = "2021"
+authors = ["Muhammad Attahir <bleepecosystem@gmail.com>"]
+description = "Adaptive, AI-powered, quantum-secure consensus engine for BLEEP blockchain"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+# Logging & Utilities
+log = "0.4"
+env_logger = "0.11"
+hex = "0.4"
+serde = { version = "1.0", features = ["derive"] }
+
+# Cryptography
+ring = "0.17.8"                         # SHA256 for PoW
+pqcrypto = { version = "0.15", features = ["sphincs-shake256-128s-simple"] }
+
+# Quantum Signatures (SPHINCS+)
+pqcrypto-sign = "0.15.0"                # SPHINCS+ family
+
+# AI & ML
+tch = "0.13"                            # Torch-based inference
+linfa = "0.6.1"                         # AI prediction logic
+linfa-nn = "0.6.1"                      # k-Nearest Neighbors
+ndarray = "0.15.6"                      # For tensor & array ops
+
+# Networking & State (referenced modules)
+bleep-core = { path = "../bleep-core" }
+bleep-crypto = { path = "../bleep-crypto" }
+bleep-p2p = { path = "../bleep-p2p" }
+bleep-ai = { path = "../bleep-ai" }
+bleep-state = { path = "../bleep-state" }
+bleep-networking = { path = "../bleep-networking" }
+
+# Randomness
+rand = "0.8.5"
+
+# Error Handling
+thiserror = "1.0.39"
+anyhow = "1.0.80"
