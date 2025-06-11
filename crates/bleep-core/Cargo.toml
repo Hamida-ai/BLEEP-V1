@@ -13,9 +13,16 @@ sha3 = "0.10"
 hex = "0.4"
 chrono = { version = "0.4", features = ["serde"] }
 log = "0.4"
+tokio = { version = "1", features = ["full"] }
 
-# Internal crates (relative to workspace root)
+# zk-SNARK / Merkle proof dependencies
+ark-ff = "0.4"
+ark-std = "0.4"
+ark-crypto-primitives = "0.4"
+ark-bls12-381 = "0.4"
+
+# Internal workspace crates
 bleep-crypto = { path = "../bleep-crypto" }
+bleep-p2p = { path = "../bleep-p2p" }
 bleep-ai = { path = "../bleep-ai" }
 bleep-state = { path = "../bleep-state" }
-bleep-p2p = { path = "../bleep-p2p" } 
