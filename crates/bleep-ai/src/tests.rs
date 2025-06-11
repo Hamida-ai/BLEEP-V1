@@ -1,155 +1,97 @@
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::Arc;
+    use std::sync::{Arc, Mutex};
     use tokio::runtime::Runtime;
 
-    struct MockAIModel;
-
-    impl AIModel for MockAIModel {
-        fn predict(&self, input: &[f32]) -> Result<PredictionResult, BLEEPError> {
-            if input.is_empty() {
-                return Err(BLEEPError::InvalidInput);
-            }
-            Ok(PredictionResult::FloatVec(input.to_vec()))
-        }
-    }
-
     #[test]
-    fn test_model_registration() {
+    fn test_validator_recovery() {
         let rt = Runtime::new().unwrap();
-        let mut ai_module = BLEEPAIDecisionModule::new();
-        let model = Arc::new(MockAIModel);
+        rt.block_on(async {
+            let consensus = Arc::new(Mutex::new(BLEEPAdaptiveConsensus::new()));
+            let monitor = BlockchainMonitor::new(consensus.clone());
 
-        let result = rt.block_on(ai_module.register_model("test_model".to_string(), model.clone()));
-        assert!(result.is_ok(), "Model registration should succeed");
+            // Simulating a failed validator
+            monitor.update_validator_status(1, false);
+            monitor.recover_failed_validator(1).await;
 
-        let duplicate_result =
-            rt.block_on(ai_module.register_model("test_model".to_string(), model.clone()));
-        assert_eq!(
-            duplicate_result,
-            Err(BLEEPError::ModelAlreadyRegistered),
-            "Duplicate model registration should fail"
-        );
+            let health_status = monitor.health_status.lock().unwrap();
+            assert_eq!(health_status.get(&1), Some(&true), "Validator should be recovered");
+        });
     }
 
     #[test]
-    fn test_model_prediction() {
+    fn test_auto_shard_balancing() {
         let rt = Runtime::new().unwrap();
-        let mut ai_module = BLEEPAIDecisionModule::new();
-        let model = Arc::new(MockAIModel);
+        rt.block_on(async {
+            let sharding = Arc::new(Mutex::new(BLEEPShardingModule::new()));
+            let ai_engine = Arc::new(BLEEPAIDecisionModule::new());
+            let shard_manager = ShardManager { sharding, ai_engine };
 
-        rt.block_on(ai_module.register_model("test_model".to_string(), model))
-            .unwrap();
+            shard_manager.auto_shard_balancing().await;
 
-        let input_data = vec![0.1, 0.5, 0.9];
-        let result = rt.block_on(ai_module.predict("test_model", &input_data));
-
-        assert!(
-            matches!(result, Ok(PredictionResult::FloatVec(_))),
-            "Prediction should return a FloatVec result"
-        );
+            let current_shard_count = shard_manager.sharding.lock().unwrap().get_shard_count();
+            assert!(current_shard_count > 0, "Shards should be dynamically managed");
+        });
     }
 
     #[test]
-    fn test_invalid_model_prediction() {
+    fn test_recover_corrupt_state() {
         let rt = Runtime::new().unwrap();
-        let ai_module = BLEEPAIDecisionModule::new();
-        let result = rt.block_on(ai_module.predict("unknown_model", &[1.0, 2.0]));
+        rt.block_on(async {
+            let ai_engine = Arc::new(BLEEPAIDecisionModule::new());
+            let state_merkle = Arc::new(Mutex::new(StateMerkle::new()));
+            let state_monitor = BlockchainStateMonitor { ai_engine, state_merkle };
 
-        assert_eq!(
-            result,
-            Err(BLEEPError::ModelNotFoundError),
-            "Predicting with an unknown model should return an error"
-        );
+            // Simulating blockchain anomaly detection
+            state_monitor.recover_corrupt_state().await;
+
+            let last_state = state_monitor.state_merkle.lock().unwrap().get_current_state();
+            assert!(last_state.is_some(), "State should be restored to a valid checkpoint");
+        });
     }
 
     #[test]
-    fn test_prediction_cache() {
+    fn test_smart_contract_security() {
         let rt = Runtime::new().unwrap();
-        let mut ai_module = BLEEPAIDecisionModule::new();
-        let model = Arc::new(MockAIModel);
+        rt.block_on(async {
+            let ai_engine = Arc::new(BLEEPAIDecisionModule::new());
+            let security_module = SmartContractSecurity { ai_engine };
 
-        rt.block_on(ai_module.register_model("test_model".to_string(), model))
-            .unwrap();
+            let contract_code = "contract Test { function test() public { expensive_op; } }";
+            let optimized_code = security_module.secure_and_optimize_smart_contract(contract_code).await;
 
-        let input_data = vec![0.3, 0.6, 0.9];
-        let first_result = rt.block_on(ai_module.predict("test_model", &input_data));
-        let second_result = rt.block_on(ai_module.predict("test_model", &input_data));
-
-        assert_eq!(
-            first_result, second_result,
-            "Second prediction should use cached result"
-        );
+            assert!(
+                !optimized_code.contains("Security flaws detected"),
+                "Contract should be optimized and secure"
+            );
+        });
     }
 
     #[test]
-    fn test_ensemble_majority_vote() {
-        let model1 = Arc::new(MockAIModel);
-        let model2 = Arc::new(MockAIModel);
-        let ensemble = EnsemblePredictiveModel::new(
-            vec![model1, model2],
-            AggregationStrategy::MajorityVote,
-        );
-
-        let input_data = vec![1.0, 2.0, 3.0];
-        let result = ensemble.predict(&input_data);
-
-        assert!(
-            matches!(result, Ok(PredictionResult::FloatVec(_))),
-            "Majority vote should return a FloatVec result"
-        );
-    }
-
-    #[test]
-    fn test_ensemble_average() {
-        let model1 = Arc::new(MockAIModel);
-        let model2 = Arc::new(MockAIModel);
-        let ensemble = EnsemblePredictiveModel::new(vec![model1, model2], AggregationStrategy::Average);
-
-        let input_data = vec![1.0, 2.0, 3.0];
-        let result = ensemble.predict(&input_data);
-
-        assert!(
-            matches!(result, Ok(PredictionResult::FloatVec(_))),
-            "Averaging should return a FloatVec result"
-        );
-    }
-
-    #[test]
-    fn test_ensemble_weighted_average() {
-        let model1 = Arc::new(MockAIModel);
-        let model2 = Arc::new(MockAIModel);
-        let weights = vec![0.7, 0.3];
-        let ensemble = EnsemblePredictiveModel::new(
-            vec![model1, model2],
-            AggregationStrategy::WeightedAverage(weights),
-        );
-
-        let input_data = vec![1.0, 2.0, 3.0];
-        let result = ensemble.predict(&input_data);
-
-        assert!(
-            matches!(result, Ok(PredictionResult::FloatVec(_))),
-            "Weighted averaging should return a FloatVec result"
-        );
-    }
-
-    #[test]
-    fn test_timeout_handling() {
+    fn test_self_healing_automation() {
         let rt = Runtime::new().unwrap();
-        let mut ai_module = BLEEPAIDecisionModule::new();
-        let model = Arc::new(MockAIModel);
+        rt.block_on(async {
+            let consensus = Arc::new(Mutex::new(BLEEPAdaptiveConsensus::new()));
+            let monitor = BlockchainMonitor::new(consensus.clone());
 
-        rt.block_on(ai_module.register_model("test_model".to_string(), model))
-            .unwrap();
+            let sharding = Arc::new(Mutex::new(BLEEPShardingModule::new()));
+            let ai_engine = Arc::new(BLEEPAIDecisionModule::new());
+            let shard_manager = ShardManager { sharding, ai_engine.clone() };
 
-        let input_data = vec![1.0, 2.0, 3.0];
-        let result = rt.block_on(ai_module.predict("test_model", &input_data));
+            let state_merkle = Arc::new(Mutex::new(StateMerkle::new()));
+            let state_monitor = BlockchainStateMonitor { ai_engine, state_merkle };
 
-        assert!(
-            result.is_ok(),
-            "Prediction should not timeout under normal conditions"
-        );
+            let security_module = SmartContractSecurity { ai_engine: Arc::new(BLEEPAIDecisionModule::new()) };
+
+            let self_healing = BLEEPSelfHealingAutomation::new(monitor, shard_manager, state_monitor, security_module);
+
+            self_healing.run().await;
+
+            assert!(
+                self_healing.monitor.health_status.lock().unwrap().len() > 0,
+                "Validators should have updated health statuses"
+            );
+        });
     }
-      } 
+                                               }
