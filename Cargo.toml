@@ -127,9 +127,13 @@ mockall = "0.12.1"
 test-log = "0.2.14"
 fake = "2.9.2"
 
+[[bin]]
+name = "bleep-cli"
+path = "src/bin/cli.rs"
+
 [features]
 default = ["mainnet"]
 mainnet = []
 testnet = []
 simulator = []
-quantum = ["pqcrypto", "pqcrypto-kyber", "pqcrypto-falcon", "pqcrypto-sphincsplus"] 
+quantum = ["pqcrypto", "pqcrypto-kyber", "pqcrypto-falcon", "pqcrypto-sphincsplus"]
