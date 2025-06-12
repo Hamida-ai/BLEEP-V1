@@ -127,10 +127,6 @@ mockall = "0.12.1"
 test-log = "0.2.14"
 fake = "2.9.2"
 
-[[bin]]
-name = "bleep-cli"
-path = "src/cli.rs"
-
 [features]
 default = ["mainnet"]
 mainnet = []
