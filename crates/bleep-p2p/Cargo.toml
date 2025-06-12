@@ -1,0 +1,66 @@
+[package]
+name = "bleep-p2p"
+version = "0.1.0"
+edition = "2021"
+authors = ["Muhammad Attahir <bleepecosystem@gmail.com>"]
+description = "BLEEP P2P networking module with AI-driven gossip, secure routing, and quantum-safe protocols"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+# Async runtime & concurrency
+tokio = { version = "1.36", features = ["full"] }
+tokio-stream = "0.1.15"
+futures = "0.3.30"
+async-trait = "0.1.77"
+parking_lot = "0.12.1"
+
+# Networking
+libp2p = { version = "0.53.2", features = ["tcp-tokio", "dns", "gossipsub", "identify", "mdns", "kad", "yamux"] }
+quinn = "0.10.2"
+noise-protocol = "0.2.0"
+
+# Cryptography
+sha2 = "0.10.8"
+blake2 = "0.10.6"
+ed25519-dalek = "2.1.1"
+aes-gcm = "0.10.3"
+hkdf = "0.12.4"
+rand = "0.8.5"
+
+# Post-Quantum
+pqcrypto-kyber = { version = "0.8.0", optional = true }
+pqcrypto-falcon = { version = "0.4.0", optional = true }
+pqcrypto = { version = "0.15", optional = true }
+
+# Serialization & Encoding
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+bincode = "1.3.3"
+base64 = "0.21.7"
+hex = "0.4.3"
+
+# AI / ML integration
+smartcore = "0.3.2"
+linfa = "0.6.1"
+linfa-clustering = "0.6.1"
+ndarray = "0.15.6"
+
+# Logging
+log = "0.4.21"
+tracing = "0.1.40"
+tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
+
+# Error handling
+anyhow = "1.0.80"
+thiserror = "1.0.39"
+
+# Data structures
+dashmap = "5.5.3"
+lru = "0.12.3"
+
+# Optional Features
+[features]
+default = ["kyber", "falcon"]
+kyber = ["pqcrypto-kyber"]
+falcon = ["pqcrypto-falcon"]
+quantum = ["pqcrypto", "pqcrypto-kyber", "pqcrypto-falcon"]
