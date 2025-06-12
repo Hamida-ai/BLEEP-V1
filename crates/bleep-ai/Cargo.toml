@@ -1,0 +1,49 @@
+[package]
+name = "bleep"
+version = "0.1.0"
+edition = "2021"
+authors = ["Muhammad Attahir"]
+description = "BLEEP Unified AI + Self-Healing Quantum-Secure Blockchain Engine"
+license = "MIT"
+
+[dependencies]
+# --- Core System Dependencies ---
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+serde_derive = "1.0"
+thiserror = "1.0"
+tokio = { version = "1.37", features = ["full"] }
+log = "0.4"
+env_logger = "0.11"
+uuid = { version = "1.7", features = ["v4", "serde"] }
+futures = "0.3"
+rayon = "1.8"
+dashmap = "5.5"
+rand = "0.8"
+
+# --- Cryptography / Hashing ---
+sha2 = "0.10"
+blake3 = "1.5"
+pqcrypto-kyber = "0.7"         # Kyber512 post-quantum
+pqcrypto-sphincsplus = "0.7"   # SPHINCS+ post-quantum
+
+# --- AI Inference & ONNX ---
+onnxruntime = { version = "0.0.23", features = ["download"] }
+
+# --- Smart Contract & Blockchain Integration ---
+ethers = { version = "2.0", features = ["abigen", "contract", "providers", "signers"] }
+web3 = "0.19"
+bellman = "0.14"               # zk-SNARKs
+rand_core = "0.6"
+
+# --- REST API Server (Smart Contract Automation) ---
+actix-web = "4.5"
+actix-rt = "2.9"
+
+# --- Wallet / Mnemonic Import ---
+bip39 = "2.0"
+hdwallet = "0.4"
+
+# --- Optional: Async Test Utilities ---
+[dev-dependencies]
+tokio = { version = "1.37", features = ["full"] }
