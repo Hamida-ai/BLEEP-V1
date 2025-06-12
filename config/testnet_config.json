@@ -1,1 +1,115 @@
-// config/testnet_config.json placeholder
+{
+  "chain_id": "BLEEP-Testnet",
+  "genesis_time": "2025-02-11T00:00:00Z",
+  "networking": {
+    "p2p_protocol": "Noise +- QUIC",
+    "peer_discovery": "Kademlia DHT",
+    "gossip_protocol": true,
+    "secure_messaging": "SPHINCS+- Signed",
+    "anomaly_detection": true,
+    "peer_scoring": "Reputation-Based",
+    "self_healing_network": true,
+    "mesh_network_support": true
+  },
+  "validators": {
+    "selection": "AI-Driven Validator Efficiency Ratings",
+    "election_process": "Decentralized Voting",
+    "threshold_signatures": "FROST",
+    "list": [
+      {"address": "0xValidator1", "power": 500000, "stake": 250000},
+      {"address": "0xValidator2", "power": 450000, "stake": 225000},
+      {"address": "0xValidator3", "power": 400000, "stake": 200000}
+    ]
+  },
+  "consensus": {
+    "type": "Hybrid-PoS-AI",
+    "block_time": 2,
+    "adaptive_consensus": true,
+    "ai_leader_selection": true,
+    "fallback_mechanism": "VRF-Based PoS",
+    "mempool_management": "Quantum-Secure +- AI-Powered"
+  },
+  "sharding": {
+    "enabled": true,
+    "shard_count": 16,
+    "dynamic_adjustment": true,
+    "ai_optimization": true,
+    "cross_shard_transactions": "Asynchronous State Proofs",
+    "load_balancing": "AI-Powered Dynamic Reassignment",
+    "shard_governance": true
+  },
+  "governance": {
+    "proposal_threshold": 5000,
+    "vote_period": 86400,
+    "ai_automation": true,
+    "on_chain_voting": true,
+    "auto_upgrade": true,
+    "treasury_management": true,
+    "auditing": "AI-Based Governance Monitoring",
+    "quadratic_voting": true,
+    "fund_allocation": "AI-Dynamic"
+  },
+  "security": {
+    "zkp_enabled": true,
+    "zkp_type": "zk-STARKs",
+    "quantum_safe_signatures": ["SPHINCS+-", "FALCON"],
+    "anti_asset_loss": true,
+    "decentralized_identity_verification": true,
+    "ai_anomaly_detection": true,
+    "onion_routing": true,
+    "proof_of_identity": true,
+    "dark_routing": true
+  },
+  "interoperability": {
+    "bleep_connect_enabled": true,
+    "supported_chains": ["Ethereum", "Bitcoin", "Polkadot", "Solana", "Cosmos"],
+    "cross_chain_bridge": "Automated",
+    "token_conversion": true,
+    "atomic_swaps": true,
+    "cross_chain_governance": true,
+    "ai_optimized_routing": true
+  },
+  "tokenomics": {
+    "native_token": "BLP",
+    "decimals": 18,
+    "supply_model": "Hybrid",
+    "staking_rewards": true,
+    "burn_mint_mechanism": true,
+    "dynamic_staking_apy": true,
+    "liquidity_management": "AI-Powered",
+    "nft_staking_rewards": true,
+    "distribution": {
+      "foundation": 50000000,
+      "developers": 30000000,
+      "community": 70000000,
+      "staking_rewards": 50000000
+    }
+  },
+  "programmable_asset_tokens": {
+    "enabled": true,
+    "pat_types": ["Security", "Utility", "Governance", "AI-Driven"],
+    "interlinked_with_blp": true,
+    "automation_levels": ["Basic", "Advanced", "AI-Powered"],
+    "smart_contract_templates": true,
+    "cross_chain_pat_support": true,
+    "ai_audited_contracts": true,
+    "reputation_based_issuance": true
+  },
+  "energy_monitoring": {
+    "enabled": true,
+    "node_efficiency_tracking": true,
+    "carbon_footprint_analytics": true,
+    "ai_energy_optimization": true,
+    "eco_friendly_validator_incentives": true,
+    "proof_of_green_work": true
+  },
+  "testnet_specific": {
+    "faucet_enabled": true,
+    "testnet_token_supply": 50000000,
+    "ai_monitoring": true,
+    "debug_logging": true,
+    "token_expiry": true,
+    "ai_bug_detection": true,
+    "incentivized_bug_bounty": true
+  }
+}
