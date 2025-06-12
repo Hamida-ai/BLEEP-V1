@@ -57,3 +57,22 @@ anyhow = "1.0.80"
 # Filesystem I/O
 serde_json = "1.0"
 serde_yaml = "0.9.31"
+
+[workspace]
+members = [
+    "crates/bleep-ai",
+    "crates/bleep-cli",
+    "crates/bleep-core",
+    "crates/bleep-p2p",
+    "crates/bleep-consensus",
+    "crates/bleep-state",
+    "crates/bleep-crypto",
+    "crates/bleep-rpc",
+    "crates/bleep-vm",
+    "crates/bleep-governance",
+    "crates/bleep-telemetry",
+    "crates/bleep-wallet-core",
+    "crates/bleep-indexer",
+    "crates/bleep-auth",
+    "crates/bleep-scheduler"
+]
