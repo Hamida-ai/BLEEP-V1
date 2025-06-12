@@ -1,0 +1,22 @@
+[dependencies]
+# Logging & Time
+log = "0.4"
+chrono = "0.4"
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# AI via Torch
+tch = { version = "0.13", features = ["download-libtorch"] }
+
+# SystemTime serialization
+time = "0.3"
+
+# Optional: base64 if encrypting energy data
+base64 = "0.21"
+
+# Optional ZKP libs if you're integrating them directly
+ark-groth16 = "0.4"
+ark-ff = "0.4"
+ark-serialize = "0.4"
