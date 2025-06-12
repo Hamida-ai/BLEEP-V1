@@ -129,7 +129,7 @@ fake = "2.9.2"
 
 [[bin]]
 name = "bleep-cli"
-path = "src/bin/cli.rs"
+path = "src/cli.rs"
 
 [features]
 default = ["mainnet"]
