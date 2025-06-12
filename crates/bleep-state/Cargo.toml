@@ -45,3 +45,22 @@ tokio = { version = "1.36", features = ["full"] }
 
 [features]
 default = ["std"]
+
+[workspace]
+members = [
+    "crates/bleep-ai",
+    "crates/bleep-cli",
+    "crates/bleep-core",
+    "crates/bleep-p2p",
+    "crates/bleep-consensus",
+    "crates/bleep-state",
+    "crates/bleep-crypto",
+    "crates/bleep-rpc",
+    "crates/bleep-vm",
+    "crates/bleep-governance",
+    "crates/bleep-telemetry",
+    "crates/bleep-wallet-core",
+    "crates/bleep-indexer",
+    "crates/bleep-auth",
+    "crates/bleep-scheduler"
+]
