@@ -95,7 +95,7 @@ config = "0.14.0"
 clap = { version = "4.5.1", features = ["derive"]}
 chrono = { version = "0.4.34", features = ["serde"]}
 
-[workspace]
+[dependencies]
 members = [
     "src/bin",  # your main project
     "src/bleep_p2p",
@@ -130,4 +130,3 @@ mainnet = []
 testnet = []
 simulator = []
 quantum = ["pqcrypto", "pqcrypto-kyber", "pqcrypto-falcon", "pqcrypto-sphincsplus"]
-
