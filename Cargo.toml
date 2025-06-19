@@ -95,18 +95,6 @@ config = "0.14.0"
 clap = { version = "4.5.1", features = ["derive"]}
 chrono = { version = "0.4.34", features = ["serde"]}
 
-members = [
-    "src/bin",  # your main project
-    "src/bleep_p2p",
-    "src/bleep_consensus",
-    "src/bleep_governance",
-    "src/bleep_ai",
-    "src/bleep_crypto",
-    "src/bleep_state",
-    "src/bleep_telemetry",
-    "src/bleep_pat",
-    "src/bleep_wallet_core"
-]
 
 [dev-dependencies]
 tokio-test = "0.4.3"
