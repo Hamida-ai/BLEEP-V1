@@ -1,3 +1,3 @@
 pub fn init() {
-    println!("Initializing PAT module...");
+    println!("Initializing bleep_pat...");
 }
