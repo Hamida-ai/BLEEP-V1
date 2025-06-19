@@ -1,3 +1,3 @@
 pub fn init() {
-    println!("Initializing Transaction module...");
+    println!("Initializing bleep_transaction...");
 }
