@@ -1,3 +1,3 @@
 pub fn init() {
-    println!("Initializing Block module...");
+    println!("Initializing bleep_block...");
 }
