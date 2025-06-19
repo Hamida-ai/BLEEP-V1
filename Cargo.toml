@@ -95,23 +95,6 @@ config = "0.14.0"
 clap = { version = "4.5.1", features = ["derive"]}
 chrono = { version = "0.4.34", features = ["serde"]}
 
-[workspace]
-members = [
-    "bleep-ai",
-    "bleep-crypto",
-    "bleep-state",
-    "bleep-telemetry",
-    "bleep-pat",
-    "bleep-wallet-core",
-    "bleep-connect",
-    "bleep-consensus",
-    "bleep-governance",
-    "bleep-indexer",
-    "bleep-scheduler",
-    "bleep-sharding",
-    "bleep-interoperability",
-    "bleep-zkp",
-]
 
 [dev-dependencies]
 tokio-test = "0.4.3"
