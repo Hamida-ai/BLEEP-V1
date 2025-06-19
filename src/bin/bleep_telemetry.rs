@@ -1,3 +1,3 @@
 pub fn init() {
-    println!("Initializing Energy module...");
+    println!("Initializing bleep_telemetry...");
 }
