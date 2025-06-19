@@ -8,27 +8,6 @@ description = "BLEEP Blockchain - AI-powered, quantum-secure, cross-chain decent
 repository = "https://github.com/bleep-project/bleep"
 readme = "README.md"
 
-[workspace]
-members = [
-    "crates/bleep-ai", 
-    "crates/bleep-cli",
-    "crates/bleep-core",
-    "crates/bleep-p2p",
-    "crates/bleep-consensus",
-    "crates/bleep-state",
-    "crates/bleep-crypto",
-    "crates/bleep-rpc",
-    "crates/bleep-vm",
-    "crates/bleep-ai",
-    "crates/bleep-governance",
-    "crates/bleep-interop",
-    "crates/bleep-pat",
-    "crates/bleep-wallet-core",
-    "crates/bleep-telemetry",
-    "crates/bleep-indexer",
-    "crates/bleep-auth",
-    "crates/bleep-scheduler"
-]
 
 [dependencies]
 # External crate dependencies only (your existing list can remain unchanged)
