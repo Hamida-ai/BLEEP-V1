@@ -2,6 +2,7 @@ use clap::{Parser, Subcommand};
 use tracing::{info, error};
 use anyhow::Result;
 
+// ✅ Core BLEEP module imports (must be public in their respective lib.rs)
 use bleep_core::blockchain;
 use bleep_wallet_core::wallet_core;
 use bleep_p2p::p2p_network;
@@ -23,57 +24,36 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// Start the BLEEP blockchain node
     StartNode,
-
-    /// Wallet operations
     Wallet {
         #[command(subcommand)]
         action: WalletCommand,
     },
-
-    /// Send and manage transactions
     Tx {
         #[command(subcommand)]
         action: TxCommand,
     },
-
-    /// AI-powered utilities
     Ai {
         #[command(subcommand)]
         task: AiCommand,
     },
-
-    /// Governance proposals and voting
     Governance {
         #[command(subcommand)]
         task: GovernanceCommand,
     },
-
-    /// Verify ZKPs and proofs
     Zkp {
         proof: String,
     },
-
-    /// State management utilities
     State {
         #[command(subcommand)]
         task: StateCommand,
     },
-
-    /// Telemetry reporting
     Telemetry,
-
-    /// Predictive Autonomous Technology (PAT) tasks
     Pat {
         #[command(subcommand)]
         task: PatCommand,
     },
-
-    /// Display node information
     Info,
-
-    /// Blockchain core operations
     Block {
         #[command(subcommand)]
         task: BlockCommand,
@@ -120,13 +100,8 @@ enum PatCommand {
 
 #[derive(Subcommand)]
 enum BlockCommand {
-    /// Get latest block
     Latest,
-
-    /// Get block by hash or height
     Get { identifier: String },
-
-    /// Validate block
     Validate { hash: String },
 }
 
@@ -197,4 +172,4 @@ async fn main() -> Result<()> {
     }
 
     Ok(())
-      } 
+    }
