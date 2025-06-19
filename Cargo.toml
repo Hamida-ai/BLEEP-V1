@@ -10,6 +10,7 @@ readme = "README.md"
 
 [workspace]
 members = [
+	"crates/bleep-ai", 
     "crates/bleep-cli",
     "crates/bleep-core",
     "crates/bleep-p2p",
@@ -125,8 +126,6 @@ test-log = "0.2.14"
 fake = "2.9.2"
 
 [[bin]]
-name = "bleep-cli"
-path = "src/bin/cli.rs"
 
 [features]
 default = ["mainnet"]
