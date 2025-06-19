@@ -95,6 +95,17 @@ config = "0.14.0"
 clap = { version = "4.5.1", features = ["derive"]}
 chrono = { version = "0.4.34", features = ["serde"]}
 
+use bleep_core::blockchain;
+use bleep_wallet_core;
+use bleep_p2p::p2p_network;
+use bleep_consensus::consensus;
+use bleep_governance::governance_engine;
+use bleep_ai::{ai_assistant, machine_learning};
+use bleep_crypto::zkp_verification;
+use bleep_state::state_manager;
+use bleep_telemetry::telemetry;
+use bleep_pat::pat_engine;
+
 [dev-dependencies]
 tokio-test = "0.4.3"
 criterion = { version = "0.5.1", features = ["html_reports"]}
@@ -103,6 +114,8 @@ quickcheck = "1.0.3"
 mockall = "0.12.1"
 test-log = "0.2.14"
 fake = "2.9.2"
+
+
 
 [[bin]]
 name = "bleep"
