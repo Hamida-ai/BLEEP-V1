@@ -1,3 +1,3 @@
 pub fn init() {
-    println!("Initializing Wallet module...");
+    println!("Initializing bleep_wallet_core...");
 }
