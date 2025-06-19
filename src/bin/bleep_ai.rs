@@ -1,3 +1,3 @@
 pub fn init() {
-    println!("Initializing AI Decision module...");
+    println!("Initializing bleep_ai...");
 }
