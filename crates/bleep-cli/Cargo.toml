@@ -37,7 +37,6 @@ path = "src/bin/rpc.rs"
 
 [workspace]
 members = [
-    "crates/bleep-ai",
     "crates/bleep-cli",
     "crates/bleep-core",
     "crates/bleep-p2p",
