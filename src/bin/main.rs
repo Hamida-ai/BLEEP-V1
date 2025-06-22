@@ -1,175 +1,69 @@
-use clap::{Parser, Subcommand};
-use tracing::{info, error};
-use anyhow::Result;
+// src/bin/main.rs
 
-// ✅ Core BLEEP module imports (must be public in their respective lib.rs)
-use bleep_core::blockchain;
-use bleep_wallet_core::wallet_core;
-use bleep_p2p::p2p_network;
-use bleep_consensus::consensus;
-use bleep_governance::governance_engine;
-use bleep_ai::{ai_assistant, machine_learning};
-use bleep_crypto::zkp_verification;
-use bleep_state::state_manager;
-use bleep_telemetry::telemetry;
-use bleep_pat::pat_engine;
+use bleep_ai::ai_assistant::start_ai_services;
+use bleep_block::blockchain::initialize_blockchain;
+use bleep_consensus::consensus::run_consensus_engine;
+use bleep_crypto::quantum_resistance::init_crypto_layer;
+use bleep_governance::governance_engine::init_governance;
+use bleep_p2p::P2PNode::start_p2p_network;
+use bleep_wallet_core::wallet::init_wallet_services;
+use bleep_state::state_manager::start_state_services;
+use bleep_telemetry::metrics::init_telemetry;
+use bleep_pat::asset_token::launch_asset_token_logic;
 
-#[derive(Parser)]
-#[command(name = "bleep-cli")]
-#[command(about = "BLEEP Blockchain CLI", long_about = None)]
-struct Cli {
-    #[command(subcommand)]
-    command: Commands,
-}
+use std::error::Error;
+use log::{info, error};
 
-#[derive(Subcommand)]
-enum Commands {
-    StartNode,
-    Wallet {
-        #[command(subcommand)]
-        action: WalletCommand,
-    },
-    Tx {
-        #[command(subcommand)]
-        action: TxCommand,
-    },
-    Ai {
-        #[command(subcommand)]
-        task: AiCommand,
-    },
-    Governance {
-        #[command(subcommand)]
-        task: GovernanceCommand,
-    },
-    Zkp {
-        proof: String,
-    },
-    State {
-        #[command(subcommand)]
-        task: StateCommand,
-    },
-    Telemetry,
-    Pat {
-        #[command(subcommand)]
-        task: PatCommand,
-    },
-    Info,
-    Block {
-        #[command(subcommand)]
-        task: BlockCommand,
-    },
-}
+fn main() {
+    // Initialize logger
+    env_logger::init();
 
-#[derive(Subcommand)]
-enum WalletCommand {
-    Create,
-    Balance,
-    Import { phrase: String },
-    Export,
-}
+    info!("Starting BLEEP Blockchain Node...");
 
-#[derive(Subcommand)]
-enum TxCommand {
-    Send { to: String, amount: f64 },
-    History,
-}
-
-#[derive(Subcommand)]
-enum AiCommand {
-    Ask { prompt: String },
-    Learn { dataset: String },
-}
-
-#[derive(Subcommand)]
-enum GovernanceCommand {
-    Propose { proposal: String },
-    Vote { proposal_id: u32, yes: bool },
-}
-
-#[derive(Subcommand)]
-enum StateCommand {
-    Snapshot,
-    Restore { snapshot_path: String },
-}
-
-#[derive(Subcommand)]
-enum PatCommand {
-    Predict { input: String },
-    Autonomy,
-}
-
-#[derive(Subcommand)]
-enum BlockCommand {
-    Latest,
-    Get { identifier: String },
-    Validate { hash: String },
-}
-
-#[tokio::main]
-async fn main() -> Result<()> {
-    tracing_subscriber::fmt::init();
-    let cli = Cli::parse();
-
-    match cli.command {
-        Commands::StartNode => {
-            info!("Starting node...");
-            consensus::start_node().await?;
-        }
-        Commands::Wallet { action } => match action {
-            WalletCommand::Create => wallet_core::create_wallet()?,
-            WalletCommand::Balance => wallet_core::get_balance()?,
-            WalletCommand::Import { phrase } => wallet_core::import_wallet(&phrase)?,
-            WalletCommand::Export => wallet_core::export_wallet()?,
-        },
-        Commands::Tx { action } => match action {
-            TxCommand::Send { to, amount } => wallet_core::send_transaction(&to, amount)?,
-            TxCommand::History => wallet_core::transaction_history()?,
-        },
-        Commands::Ai { task } => match task {
-            AiCommand::Ask { prompt } => ai_assistant::run_prompt(&prompt).await?,
-            AiCommand::Learn { dataset } => machine_learning::train_on_dataset(&dataset).await?,
-        },
-        Commands::Governance { task } => match task {
-            GovernanceCommand::Propose { proposal } => governance_engine::submit_proposal(&proposal)?,
-            GovernanceCommand::Vote { proposal_id, yes } => governance_engine::vote(proposal_id, yes)?,
-        },
-        Commands::Zkp { proof } => {
-            if zkp_verification::verify_proof(&proof)? {
-                println!("ZKP valid");
-            } else {
-                println!("ZKP invalid");
-            }
-        }
-        Commands::State { task } => match task {
-            StateCommand::Snapshot => state_manager::create_snapshot()?,
-            StateCommand::Restore { snapshot_path } => state_manager::restore_snapshot(&snapshot_path)?,
-        },
-        Commands::Telemetry => {
-            telemetry::report_metrics()?;
-        }
-        Commands::Pat { task } => match task {
-            PatCommand::Predict { input } => pat_engine::predict(&input)?,
-            PatCommand::Autonomy => pat_engine::enable_autonomy()?,
-        },
-        Commands::Info => {
-            let info = p2p_network::get_node_info()?;
-            println!("{}", info);
-        }
-        Commands::Block { task } => match task {
-            BlockCommand::Latest => {
-                let block = blockchain::latest_block()?;
-                println!("{:?}", block);
-            }
-            BlockCommand::Get { identifier } => {
-                let block = blockchain::get_block(&identifier)?;
-                println!("{:?}", block);
-            }
-            BlockCommand::Validate { hash } => {
-                let is_valid = blockchain::validate_block(&hash)?;
-                println!("Block valid: {}", is_valid);
-            }
-        }
+    if let Err(e) = run() {
+        error!("BLEEP Node failed to start: {}", e);
+        std::process::exit(1);
     }
+}
 
+fn run() -> Result<(), Box<dyn Error>> {
+    // Step 1: Initialize core cryptographic and ZK systems
+    init_crypto_layer()?;
+    info!("Quantum-safe cryptography initialized.");
+
+    // Step 2: Load and initialize the blockchain
+    initialize_blockchain()?;
+    info!("Blockchain loaded and genesis verified.");
+
+    // Step 3: Launch the P2P node network
+    start_p2p_network()?;
+    info!("P2P node started.");
+
+    // Step 4: Start AI-driven services
+    start_ai_services()?;
+    info!("AI automation services running.");
+
+    // Step 5: Launch wallet and asset token logic
+    init_wallet_services()?;
+    launch_asset_token_logic()?;
+    info!("Wallet and token layers active.");
+
+    // Step 6: Start state management and mempool
+    start_state_services()?;
+    info!("State services and mempool started.");
+
+    // Step 7: Run consensus engine
+    run_consensus_engine()?;
+    info!("Consensus mechanism operational.");
+
+    // Step 8: Initialize governance modules
+    init_governance()?;
+    info!("Governance logic activated.");
+
+    // Step 9: Launch telemetry
+    init_telemetry()?;
+    info!("Telemetry and metrics collection active.");
+
+    info!("BLEEP Blockchain Node successfully launched.");
     Ok(())
-    }
+}
