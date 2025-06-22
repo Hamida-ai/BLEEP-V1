@@ -122,7 +122,7 @@ members = [
     "crates/bleep_interop"
 ]
 
-[dependencies]
+[bleep_dependencies]
 bleep_core = { path = "crates/bleep_core" }
 bleep_crypto = { path = "crates/bleep_crypto" }
 bleep_block = { path = "crates/bleep_block" }
