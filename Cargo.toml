@@ -105,11 +105,14 @@ mockall = "0.12.1"
 test-log = "0.2.14"
 fake = "2.9.2"
 
+[[bin]]
+name = "bleep_admin"
+path = "src/bin/bleep_admin.rs"
 
 
 [[bin]]
 name = "bleep"
-path = "src/main.rs"
+path = "src/bin/main.rs"
 
 [features]
 default = ["mainnet"]
