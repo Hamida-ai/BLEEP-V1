@@ -10,6 +10,8 @@ use bleep_wallet_core::wallet::init_wallet_services;
 use bleep_state::state_manager::start_state_services;
 use bleep_telemetry::metrics::init_telemetry;
 use bleep_pat::asset_token::launch_asset_token_logic;
+use bleep_interop::interoperability::start_interop_services;
+use bleep_interop::bleep_connect::start_bleep_connect;
 
 use std::error::Error;
 use log::{info, error};
@@ -68,7 +70,13 @@ fn run() -> Result<(), Box<dyn Error>> {
     init_governance()?;
     info!("✅ Governance system online.");
 
-    // Step 9: Begin telemetry and performance monitoring
+    // Step 9: Start interoperability and connection services
+    info!("🌉 Launching interoperability and BLEEP Connect...");
+    start_interop_services()?;
+    start_bleep_connect()?;
+    info!("✅ Interoperability modules initialized.");
+
+    // Step 10: Begin telemetry and performance monitoring
     info!("📊 Starting telemetry services...");
     init_telemetry()?;
     info!("✅ Telemetry enabled.");
