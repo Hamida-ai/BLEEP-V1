@@ -1,63 +1,39 @@
-use std::sync::{Arc, Mutex};
-use log::{info, warn};
-use crate::{
-    Wallet, WalletError, 
-    p2p::P2PNode,
-    state_merkle::StateMerkle,
-    Transaction,
-};
+// src/bin/bleep_wallet_core.rs
 
-pub fn init() {
-    // Initialize logger (will silently fail if already initialized)
-    let _ = env_logger::builder().is_test(true).try_init();
+use bleep_wallet_core::wallet::{WalletManager, EncryptedWallet};
+use bleep_crypto::quantum_resistance::{generate_falcon_keypair, generate_kyber_keypair};
 
-    println!("🔧 Initializing bleep_wallet_core...");
-    info!("🔐 Bootstrapping BLEEP components...");
+use std::error::Error;
+use log::{info, error};
 
-    // 🔌 Initialize core dependencies
-    let p2p_node = Arc::new(P2PNode::new());
-    let state_merkle = Arc::new(Mutex::new(StateMerkle::new()));
+fn main() {
+    env_logger::init();
+    info!("💼 BLEEP Wallet Core Engine Initializing...");
 
-    // 🧠 Create a new Wallet instance
-    match Wallet::new(p2p_node.clone(), state_merkle.clone()) {
-        Ok(mut wallet) => {
-            info!("✅ Wallet initialized for address: {}", wallet.address);
-            println!("🔑 Wallet created with address: {}", wallet.address);
-
-            // 📦 Prepare a dummy transaction
-            let tx = Transaction {
-                id: "init_tx_001".to_string(),
-                from: wallet.address.clone(),
-                to: "recipient_xyz".to_string(),
-                amount: 10.5,
-                fee: match wallet.optimize_gas_fee("BLEEP-NET") {
-                    Ok(fee) => fee,
-                    Err(_) => 0.01,
-                },
-                signature: vec![],
-            };
-
-            // ✅ Sign the transaction
-            match wallet.sign_transaction(&tx) {
-                Ok(signature) => {
-                    let mut signed_tx = tx.clone();
-                    signed_tx.signature = signature;
-
-                    // 🧱 Store it in the Merkle state
-                    wallet.store_transaction(signed_tx);
-                    println!("📝 Transaction signed and stored in Merkle state.");
-                },
-                Err(e) => {
-                    warn!("❌ Failed to sign transaction: {}", e);
-                    println!("❌ Signing error: {}", e);
-                }
-            }
-
-            println!("✅ bleep_wallet_core initialization complete.");
-        }
-        Err(e) => {
-            warn!("❌ Wallet initialization failed: {}", e);
-            println!("🚨 Wallet initialization error: {}", e);
-        }
+    if let Err(e) = run_wallet_engine() {
+        error!("❌ Wallet engine failed: {}", e);
+        std::process::exit(1);
     }
+}
+
+fn run_wallet_engine() -> Result<(), Box<dyn Error>> {
+    // Step 1: Generate new post-quantum keypairs for a wallet
+    let falcon_keys = generate_falcon_keypair()?;
+    let kyber_keys = generate_kyber_keypair()?;
+    info!("🔐 Falcon and Kyber keypairs generated.");
+
+    // Step 2: Initialize a new encrypted wallet
+    let wallet = EncryptedWallet::new(falcon_keys, kyber_keys);
+    info!("✅ Encrypted wallet instance created.");
+
+    // Step 3: Use WalletManager to save and manage the wallet
+    let mut manager = WalletManager::load_or_create()?;
+    manager.save_wallet(wallet)?;
+    info!("💾 Wallet saved to secure store.");
+
+    // Step 4: Display basic wallet summary
+    manager.list_wallets();
+
+    info!("💼 BLEEP Wallet Core Engine completed successfully.");
+    Ok(())
 }
