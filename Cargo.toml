@@ -9,22 +9,6 @@ description = "BLEEP Blockchain - AI-powered, quantum-secure, cross-chain decent
 repository = "https://github.com/bleep-project/bleep"
 readme = "README.md"
 
-[workspace]
-members = [
-    "crates/bleep-core",
-    "crates/bleep-crypto",
-    "crates/bleep-block",
-    "crates/bleep-consensus",
-    "crates/bleep-wallet_core",
-    "crates/bleep-governance",
-    "crates/bleep-p2p",
-    "crates/bleep-state",
-    "crates/bleep-telemetry",
-    "crates/bleep-ai",
-    "crates/bleep-pat",
-    "crates/bleep-interop"
-]
-
 [dependencies]
 bleep_core = { path = "crates/bleep_core" }
 bleep_crypto = { path = "crates/bleep_crypto" }
