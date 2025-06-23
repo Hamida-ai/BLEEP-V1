@@ -10,18 +10,6 @@ repository = "https://github.com/bleep-project/bleep"
 readme = "README.md"
 
 [dependencies]
-bleep_core = { path = "crates/bleep_core" }
-bleep_crypto = { path = "crates/bleep_crypto" }
-bleep_block = { path = "crates/bleep_block" }
-bleep_consensus = { path = "crates/bleep_consensus" }
-bleep_wallet_core = { path = "crates/bleep_wallet_core" }
-bleep_governance = { path = "crates/bleep_governance" }
-bleep_p2p = { path = "crates/bleep_p2p" }
-bleep_state = { path = "crates/bleep_state" }
-bleep_telemetry = { path = "crates/bleep_telemetry" }
-bleep_ai = { path = "crates/bleep_ai" }
-bleep_pat = { path = "crates/bleep_pat" }
-bleep_interop = { path = "crates/bleep_interop" }
 
 # External crates
 # (All valid and well-structured as provided)
