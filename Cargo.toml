@@ -9,7 +9,35 @@ description = "BLEEP Blockchain - AI-powered, quantum-secure, cross-chain decent
 repository = "https://github.com/bleep-project/bleep"
 readme = "README.md"
 
+[workspace]
+members = [
+    "crates/bleep_core",
+    "crates/bleep_crypto",
+    "crates/bleep_block",
+    "crates/bleep_consensus",
+    "crates/bleep_wallet_core",
+    "crates/bleep_governance",
+    "crates/bleep_p2p",
+    "crates/bleep_state",
+    "crates/bleep_telemetry",
+    "crates/bleep_ai",
+    "crates/bleep_pat",
+    "crates/bleep_interop"
+]
+
 [dependencies]
+bleep_core = { path = "crates/bleep_core" }
+bleep_crypto = { path = "crates/bleep_crypto" }
+bleep_block = { path = "crates/bleep_block" }
+bleep_consensus = { path = "crates/bleep_consensus" }
+bleep_wallet_core = { path = "crates/bleep_wallet_core" }
+bleep_governance = { path = "crates/bleep_governance" }
+bleep_p2p = { path = "crates/bleep_p2p" }
+bleep_state = { path = "crates/bleep_state" }
+bleep_telemetry = { path = "crates/bleep_telemetry" }
+bleep_ai = { path = "crates/bleep_ai" }
+bleep_pat = { path = "crates/bleep_pat" }
+bleep_interop = { path = "crates/bleep_interop" }
 
 # External crates
 # (All valid and well-structured as provided)
@@ -106,6 +134,9 @@ mockall = "0.12.1"
 test-log = "0.2.14"
 fake = "2.9.2"
 
+[[bin]]
+name = "bleep_admin"
+path = "src/bin/bleep_admin.rs"
 
 [[bin]]
 name = "bleep"
