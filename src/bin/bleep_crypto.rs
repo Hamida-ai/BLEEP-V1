@@ -1,7 +1,7 @@
 // src/bin/bleep_crypto.rs
 
-use bleep_crypto::quantum_resistance::{init_falcon, init_kyber, run_keygen_tests};
-use bleep_crypto::zkp_verification::{init_zkp_systems, test_zkp_proofs};
+use bleep-crypto::quantum_resistance::{init_falcon, init_kyber, run_keygen_tests};
+use bleep-crypto::zkp_verification::{init_zkp_systems, test_zkp_proofs};
 
 use std::error::Error;
 use log::{info, error};
