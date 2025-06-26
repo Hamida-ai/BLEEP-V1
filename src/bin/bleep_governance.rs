@@ -1,8 +1,8 @@
 // src/bin/bleep_governance.rs
 
-use bleep_governance::governance_engine::GovernanceEngine;
-use bleep_governance::off_chain_voting::load_off_chain_votes;
-use bleep_governance::self_amending::apply_protocol_updates;
+use bleep-governance::governance_engine::GovernanceEngine;
+use bleep-governance::off_chain_voting::load_off_chain_votes;
+use bleep-governance::self_amending::apply_protocol_updates;
 
 use std::error::Error;
 use log::{info, error};
