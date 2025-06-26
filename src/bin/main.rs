@@ -11,7 +11,7 @@ use bleep-state::state_manager::start_state_services;
 use bleep-telemetry::metrics::init_telemetry;
 use bleep-pat::asset_token::launch_asset_token_logic;
 use bleep-interop::interoperability::start_interop_services;
-use bleep-interop::bleep-connect::start_bleep_connect;
+use bleep-interop::bleep_connect::start_bleep_connect;
 
 use std::error::Error;
 use log::{info, error};
