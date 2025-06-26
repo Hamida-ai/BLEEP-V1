@@ -1,10 +1,10 @@
 // src/bin/bleep_block.rs
 
-use bleep_core::block::{Block, BlockHeader};
-use bleep_core::blockchain::{Blockchain, BlockchainError};
-use bleep_core::transaction::Transaction;
-use bleep_core::mempool::Mempool;
-use bleep_core::proof_of_identity::Identity;
+use bleep-core::block::{Block, BlockHeader};
+use bleep-core::blockchain::{Blockchain, BlockchainError};
+use bleep-core::transaction::Transaction;
+use bleep-core::mempool::Mempool;
+use bleep-core::proof_of_identity::Identity;
 
 use std::error::Error;
 use log::{info, error};
