@@ -1,8 +1,8 @@
 // src/bin/bleep_state.rs
 
-use bleep_state::state_manager::{StateManager, StateError};
-use bleep_core::transaction_pool::TransactionPool;
-use bleep_core::blockchain::Blockchain;
+use bleep-state::state_manager::{StateManager, StateError};
+use bleep-core::transaction_pool::TransactionPool;
+use bleep-core::blockchain::Blockchain;
 
 use std::error::Error;
 use log::{info, error};
