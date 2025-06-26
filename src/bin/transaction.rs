@@ -1,9 +1,9 @@
 // src/bin/transaction.rs
 
-use bleep_core::transaction::{Transaction, TransactionBuilder};
-use bleep_core::transaction_pool::TransactionPool;
-use bleep_crypto::quantum_resistance::sign_transaction;
-use bleep_core::proof_of_identity::Identity;
+use bleep-core::transaction::{Transaction, TransactionBuilder};
+use bleep-core::transaction_pool::TransactionPool;
+use bleep-crypto::quantum_resistance::sign_transaction;
+use bleep-core::proof_of_identity::Identity;
 
 use std::error::Error;
 use log::{info, error};
