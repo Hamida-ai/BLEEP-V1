@@ -1,9 +1,9 @@
 // src/bin/bleep_p2p.rs
 
-use bleep_p2p::P2PNode::P2PNode;
-use bleep_p2p::gossip_protocol::start_gossip_layer;
-use bleep_p2p::dark_routing::start_dark_routing;
-use bleep_p2p::peer_manager::PeerManager;
+use bleep-p2p::P2PNode::P2PNode;
+use bleep-p2p::gossip_protocol::start_gossip_layer;
+use bleep-p2p::dark_routing::start_dark_routing;
+use bleep-p2p::peer_manager::PeerManager;
 
 use std::error::Error;
 use log::{info, error};
