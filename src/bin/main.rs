@@ -1,17 +1,17 @@
 // src/bin/main.rs
 
-use bleep_ai::ai_assistant::start_ai_services;
-use bleep_block::blockchain::initialize_blockchain;
-use bleep_consensus::consensus::run_consensus_engine;
-use bleep_crypto::quantum_resistance::init_crypto_layer;
-use bleep_governance::governance_engine::init_governance;
-use bleep_p2p::P2PNode::start_p2p_network;
-use bleep_wallet_core::wallet::init_wallet_services;
-use bleep_state::state_manager::start_state_services;
-use bleep_telemetry::metrics::init_telemetry;
-use bleep_pat::asset_token::launch_asset_token_logic;
-use bleep_interop::interoperability::start_interop_services;
-use bleep_interop::bleep_connect::start_bleep_connect;
+use bleep-ai::ai_assistant::start_ai_services;
+use bleep-block::blockchain::initialize_blockchain;
+use bleep-consensus::consensus::run_consensus_engine;
+use bleep-crypto::quantum_resistance::init_crypto_layer;
+use bleep-governance::governance_engine::init_governance;
+use bleep-p2p::P2PNode::start_p2p_network;
+use bleep-wallet_core::wallet::init_wallet_services;
+use bleep-state::state_manager::start_state_services;
+use bleep-telemetry::metrics::init_telemetry;
+use bleep-pat::asset_token::launch_asset_token_logic;
+use bleep-interop::interoperability::start_interop_services;
+use bleep-interop::bleep-connect::start_bleep_connect;
 
 use std::error::Error;
 use log::{info, error};
