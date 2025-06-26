@@ -1,6 +1,6 @@
 // src/bin/bleep_interop.rs
 
-use bleep_interop::interoperability::{InteropEngine, InteropConfig};
+use bleep-interop::interoperability::{InteropEngine, InteropConfig};
 use std::error::Error;
 use log::{info, error};
 
