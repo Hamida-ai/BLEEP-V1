@@ -1,4 +1,4 @@
-// src/bin/bleep_wallet_core.rs
+// src/bin/bleep-wallet_core.rs
 
 use bleep_wallet_core::wallet::{WalletManager, EncryptedWallet};
 use bleep_crypto::quantum_resistance::{generate_falcon_keypair, generate_kyber_keypair};
