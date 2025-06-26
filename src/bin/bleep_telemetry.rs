@@ -1,4 +1,4 @@
-// src/bin/bleep_telemetry.rs
+// src/bin/bleep-telemetry.rs
 
 use bleep_telemetry::metrics::{TelemetryCollector, TelemetryConfig};
 use std::error::Error;
