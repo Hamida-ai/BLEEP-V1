@@ -1,10 +1,10 @@
 // src/bin/bleep_consensus.rs
 
-use bleep_consensus::consensus::ConsensusEngine;
-use bleep_core::blockchain::Blockchain;
-use bleep_core::mempool::Mempool;
-use bleep_core::transaction::Transaction;
-use bleep_crypto::zkp_verification::verify_transaction_zkp;
+use bleep-consensus::consensus::ConsensusEngine;
+use bleep-core::blockchain::Blockchain;
+use bleep-core::mempool::Mempool;
+use bleep-core::transaction::Transaction;
+use bleep-crypto::zkp_verification::verify_transaction_zkp;
 
 use std::error::Error;
 use log::{info, error};
