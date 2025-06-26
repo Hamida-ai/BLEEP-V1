@@ -1,8 +1,8 @@
 // src/bin/bleep_ai.rs
 
-use bleep_ai::ai_assistant::AIAssistant;
-use bleep_ai::smart_contracts::SmartContractAdvisor;
-use bleep_ai::decision_engine::run_decision_loop;
+use bleep-ai::ai_assistant::AIAssistant;
+use bleep-ai::smart_contracts::SmartContractAdvisor;
+use bleep-ai::decision_engine::run_decision_loop;
 use std::error::Error;
 use log::{info, error};
 
