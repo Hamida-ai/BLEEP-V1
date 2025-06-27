@@ -1,13 +1,13 @@
 use warp::Filter;
 use tracing::{info, error};
-use bleep_core::blockchain;
-use bleep_wallet_core::wallet_core;
-use bleep_ai::ai_assistant;
-use bleep_governance::governance_engine;
-use bleep_state::state_manager;
-use bleep_pat::pat_engine;
-use bleep_telemetry::telemetry;
-use bleep_crypto::zkp_verification;
+use bleep-core::blockchain;
+use bleep-wallet_core::wallet_core;
+use bleep-ai::ai_assistant;
+use bleep-governance::governance_engine;
+use bleep-state::state_manager;
+use bleep-pat::pat_engine;
+use bleep-telemetry::telemetry;
+use bleep-crypto::zkp_verification;
 use serde::{Deserialize, Serialize};
 use anyhow::Result;
 
