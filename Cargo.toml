@@ -18,7 +18,6 @@ members = [
     "crates/bleep-wallet-core",
     "crates/bleep-governance",
     "crates/bleep-p2p",
-    "crates/bleep-state",
     "crates/bleep-telemetry",
     "crates/bleep-ai",
     "crates/bleep-pat",
