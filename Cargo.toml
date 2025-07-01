@@ -32,7 +32,6 @@ bleep_consensus = { path = "crates/bleep-consensus" }
 bleep_wallet_core = { path = "crates/bleep-wallet-core" }
 bleep_governance = { path = "crates/bleep-governance" }
 bleep_p2p = { path = "crates/bleep-p2p" }
-bleep_state = { path = "crates/bleep-state" }
 bleep_telemetry = { path = "crates/bleep-telemetry" }
 bleep_ai = { path = "crates/bleep-ai" }
 bleep_pat = { path = "crates/bleep-pat" }
