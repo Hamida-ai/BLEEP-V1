@@ -26,17 +26,18 @@ members = [
 ]
 
 [dependencies]
-bleep_core = { path = "crates/bleep-core" }
-bleep_crypto = { path = "crates/bleep-crypto" }
-bleep_block = { path = "crates/bleep-block" }
-bleep_consensus = { path = "crates/bleep-consensus" }
-bleep_wallet_core = { path = "crates/bleep-wallet-core" }
-bleep_governance = { path = "crates/bleep-governance" }
-bleep_p2p = { path = "crates/bleep-p2p" }
-bleep_telemetry = { path = "crates/bleep-telemetry" }
-bleep_ai = { path = "crates/bleep-ai" }
-bleep_pat = { path = "crates/bleep-pat" }
-bleep_interop = { path = "crates/bleep-interop" }
+bleep-core = { path = "crates/bleep-core" }
+bleep-state = { path = "crates/bleep-state" }
+bleep-crypto = { path = "crates/bleep-crypto" }
+bleep-block = { path = "crates/bleep-block" }
+bleep-consensus = { path = "crates/bleep-consensus" }
+bleep-wallet_core = { path = "crates/bleep-wallet-core" }
+bleep-governance = { path = "crates/bleep-governance" }
+bleep-p2p = { path = "crates/bleep-p2p" }
+bleep-telemetry = { path = "crates/bleep-telemetry" }
+bleep-ai = { path = "crates/bleep-ai" }
+bleep-pat = { path = "crates/bleep-pat" }
+bleep-interop = { path = "crates/bleep-interop" }
 
 # External crates
 # (All valid and well-structured as provided)
