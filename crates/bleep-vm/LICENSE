@@ -1,0 +1,34 @@
+Business Source License 1.1
+
+Licensor: Muhammad Attahir
+
+Licensed Work: The BLEEP Virtual Machine (BLEEP-VM) and all source code files within the /vm directory of the BLEEP repository.
+
+The Licensed Work is provided under the terms of this Business Source License (the “License”). The Licensed Work may only be used in accordance with the terms below.
+
+Change Date: July 13, 2028
+
+Change License: Apache License, Version 2.0
+
+Terms
+
+1. Grant of Rights. Subject to the conditions below, you may copy, modify, and use the Licensed Work, but you may not use it in production or for commercial purposes until the Change Date.
+
+2. Limitations on Production Use. Use of the Licensed Work in a production environment, or for any commercial purpose (including as part of a commercial offering), is not permitted until the Change Date.
+
+3. Redistribution. You may redistribute the Licensed Work only if:
+   (a) You retain this License and all license notices in all copies;
+   (b) You do not alter or remove any proprietary or author attribution notices;
+   (c) You do not use the Licensed Work in violation of Section 2.
+
+4. Modification. You may modify the Licensed Work for internal research or evaluation, but such modified versions are subject to this License and may not be used in production until the Change Date.
+
+5. Change Date. On the Change Date, the License will automatically convert to the Change License. After that date, the Licensed Work will be licensed under the Change License.
+
+6. Disclaimer. The Licensed Work is provided “AS IS,” without warranty of any kind. Licensor disclaims all warranties, express or implied, including but not limited to warranties of merchantability, fitness for a particular purpose, and non-infringement.
+
+7. Limitation of Liability. In no event will Licensor be liable for any damages, including direct, indirect, special, incidental, or consequential damages, arising out of the use or inability to use the Licensed Work.
+
+For more information, visit: https://mariadb.com/bsl11/
+
+SPDX-License-Identifier: BSL-1.1
