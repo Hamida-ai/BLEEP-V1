@@ -12,7 +12,7 @@ use bleep-telemetry::metrics::init_telemetry;
 use bleep-pat::asset_token::launch_asset_token_logic;
 use bleep-interop::interoperability::start_interop_services;
 use bleep-interop::bleep_connect::start_bleep_connect;
-use bleep-vm::bleep_engine::start_bleep_vm_engine;
+use bleep-vm::vm_core::start_vm_core;
 
 use std::error::Error;
 use log::{info, error};
