@@ -122,6 +122,6 @@ BLEEP is released under the **Apache License 2.0** (core) and **MIT** (optional 
 - GitHub: [BleepEcosystem/BLEEP-V1](https://github.com/BleepEcosystem/BLEEP-V1)  
 - X (Twitter): [@BleepEcosystem](https://twitter.com/BleepEcosystem)  
 - Telegram: [t.me/BleepEcosystem](https://t.me/BleepEcosystem)  
-- Email: info@bleepecosystem.com
+- Email: support@bleepecosystem.com
 
 Let’s build the future together — intelligent, secure, and decentralized. 
