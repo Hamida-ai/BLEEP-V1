@@ -22,7 +22,7 @@ members = [
     "crates/bleep-telemetry",
     "crates/bleep-ai",
     "crates/bleep-pat",
-    "crates/bleep-interop"
+    "crates/bleep-interop", 
     "crates/bleep-vm"
 ]
 
