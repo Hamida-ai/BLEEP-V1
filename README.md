@@ -15,7 +15,10 @@ BLEEP is a next-generation, self-amending blockchain platform designed to overco
 - [Programmable Asset Token (PAT)](#programmable-asset-token-pat)
 - [Faucet & Wallet](#faucet--wallet)
 - [Development Roadmap](#development-roadmap)
+- [Testnet Status](#testnet-status)
+- [Support BLEEP](#support-bleep)
 - [Contributing](#contributing)
+- [Community](#community)
 - [License](#license)
 
 ---
@@ -56,8 +59,8 @@ BLEEP is designed as a modular, scalable, and intelligent blockchain platform. I
 ### Building the Node
 
 ```bash
-git clone https://github.com/your-org/BLEEP.git
-cd BLEEP
+git clone https://github.com/BleepEcosystem/BLEEP-V1.git
+cd BLEEP-V1
 cargo build --release
 ```
 
@@ -127,6 +130,29 @@ BLEEP includes a combined wallet + faucet system with:
 
 ---
 
+## 🔧 Testnet Status
+
+BLEEP is currently in internal testnet mode with multiple validator nodes under simulation.  
+A public testnet (with explorer, faucet, and developer tools) will launch in **Q3 2025**.
+
+---
+
+## 💖 Support BLEEP
+
+BLEEP is self-funded and fully open-source. Your support accelerates core development, ecosystem growth, and infrastructure audits.
+
+### Donate Crypto
+
+| Asset | Address | Link |
+|-------|---------|------|
+| **ETH / USDT (ERC-20)** | `0x4c3ceb507f7b2f976b31caed45ceeefab5ee5bd2` | [View on Etherscan](https://etherscan.io/address/0x4c3ceb507f7b2f976b31caed45ceeefab5ee5bd2) |
+| **BTC** | `16mMB2di5BMCjGTEzf49mPvF5QSkxz2NVX` | [View on Blockchain.com](https://www.blockchain.com/btc/address/16mMB2di5BMCjGTEzf49mPvF5QSkxz2NVX) |
+| **TRC-20 USDT** | `TDmE78aQnLHdaVNRnXFKykXpLfb6j4UgDj` | [View on Tronscan](https://tronscan.org/#/address/TDmE78aQnLHdaVNRnXFKykXpLfb6j4UgDj) |
+
+➡️ We’ll soon be accepting donations via our [Gitcoin Grant](https://gitcoin.co/) page. Stay tuned!
+
+---
+
 ## Contributing
 
 We welcome developers, researchers, and testers.
@@ -136,6 +162,18 @@ We welcome developers, researchers, and testers.
 3. Commit changes: `git commit -am 'Add feature'`
 4. Push and create a PR
 
+Please follow our [Code of Conduct](./.github/CODE_OF_CONDUCT.md).
+
+---
+
+## 🌐 Community
+
+- **Website**: [https://bleepecosystem.com](https://bleepecosystem.com)
+- **GitHub**: [https://github.com/BleepEcosystem](https://github.com/BleepEcosystem)
+- **X (Twitter)**: [@bleepecosystem](https://x.com/bleepecosystem)
+- **Telegram**: [Join Chat](https://t.me/bleepecosystem)
+- **Discord**: Coming Soon
+
 ---
 
 ## License
@@ -143,8 +181,8 @@ We welcome developers, researchers, and testers.
 This repository is licensed under the Apache License 2.0. See the [LICENSE](./LICENSE) file for details.
 
 Some subcomponents are under different licenses:
-- Smart contracts (`/smart-contracts`) – GNU GPLv3
-- SDKs (`/sdk`) – MIT License
-- Virtual Machine (`/vm`) – Business Source License 1.1
+
+- Smart contracts (`/smart-contracts`) – GNU GPLv3  
+- SDKs (`/sdk`) – MIT License  
+- Virtual Machine (`/vm`) – Business Source License 1.1  
 - Documentation (`/docs`) – Creative Commons Attribution 4.0 (CC-BY-4.0)
----
