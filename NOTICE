@@ -2,16 +2,23 @@
 
 This repository is currently public **for evaluation purposes only**.
 
-The BLEEP project is an **early-stage, high-concept blockchain ecosystem** being developed by a **solo founder**. It is made temporarily public to allow **grant providers, potential collaborators, and reviewers** to explore its vision and codebase.
+The BLEEP project is an **early-stage, high-concept blockchain ecosystem** being developed by a **solo founder**. It is temporarily public to allow **grant providers, potential collaborators, and reviewers** to assess its technical and visionary merit.
 
 ---
 
-### ⚠️ Important:
+### ⚠️ Important
 
 - This codebase is under **active development**.
-- Certain modules may be **incomplete**, **experimental**, or **under heavy revision**.
-- Please **do not clone, fork, or replicate** without explicit permission.
-- No part of this codebase may be used for commercial or derivative work **without written consent** from the author.
+- Modules may be **incomplete**, **unstable**, or **subject to rapid change**.
+- Do **not clone, fork, or reuse** the contents for derivative or commercial projects **without prior written consent** from the author.
+
+---
+
+### 🔏 License Clarification
+
+While this project is licensed under the **Apache License, Version 2.0**, additional restrictions apply **during the evaluation phase**:
+
+> ⚠️ **Note**: Apache 2.0 permits commercial and derivative use. However, until the project reaches a formal release milestone, such uses are **explicitly restricted**. Please **contact the author** to request permission for any use beyond personal inspection, feedback, or grant evaluation.
 
 ---
 
@@ -31,12 +38,11 @@ For full licensing terms, see the [`LICENSE`](./LICENSE) file.
 ### 📬 Contact
 
 For legitimate interest in:
-- Collaboration  
-- Support or funding  
 - Technical feedback  
-- Partnership discussions  
+- Partnerships or funding  
+- Collaboration proposals  
 
-Please contact [@Bleepecosystem on X](https://x.com/Bleepecosystem) or open a GitHub issue marked `discussion`.
+Reach out via [@Bleepecosystem on X](https://x.com/Bleepecosystem) or open a GitHub issue tagged `discussion`.
 
 ---
 
