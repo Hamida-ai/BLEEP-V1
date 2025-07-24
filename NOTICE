@@ -1,10 +1,43 @@
-BLEEP Blockchain Ecosystem
+# NOTICE
 
-Copyright © 2025 Muhammad Attahir
+This repository is currently public **for evaluation purposes only**.
 
-Licensed under the Apache License, Version 2.0.
+The BLEEP project is an **early-stage, high-concept blockchain ecosystem** being developed by a **solo founder**. It is made temporarily public to allow **grant providers, potential collaborators, and reviewers** to explore its vision and codebase.
 
-This product includes software developed by Muhammad Attahir and contributors.
-BLEEP is a self-amending, AI-native, quantum-secure blockchain.
+---
 
-For licensing terms, see the LICENSE file.
+### ⚠️ Important:
+
+- This codebase is under **active development**.
+- Certain modules may be **incomplete**, **experimental**, or **under heavy revision**.
+- Please **do not clone, fork, or replicate** without explicit permission.
+- No part of this codebase may be used for commercial or derivative work **without written consent** from the author.
+
+---
+
+### ℹ️ Legal Notice
+
+**BLEEP Blockchain Ecosystem**  
+Copyright © 2025 **Muhammad Attahir**
+
+Licensed under the **Apache License, Version 2.0**.  
+This product includes software developed by Muhammad Attahir and contributors.  
+**BLEEP** is a self-amending, AI-native, quantum-secure blockchain.
+
+For full licensing terms, see the [`LICENSE`](./LICENSE) file.
+
+---
+
+### 📬 Contact
+
+For legitimate interest in:
+- Collaboration  
+- Support or funding  
+- Technical feedback  
+- Partnership discussions  
+
+Please contact [@Bleepecosystem on X](https://x.com/Bleepecosystem) or open a GitHub issue marked `discussion`.
+
+---
+
+© 2025 BLEEP Ecosystem. All rights reserved.
