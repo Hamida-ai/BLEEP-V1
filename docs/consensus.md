@@ -42,7 +42,7 @@ To select the most appropriate consensus method.
 
 ## Visual Architecture
 
-![BLEEP Consensus Architecture](bleep_consensus_architecture.png)
+![BLEEP Consensus Architecture](doc/asset/bleep_consensus_architecture.png)
 
 ## AI Logic Flow
 
