@@ -149,8 +149,6 @@ BLEEP is self-funded and fully open-source. Your support accelerates core develo
 | **BTC** | `16mMB2di5BMCjGTEzf49mPvF5QSkxz2NVX` | [View on Blockchain.com](https://www.blockchain.com/btc/address/16mMB2di5BMCjGTEzf49mPvF5QSkxz2NVX) |
 | **TRC-20 USDT** | `TDmE78aQnLHdaVNRnXFKykXpLfb6j4UgDj` | [View on Tronscan](https://tronscan.org/#/address/TDmE78aQnLHdaVNRnXFKykXpLfb6j4UgDj) |
 
-➡️ We’ll soon be accepting donations via our [Gitcoin Grant](https://gitcoin.co/) page. Stay tuned!
-
 ---
 
 ## Contributing
