@@ -170,7 +170,7 @@ Please follow our [Code of Conduct](./.github/CODE_OF_CONDUCT.md).
 - **GitHub**: [https://github.com/BleepEcosystem](https://github.com/BleepEcosystem)
 - **X (Twitter)**: [@bleepecosystem](https://x.com/bleepecosystem)
 - **Telegram**: [Join Chat](https://t.me/bleepecosystem)
-- **Discord**: Coming Soon
+- **Discord**: https://discord.gg/KSrHuYFcpD
 
 ---
 
