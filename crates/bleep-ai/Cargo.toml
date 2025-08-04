@@ -1,5 +1,5 @@
 [package]
-name = "bleep"
+name = "bleep-ai"
 version = "0.1.0"
 edition = "2021"
 authors = ["Muhammad Attahir"]
@@ -28,26 +28,33 @@ pqcrypto-kyber = "0.7"         # Kyber512 post-quantum
 pqcrypto-sphincsplus = "0.7"   # SPHINCS+ post-quantum
 
 # --- AI Inference & ONNX ---
-onnxruntime = { version = "0.0.23", features = ["download"] }
+onnxruntime-ng = "1.16.1"
 
 # --- Smart Contract & Blockchain Integration ---
-ethers = { version = "2.0", features = ["abigen", "contract", "providers", "signers"] }
+ethers = { version = "2.0", features = ["abigen"] }
 web3 = "0.19"
-bellman = "0.14"               # zk-SNARKs
+ark-ff = "0.4.0"
+ark-ec = "0.4.0"
+ark-bls12-381 = "0.4.0"
+ark-groth16 = "0.4.0"
+ark-crypto-primitives = "0.4.0"
+ark-r1cs-std = "0.4.0"
+ark-relations = "0.4.0"
+ark-serialize = "0.4.0"
+ark-std = "0.4.0"
+ark-snark = "0.4.0"
 rand_core = "0.6"
 
 # --- REST API Server (Smart Contract Automation) ---
 actix-web = "4.5"
 actix-rt = "2.9"
 
-# --- Wallet / Mnemonic Import ---
-bip39 = "2.0"
-hdwallet = "0.4"
-
+linfa = "0.7.1"
+linfa-clustering = "0.7.1"
+linfa-nn = "0.7.2"
+ndarray = "0.15.6"
 # --- Optional: Async Test Utilities ---
 [dev-dependencies]
 tokio = { version = "1.37", features = ["full"] }
-[workspace]
-members = [
-    "crates/bleep-ai",
-]
+
+
