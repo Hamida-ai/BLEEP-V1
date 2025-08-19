@@ -133,7 +133,7 @@ BLEEP includes a combined wallet + faucet system with:
 ## 🔧 Testnet Status
 
 BLEEP is currently in internal testnet mode with multiple validator nodes under simulation.  
-A public testnet (with explorer, faucet, and developer tools) will launch in **Q3 2025**.
+A public testnet (with explorer, faucet, and developer tools) will launch in **Q4 2025**.
 
 ---
 
