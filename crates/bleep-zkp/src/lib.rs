@@ -1,7 +1,8 @@
 //! BLEEP Zero-Knowledge Proofs (ZKP) module
 
 use ark_ff::Field;
-use ark_groth16::{Groth16, Proof, ProvingKey, VerifyingKey, create_random_proof, verify_proof};
+use ark_groth16::{Groth16, Proof, ProvingKey, VerifyingKey, PreparedVerifyingKey, create_random_proof, verify_proof};
+use ark_snark::CircuitSpecificSetupSNARK;
 use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystemRef, SynthesisError};
 use ark_bls12_381::{Bls12_381, Fr};
 use rand::thread_rng;
@@ -28,16 +29,17 @@ impl<F: Field> ConstraintSynthesizer<F> for ExampleCircuit<F> {
 }
 
 /// Generate a Groth16 proof for the example circuit
-default pub fn generate_example_proof(a: Fr, b: Fr) -> (Proof<Bls12_381>, VerifyingKey<Bls12_381>, Fr) {
+pub fn generate_example_proof(a: Fr, b: Fr) -> (Proof<Bls12_381>, VerifyingKey<Bls12_381>, Fr) {
     let circuit = ExampleCircuit { a: Some(a), b: Some(b) };
     let mut rng = thread_rng();
-    let (pk, vk) = Groth16::<Bls12_381>::setup(circuit.clone(), &mut rng).unwrap();
+    let (pk, vk) = <Groth16<Bls12_381> as CircuitSpecificSetupSNARK<_>>::setup(circuit.clone(), &mut rng).unwrap();
     let public_input = a * b;
     let proof = create_random_proof(circuit, &pk, &mut rng).unwrap();
     (proof, vk, public_input)
 }
 
 /// Verify a Groth16 proof for the example circuit
-default pub fn verify_example_proof(proof: &Proof<Bls12_381>, vk: &VerifyingKey<Bls12_381>, public_input: Fr) -> bool {
-    verify_proof(vk, proof, &[public_input]).unwrap_or(false)
+pub fn verify_example_proof(proof: &Proof<Bls12_381>, vk: &VerifyingKey<Bls12_381>, public_input: Fr) -> bool {
+    let pvk = PreparedVerifyingKey::from(vk.clone());
+    verify_proof(&pvk, proof, &[public_input]).unwrap_or(false)
 }
