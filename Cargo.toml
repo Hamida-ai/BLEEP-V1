@@ -142,7 +142,7 @@ members = [
     "crates/bleep-telemetry",
     "crates/bleep-vm",
     "crates/bleep-wallet-core"
-]bleep-core = { path = "crates/bleep-core" }
+bleep-core = { path = "crates/bleep-core" }
 bleep-consensus = { path = "crates/bleep-consensus" }
 
 [dev-dependencies]
