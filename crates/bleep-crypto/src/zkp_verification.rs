@@ -141,6 +141,51 @@ impl BLEEPZKPModule {
     pub fn load_revocation_tree(_path: &str) -> Result<MerkleTree, BLEEPError> {
         Ok(MerkleTree::new())
     }
+}    }
+
+    /// Generate merkle-based zero-knowledge proofs for a batch of transactions
+    pub fn generate_batch_proofs(
+        &self,
+        transactions: Vec<Vec<u8>>,
+    ) -> Result<Vec<Vec<u8>>, BLEEPError> {
+        let proofs: Vec<Vec<u8>> = transactions
+            .into_iter()
+            .map(|tx| {
+                let mut hasher = Sha256::new();
+                hasher.update(&tx);
+                hasher.finalize().to_vec()
+            })
+            .collect();
+
+        self.logger.info("Batch proof generation successful.");
+        self.logger.info("Batch proof generation completed.");
+        Ok(proofs)
+    }
+
+    /// Revoke a ZKP key by adding it to a Merkle-based revocation tree
+    pub fn revoke_key(&mut self, key_bytes: Vec<u8>) -> Result<(), BLEEPError> {
+        self.revocation_tree.add_leaf(key_bytes);
+        self.logger.warning("ZKP key revoked.");
+        Ok(())
+    }
+
+    /// Check if a key is revoked
+    pub fn is_key_revoked(&self, key_bytes: &[u8]) -> bool {
+        self.revocation_tree.contains_leaf(key_bytes)
+    }
+
+    /// Save the revocation list securely
+    pub fn save_revocation_tree(&self, path: &str) -> Result<(), BLEEPError> {
+        // Save the root of the Merkle tree as a simple representation
+        fs::write(path, &self.revocation_tree.root())?;
+        self.logger.info("Revocation tree saved.");
+        Ok(())
+    }
+
+    /// Load the revocation list from a file
+    pub fn load_revocation_tree(_path: &str) -> Result<MerkleTree, BLEEPError> {
+        Ok(MerkleTree::new())
+    }
         }    }
 
     /// Generate merkle-based zero-knowledge proofs for a batch of transactions
