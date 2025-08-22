@@ -1,11 +1,11 @@
 use noise::{NoiseBuilder, HandshakeState};
 use quinn::{Endpoint, ServerConfig, TransportConfig, Connecting, Connection};
 use tokio::{sync::mpsc, time::Duration};
-use quantum_crypto::{Kyber, SphincsPlus, Falcon};
-use ai_security::AnomalyDetector;
-use onion_routing::OnionEncryptor;
-use gossip_protocol::GossipManager;
-use peer_manager::PeerManager;
+use crate::quantum_crypto::{Kyber, SphincsPlus, Falcon};
+use crate::ai_security::AnomalyDetector;
+use crate::onion_routing::OnionEncryptor;
+use crate::gossip_protocol::GossipManager;
+use crate::peer_manager::PeerManager;
 use std::{net::SocketAddr, sync::{Arc, Mutex}};
 
 /// Enum representing different message types in the BLEEP network
@@ -29,7 +29,7 @@ pub struct SecureMessage {
 }
 
 /// MessageProtocol for managing secure, private, AI-enhanced P2P messaging
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug)]
 pub struct MessageProtocol {
     endpoint: Endpoint,
     noise: HandshakeState,
@@ -40,6 +40,10 @@ pub struct MessageProtocol {
 }
 
 impl MessageProtocol {
+    /// Stub for compatibility with modules expecting send_message with String address
+    pub async fn send_message(&self, _peer_addr: String, _message: SecureMessage) {
+        // Stub: do nothing
+    }
     /// Initializes the secure messaging protocol with QUIC + Noise + AI
     pub fn new(local_addr: SocketAddr, peer_manager: Arc<Mutex<PeerManager>>, gossip_manager: Arc<GossipManager>) -> Self {
         let mut transport_config = TransportConfig::default();

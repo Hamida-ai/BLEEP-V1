@@ -70,7 +70,7 @@ impl P2PNode {
         }
     }
 
-    pub fn handle_message(&self, message: P2PMessage, peer_addr: SocketAddr) {
+    pub fn handle_message(&self, message: P2PMessage, _peer_addr: SocketAddr) {
         if self.gossip_protocol.is_known(&message.validate().unwrap_or_default()) {
             return;
         }
@@ -78,7 +78,7 @@ impl P2PNode {
         match message {
             P2PMessage::NewBlock(block) => {
                 let mut blockchain = self.blockchain.lock().unwrap();
-                if blockchain.add_block(block).is_ok() {
+                if blockchain.add_block(block.clone()).is_ok() {
                     self.gossip_protocol.gossip_message(self, P2PMessage::NewBlock(block));
                 }
             }

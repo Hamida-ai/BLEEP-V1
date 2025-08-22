@@ -1,11 +1,10 @@
-use std::collections::HashSet;
 use std::sync::{Arc, Mutex};
 use rand::seq::SliceRandom;
 use tokio::sync::mpsc;
-use crate::p2p::message_protocol::{MessageProtocol, SecureMessage};
-use crate::p2p::peer_manager::PeerManager;
-use crate::crypto::quantum_encryption::{Kyber, SphincsPlus};
-use ai_security::PeerScoring;
+use crate::message_protocol::{MessageProtocol, SecureMessage};
+use crate::peer_manager::{PeerManager, Peer};
+use crate::quantum_crypto::{Kyber, SphincsPlus};
+use crate::ai_security::PeerScoring;
 
 const MAX_HOPS: usize = 5;
 
@@ -29,9 +28,10 @@ impl MultiHopRouting {
 
     /// Selects AI-ranked relay nodes for multi-hop transmission
     fn select_relay_nodes(&self, sender_id: &str) -> Vec<String> {
-        let peers: HashSet<String> = self.peer_manager.get_peers();
+        let peers: Vec<Peer> = self.peer_manager.get_peers();
         let mut peer_list: Vec<String> = peers
             .into_iter()
+            .map(|p| p.id)
             .filter(|p| p != sender_id)
             .collect();
 

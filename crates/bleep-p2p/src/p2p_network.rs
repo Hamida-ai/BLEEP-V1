@@ -1,7 +1,7 @@
 use crate::gossip_protocol::GossipProtocol;
 use crate::message_protocol::P2PMessage;
 use crate::peer_manager::PeerManager;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::net::{SocketAddr, TcpListener, TcpStream};
 use std::sync::{Arc, Mutex};
 use std::thread;
