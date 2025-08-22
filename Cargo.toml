@@ -186,6 +186,50 @@ members = [
     "crates/bleep-telemetry",
     "crates/bleep-vm",
     "crates/bleep-wallet-core"
+]bleep-core = { path = "crates/bleep-core" }
+bleep-consensus = { path = "crates/bleep-consensus" }
+num-bigint = "0.4.6"
+near-sdk = "5.16.0"
+
+[dev-dependencies]
+tokio-test = "0.4.3"
+criterion = { version = "0.5.1", features = ["html_reports"] }
+proptest = "1.4.0"
+quickcheck = "1.0.3"
+mockall = "0.12.1"
+test-log = "0.2.14"
+fake = "2.9.2"
+
+[[bin]]
+name = "bleep_admin"
+path = "src/bin/bleep_admin.rs"
+
+[[bin]]
+name = "bleep"
+path = "src/bin/main.rs"
+
+[features]
+default = ["mainnet", "quantum"]
+mainnet = []
+testnet = []
+simulator = []
+quantum = ["pqcrypto", "pqcrypto-kyber"]
+
+[workspace]
+members = [
+    "crates/bleep-crypto",
+    "crates/bleep-core",
+    "crates/bleep-consensus",
+    "crates/bleep-cli",
+    "crates/bleep-governance", 
+    "crates/bleep-interop",
+    "crates/bleep-p2p",
+    "crates/bleep-pat",
+    "crates/bleep-rpc", 
+    "crates/bleep-state",
+    "crates/bleep-telemetry",
+    "crates/bleep-vm",
+    "crates/bleep-wallet-core"
 bleep-core = { path = "crates/bleep-core" }
 bleep-consensus = { path = "crates/bleep-consensus" }
 
