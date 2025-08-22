@@ -7,6 +7,10 @@ mod analytics;
 mod compliance;
 mod sharding;
 mod energy_monitor;
+pub mod ai_decision;
+pub mod zkp_verification;
+pub mod bleep_connect;
+pub mod consensus;
 // Existing module declarations
 pub mod ai_assistant;
 
