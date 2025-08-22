@@ -39,7 +39,7 @@ parking_lot = "0.12.1"
 chrono = { version = "0.4.34", features = ["serde"] }
 linfa = "0.7.1"
 linfa-clustering = "0.7.1"
-pqcrypto = { version = "0.15", optional = true }
+pqcrypto = { version = "0.18.1", optional = true }
 pqcrypto-kyber = { version = "0.8.0", optional = true }
 linfa-nn = "0.7.2"
 ndarray = "0.15.6"
@@ -52,6 +52,5 @@ bleep-state = { path = "../bleep-state" }
 tokio-test = "0.4.3"
 test-log = "0.2.14"
 proptest = "1.4.0"
-
 
 
