@@ -35,4 +35,3 @@ path = "src/bin/cli.rs"
 name = "rpc"
 path = "src/bin/rpc.rs"
 
-
