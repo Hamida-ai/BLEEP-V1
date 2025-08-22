@@ -174,8 +174,8 @@ async fn main() {
     let _blockchain = BlockchainState::new();
     let _consensus = AdaptiveConsensus::new();
     info!("Blockchain initialized with genesis block.");
-    }        }
-    }
+    }  
+}
 
     pub fn calculate_hash(transactions: &[Transaction], previous_hash: &str, timestamp: u64) -> String {
         let mut hasher = Sha3_256::new();
