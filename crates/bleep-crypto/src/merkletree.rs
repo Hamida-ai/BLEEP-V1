@@ -47,4 +47,4 @@ impl MerkleTree {
         }
         hashes[0].clone()
     }
-}
+        }
