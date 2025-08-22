@@ -1,32 +1,44 @@
-use bleep_core::block::Block;
-use bleep_core::networking::NetworkingModule as CoreNetworkingModule;
+[package]
+name = "bleep-consensus"
+version = "0.1.0"
+edition = "2021"
+authors = ["Muhammad Attahir <bleepecosystem@gmail.com>"]
+description = "Adaptive, AI-powered, quantum-secure consensus engine for BLEEP blockchain"
+license = "MIT OR Apache-2.0"
 
-pub struct NetworkingModule {
-    pub inner: CoreNetworkingModule,
-}
+[dependencies]
+# Logging & Utilities
+log = "0.4"
+env_logger = "0.11"
+hex = "0.4"
+serde = { version = "1.0", features = ["derive"] }
 
-impl NetworkingModule {
-    pub fn new() -> Self {
-        NetworkingModule {
-            inner: CoreNetworkingModule::new(),
-        }
-    }
+# Cryptography
+ring = "0.17.14"
+pqcrypto-sphincsplus = "0.7.1"
+pqcrypto-traits = "0.3.5"
+bincode = "1.3.3"
+tokio = { version = "1.36", features = ["full"] }
 
-    pub fn get_network_hashrate(&self) -> u64 {
-        // TODO: Implement actual network hashrate calculation
-        1000000 // Default value for now
-    }
+# AI & ML
+tch = "0.13"                            # Torch-based inference
+linfa = "0.7.1"                         # AI prediction logic
+linfa-nn = "0.7.2"                      # k-Nearest Neighbors
+ndarray = "0.15.1"                      # For tensor & array ops
 
-    pub fn broadcast_proposal(&self, block: &Block, _leader_id: &str) -> bool {
-        // Forward to broadcast_block for now
-        self.inner.broadcast_block(block)
-    }
+# Networking & State (referenced modules)
+bleep-core = { path = "../bleep-core" }
+bleep-crypto = { path = "../bleep-crypto" }
+bleep-p2p = { path = "../bleep-p2p" }
+bleep-ai = { path = "../bleep-ai" }
+bleep-state = { path = "../bleep-state" }
 
-    pub fn broadcast_block(&self, block: &Block) -> bool {
-        self.inner.broadcast_block(block)
-    }
+# Randomness
+rand = "0.8.5"
 
-    pub fn receive_block(&self, block: Block) -> bool {
-        self.inner.receive_block(block)
-    }
-}
+# Error Handling
+thiserror = "1.0.39"
+anyhow = "1.0.80"
+linfa-clustering = "0.7.1"
+async-trait = "0.1.77"
+futures = "0.3.30"
