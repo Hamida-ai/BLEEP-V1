@@ -75,4 +75,4 @@ impl QuantumSecure {
         };
         sphincssha2128fsimple::verify_detached_signature(&detached_sig, message, &self.public_key).is_ok()
     }
-}
+                                           }
