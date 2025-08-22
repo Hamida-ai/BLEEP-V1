@@ -209,4 +209,118 @@ impl SelfAmendingGovernance {
         hasher.update(description);
         hasher.finalize().to_vec()
     }
+    }        info!("User registered: {}", username);
+        Ok(user_id)
+    }
+
+    /// Submit a proposal
+    pub async fn submit_proposal(&self, proposer: User, title: &str, description: &str) -> Result<u64, SelfAmendingError> {
+        let proposal_id = self.proposals.len() as u64 + 1;
+
+        let category = self.categorize_proposal(description).await?;
+        let audit_hash = Self::generate_audit_hash(description);
+
+        self.proposals.insert(proposal_id, Proposal {
+            id: proposal_id,
+            title: title.to_string(),
+            description: description.to_string(),
+            proposer,
+            votes_for: 0,
+            votes_against: 0,
+            executed: false,
+            audit_hash,
+            category: Some(category),
+        });
+
+        info!("Proposal submitted: {}", title);
+        Ok(proposal_id)
+    }
+
+    /// Categorize proposals using an AI model
+    async fn categorize_proposal(&self, description: &str) -> Result<String, SelfAmendingError> {
+        let input_tensor = Tensor::of_slice(description.as_bytes())
+            .unsqueeze(0)
+            .to_kind(tch::Kind::Float);
+
+        let output = self.ml_model.forward_ts(&[input_tensor])
+            .map_err(|_| SelfAmendingError::ProposalCategorizationError)?;
+
+        let category_index = output.argmax(1, false).int64_value(&[0]);
+        let categories = vec!["Governance", "Development", "Update", "Miscellaneous"];
+
+        categories.get(category_index as usize)
+            .cloned()
+            .ok_or(SelfAmendingError::ProposalCategorizationError)
+    }
+
+    /// Vote on a proposal using ZKP for privacy
+    pub async fn vote(
+        &self,
+        proposal_id: u64,
+        voter: User,
+        votes: u64,
+        support: bool,
+    ) -> Result<(), SelfAmendingError> {
+        let weight = (votes as f64).sqrt() as u64; 
+
+        let circuit = TransactionCircuit {
+            sender_balance: votes.into(),
+            amount: if support { votes.into() } else { 0.into() },
+            receiver_balance: (votes * 2).into(),
+        };
+        self.zkp_module.generate_proof(circuit)?;
+
+        if let Some(mut proposal) = self.proposals.get_mut(&proposal_id) {
+            if support {
+                proposal.votes_for += weight;
+            } else {
+                proposal.votes_against += weight;
+            }
+            info!("Vote recorded for proposal {} by {}", proposal_id, voter.username);
+            Ok(())
+        } else {
+            error!("Proposal not found: {}", proposal_id);
+            Err(SelfAmendingError::InvalidProposalError)
+        }
+    }
+
+    /// Execute a proposal if conditions are met
+    pub async fn execute_proposal(&self, proposal_id: u64) -> Result<(), SelfAmendingError> {
+        if let Some(mut proposal) = self.proposals.get_mut(&proposal_id) {
+            if proposal.votes_for > proposal.votes_against && !proposal.executed {
+                proposal.executed = true;
+                let execution_log = format!(
+                    "Executed proposal: {} (For: {}, Against: {})",
+                    proposal.title, proposal.votes_for, proposal.votes_against
+                );
+                self.log_to_blockchain(&execution_log).await?;
+                info!("Proposal executed: {}", proposal.title);
+                Ok(())
+            } else {
+                warn!("Execution conditions not met for proposal {}", proposal_id);
+                Err(SelfAmendingError::ExecutionError)
+            }
+        } else {
+            error!("Proposal not found: {}", proposal_id);
+            Err(SelfAmendingError::InvalidProposalError)
+        }
+    }
+
+    /// Log proposal execution to the blockchain
+    async fn log_to_blockchain(&self, log: &str) -> Result<(), SelfAmendingError> {
+        let encrypted_log = self.quantum_secure.encrypt(log.as_bytes())?;
+        self.interoperability
+            .adapt("ethereum", &encrypted_log)
+            .await
+            .map_err(|_| SelfAmendingError::BlockchainIntegrationError)?;
+        info!("Execution log recorded on the blockchain.");
+        Ok(())
+    }
+
+    /// Generate an audit hash for proposals
+    fn generate_audit_hash(description: &str) -> Vec<u8> {
+        let mut hasher = Sha256::new();
+        hasher.update(description);
+        hasher.finalize().to_vec()
+    }
 }
