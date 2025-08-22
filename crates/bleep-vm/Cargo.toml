@@ -28,9 +28,9 @@ ed25519-dalek = { version = "1", features = ["std"] }
 dashmap = "5.5.3"
 
 # Blockchain & smart contracts
-frame-support = "16.0.0"
-frame-system = "16.0.0"
-sp-runtime = "16.0.0"
+frame-support = "32.0.0"
+frame-system = "32.0.0"
+sp-runtime = "32.0.0"
 ink = { version = "4.2.1", default-features = false, features = ["std"] }
 
 # Consensus and networking
@@ -79,9 +79,11 @@ chrono = { version = "0.4", features = ["serde"] }
 # Errors
 thiserror = "1.0"
 
+# Finite Fields
+ark-ff = "0.4.0"
+
 [features]
 default = ["std"]
 std = ["ink/std", "frame-support/std", "frame-system/std", "sp-runtime/std"]
-
 
 
