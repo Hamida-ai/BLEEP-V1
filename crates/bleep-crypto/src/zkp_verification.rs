@@ -141,7 +141,7 @@ impl BLEEPZKPModule {
     pub fn load_revocation_tree(_path: &str) -> Result<MerkleTree, BLEEPError> {
         Ok(MerkleTree::new())
     }
-}    }
+}    
 
     /// Generate merkle-based zero-knowledge proofs for a batch of transactions
     pub fn generate_batch_proofs(
