@@ -83,14 +83,18 @@ impl BLEEPShardingModule {
     /// Assigns a transaction to a shard based on AI predictions
     pub fn assign_transaction(&mut self, transaction: Transaction) -> Result<(), BLEEPError> {
         let shard_id = self.predict_least_loaded_shard()?;
-
-        let mut shard = self.shards.get(&shard_id).ok_or(BLEEPError::InvalidShard)?.lock().unwrap();
-        shard.transactions.push_back(transaction);
-        shard.load += 1;
-        
+        {
+            let mut shard = self.shards.get(&shard_id).ok_or(BLEEPError::InvalidShard)?.lock().unwrap();
+            shard.transactions.push_back(transaction);
+            shard.load += 1;
+        }
         self.persist_shard_state(shard_id);
-
-        if shard.load > self.load_threshold {
+        // Only borrow mutably after previous borrow is dropped
+        let need_rebalance = {
+            let shard = self.shards.get(&shard_id).ok_or(BLEEPError::InvalidShard)?.lock().unwrap();
+            shard.load > self.load_threshold
+        };
+        if need_rebalance {
             self.monitor_and_auto_rebalance();
         }
         Ok(())
@@ -114,13 +118,21 @@ impl BLEEPShardingModule {
         }
 
         let avg_load = self.calculate_avg_load();
-        for (&source_id, shard_mutex) in &self.shards {
-            let mut source_shard = shard_mutex.lock().unwrap();
-            if source_shard.load > avg_load {
-                let target_id = self.select_target_shard();
-                if source_id != target_id && self.validate_rebalance_with_consensus(source_id, target_id) {
-                    self.rebalance_shards(source_id, target_id);
+        // Collect source_ids to rebalance first to avoid borrow checker issues
+        let to_rebalance: Vec<u64> = self.shards.iter()
+            .filter_map(|(&source_id, shard_mutex)| {
+                let source_shard = shard_mutex.lock().unwrap();
+                if source_shard.load > avg_load {
+                    Some(source_id)
+                } else {
+                    None
                 }
+            })
+            .collect();
+        for source_id in to_rebalance {
+            let target_id = self.select_target_shard();
+            if source_id != target_id && self.validate_rebalance_with_consensus(source_id, target_id) {
+                self.rebalance_shards(source_id, target_id);
             }
         }
 

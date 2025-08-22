@@ -23,7 +23,8 @@ impl MerkleTree {
             return MerkleTree { root: String::new(), leaves: vec![] };
         }
 
-        let mut hashes: Vec<String> = data
+        let data_refs: Vec<&T> = data.iter().collect();
+        let mut hashes: Vec<String> = data_refs
             .par_iter() // Parallel computation for speedup
             .map(|item| {
                 let mut hasher = Hasher::new();
@@ -57,7 +58,11 @@ impl MerkleTree {
 
     /// **Verifies a Merkle Proof using SPHINCS+ (Quantum-Secure)**
     pub fn verify_merkle_proof(&self, proof: &[String], target_hash: &String) -> bool {
-        verify_merkle_proof(&self.root, proof, target_hash)
+        // Convert root, proof, and target_hash to Vec<u8>
+        let root_bytes = self.root.as_bytes();
+        let proof_bytes: Vec<u8> = proof.join("").as_bytes().to_vec();
+        let target_bytes = target_hash.as_bytes();
+        verify_merkle_proof(root_bytes, &proof_bytes, target_bytes)
     }
 
     /// **Retrieves the root hash of the Merkle Tree**

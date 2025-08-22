@@ -49,7 +49,7 @@ impl ShardManager {
 
     /// Adds a transaction to the appropriate shard
     pub fn add_transaction(&self, transaction: Transaction) -> Result<(), BLEEPError> {
-        let mut sharding_module = self.sharding_module.lock().unwrap();
+    let mut sharding_module = self.sharding_module.lock().unwrap();
         info!(
             "[ShardManager] Adding transaction ID {} from {} to {} with amount {}",
             transaction.id, transaction.from, transaction.to, transaction.amount
@@ -109,7 +109,7 @@ impl ShardManager {
 
     /// Checks node health, removing inactive peers
     pub fn check_node_health(&self) {
-        let mut p2p_node = self.sharding_module.lock().unwrap().p2p_node.clone();
+    let p2p_node = self.sharding_module.lock().unwrap().p2p_node.clone();
     let peers = p2p_node.peers().clone();
         
         for peer in peers.iter() {
