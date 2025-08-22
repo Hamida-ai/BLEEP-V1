@@ -124,4 +124,32 @@ async fn main() {
 
     info!("🚀 BLEEP RPC server running at http://127.0.0.1:8080");
     warp::serve(routes).run(([127, 0, 0, 1], 8080)).await;
+}            } else {
+                Err(warp::reject::not_found())
+            }
+        });
+
+    let telemetry_report = warp::path!("telemetry" / "report")
+        .and(warp::get())
+        .and_then(|| async move {
+            match telemetry::report_metrics() {
+                Ok(_) => Ok(warp::reply::json(&"Telemetry reported")),
+                Err(e) => {
+                    error!("Telemetry failed: {}", e);
+                    Err(warp::reject::custom(e))
+                }
+            }
+        });
+
+    let routes = health
+        .or(latest_block)
+        .or(send_tx)
+        .or(ai_ask)
+        .or(zkp_verify)
+        .or(pat_predict)
+        .or(telemetry_report)
+        .with(warp::log("bleep_rpc"));
+
+    info!("🚀 BLEEP RPC server running at http://127.0.0.1:8080");
+    warp::serve(routes).run(([127, 0, 0, 1], 8080)).await;
 }
