@@ -198,4 +198,106 @@ async fn main() -> Result<()> {
 
     Ok(())
 }
+    Ask { prompt: String },
+    Learn { dataset: String },
+}
+
+#[derive(Subcommand)]
+enum GovernanceCommand {
+    Propose { proposal: String },
+    Vote { proposal_id: u32, yes: bool },
+}
+
+#[derive(Subcommand)]
+enum StateCommand {
+    Snapshot,
+    Restore { snapshot_path: String },
+}
+
+#[derive(Subcommand)]
+enum PatCommand {
+    Predict { input: String },
+    Autonomy,
+}
+
+#[derive(Subcommand)]
+enum BlockCommand {
+    /// Get latest block
+    Latest,
+
+    /// Get block by hash or height
+    Get { identifier: String },
+
+    /// Validate block
+    Validate { hash: String },
+}
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    tracing_subscriber::fmt::init();
+    let cli = Cli::parse();
+
+    match cli.command {
+        Commands::StartNode => {
+            info!("Starting node...");
+            consensus::start_node().await?;
+        }
+        Commands::Wallet { action } => match action {
+            WalletCommand::Create => wallet_core::create_wallet()?,
+            WalletCommand::Balance => wallet_core::get_balance()?,
+            WalletCommand::Import { phrase } => wallet_core::import_wallet(&phrase)?,
+            WalletCommand::Export => wallet_core::export_wallet()?,
+        },
+        Commands::Tx { action } => match action {
+            TxCommand::Send { to, amount } => wallet_core::send_transaction(&to, amount)?,
+            TxCommand::History => wallet_core::transaction_history()?,
+        },
+        Commands::Ai { task } => match task {
+            AiCommand::Ask { prompt } => ai_assistant::run_prompt(&prompt).await?,
+            AiCommand::Learn { dataset } => machine_learning::train_on_dataset(&dataset).await?,
+        },
+        Commands::Governance { task } => match task {
+            GovernanceCommand::Propose { proposal } => governance_engine::submit_proposal(&proposal)?,
+            GovernanceCommand::Vote { proposal_id, yes } => governance_engine::vote(proposal_id, yes)?,
+        },
+        Commands::Zkp { proof } => {
+            if zkp_verification::verify_proof(&proof)? {
+                println!("ZKP valid");
+            } else {
+                println!("ZKP invalid");
+            }
+        }
+        Commands::State { task } => match task {
+            StateCommand::Snapshot => state_manager::create_snapshot()?,
+            StateCommand::Restore { snapshot_path } => state_manager::restore_snapshot(&snapshot_path)?,
+        },
+        Commands::Telemetry => {
+            telemetry::report_metrics()?;
+        }
+        Commands::Pat { task } => match task {
+            PatCommand::Predict { input } => pat_engine::predict(&input)?,
+            PatCommand::Autonomy => pat_engine::enable_autonomy()?,
+        },
+        Commands::Info => {
+            let info = p2p_network::get_node_info()?;
+            println!("{}", info);
+        }
+        Commands::Block { task } => match task {
+            BlockCommand::Latest => {
+                let block = blockchain::latest_block()?;
+                println!("{:?}", block);
+            }
+            BlockCommand::Get { identifier } => {
+                let block = blockchain::get_block(&identifier)?;
+                println!("{:?}", block);
+            }
+            BlockCommand::Validate { hash } => {
+                let is_valid = blockchain::validate_block(&hash)?;
+                println!("Block valid: {}", is_valid);
+            }
+        }
+    }
+
+    Ok(())
+}
 
