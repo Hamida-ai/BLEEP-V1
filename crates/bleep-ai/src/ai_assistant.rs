@@ -1,9 +1,8 @@
 // BLEEP AI Assistant - Fully Integrated with BLEEP Ecosystem
 // Self-Learning, Quantum-Secure, Governance-Driven AI Assistant
 
-use std::sync::{Arc, Mutex};
-use log::{info, warn, error};
-use tokio::sync::mpsc;
+use std::sync::Arc;
+use log::info;
 use serde::{Serialize, Deserialize};
 use crate::wallet::BLEEPWallet;
 use crate::governance::BLEEPGovernance;

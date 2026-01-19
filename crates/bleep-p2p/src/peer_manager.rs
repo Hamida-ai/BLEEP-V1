@@ -5,25 +5,6 @@ use crate::peer_manager::gossip_protocol::GossipNode;
 use crate::peer_manager::multi_hop::MultiHopRouter;
 use crate::peer_manager::zero_knowledge::ZKProof;
 use crate::peer_manager::mesh_network::MeshNode;
-    /// Stub for get_peer_address to fix missing method error
-    pub fn get_peer_address(&self, _peer_id: &str) -> Option<String> {
-        // Return a dummy address
-        Some("127.0.0.1:12345".to_string())
-    }
-use crate::peer_manager::ai_trust_scoring::AIDetector;
-use crate::peer_manager::quantum_crypto::ProofOfIdentity;
-use crate::peer_manager::onion_routing::EncryptedRoute;
-use crate::peer_manager::gossip_protocol::GossipNode;
-use crate::peer_manager::multi_hop::MultiHopRouter;
-use crate::peer_manager::zero_knowledge::ZKProof;
-use crate::peer_manager::mesh_network::MeshNode;
-use crate::peer_manager::ai_trust_scoring::AIDetector;
-use crate::peer_manager::quantum_crypto::ProofOfIdentity;
-use crate::peer_manager::onion_routing::EncryptedRoute;
-use crate::peer_manager::gossip_protocol::GossipNode;
-use crate::peer_manager::multi_hop::MultiHopRouter;
-use crate::peer_manager::zero_knowledge::ZKProof;
-use crate::peer_manager::mesh_network::MeshNode;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use crate::kademlia_dht::Kademlia;
@@ -209,6 +190,22 @@ impl PeerManager {
     pub fn get_peers(&self) -> Vec<Peer> {
         let peers = self.peers.lock().unwrap();
         peers.values().cloned().collect()
+    }
+
+    /// Update last seen timestamp for a peer
+    pub fn update_last_seen(&mut self, peer_id: &str) {
+        let mut peers = self.peers.lock().unwrap();
+        if let Some(peer) = peers.get_mut(peer_id) {
+            peer.last_seen = Self::current_time();
+        }
+    }
+
+    /// Flag a peer as suspicious
+    pub fn flag_suspicious_peer(&mut self, peer_id: &str) {
+        let mut peers = self.peers.lock().unwrap();
+        if let Some(peer) = peers.get_mut(peer_id) {
+            peer.status = PeerStatus::Suspicious;
+        }
     }
 
     /// Fetches the current system time in UNIX timestamp format

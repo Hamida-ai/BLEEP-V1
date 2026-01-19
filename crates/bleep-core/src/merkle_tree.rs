@@ -16,24 +16,31 @@ pub struct ProofOfIdentity {
 }
 
 impl ProofOfIdentity {
-    pub fn new(users: Vec<Vec<u8>>) -> Self {
+    /// Create a new identity proof system
+    /// Returns error if merkle tree construction fails
+    pub fn new(users: Vec<Vec<u8>>) -> Result<Self, String> {
         let rng = &mut ark_std::test_rng();
-        let merkle_tree = MerkleTree::new(users.clone(), rng).unwrap();
+        let merkle_tree = MerkleTree::new(users.clone(), rng)
+            .map_err(|e| format!("Merkle tree construction failed: {:?}", e))?;
 
-        Self { merkle_tree }
+        Ok(Self { merkle_tree })
     }
 
-    pub fn generate_proof(&self, user_hash: Vec<u8>) -> IdentityProof {
+    /// Generate a proof for a user
+    /// Returns error if path generation or proof construction fails
+    pub fn generate_proof(&self, user_hash: Vec<u8>) -> Result<IdentityProof, String> {
         let rng = &mut ark_std::test_rng();
 
-        let merkle_path = self.merkle_tree.generate_path(user_hash.clone()).unwrap();
-        let proof = create_random_proof(&self.merkle_tree, rng).unwrap();
+        let merkle_path = self.merkle_tree.generate_path(user_hash.clone())
+            .map_err(|e| format!("Merkle path generation failed: {:?}", e))?;
+        let proof = create_random_proof(&self.merkle_tree, rng)
+            .map_err(|e| format!("Proof creation failed: {:?}", e))?;
 
-        IdentityProof {
+        Ok(IdentityProof {
             merkle_path,
             leaf_hash: user_hash,
             proof: proof.to_bytes(),
-        }
+        })
     }
 
     pub fn verify_proof(&self, proof: &IdentityProof) -> bool {

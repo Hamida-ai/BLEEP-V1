@@ -9,37 +9,59 @@ pub struct GossipProtocol;
 pub struct MultiHopRouting;
 pub struct DarkRouting;
 
+/// Error type for P2P operations not yet implemented
+#[derive(Debug)]
+pub struct P2PNotImplementedError;
+
+impl std::fmt::Display for P2PNotImplementedError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "P2P networking not yet integrated (Phase 0: Crypto only)")
+    }
+}
+
+impl std::error::Error for P2PNotImplementedError {}
+
 impl PeerManager {
-    pub async fn add_transaction_to_pool(&self, _tx: ZKTransaction) {
-        // TODO: Implement once bleep_p2p is available
+    /// Add transaction to pool
+    /// Currently unimplemented - P2P integration pending
+    pub async fn add_transaction_to_pool(&self, _tx: ZKTransaction) -> Result<(), P2PNotImplementedError> {
+        Err(P2PNotImplementedError)
     }
 }
 
 impl GossipProtocol {
-    pub async fn broadcast_message(&self, _message: P2PMessage) {
-        // TODO: Implement once bleep_p2p is available
+    /// Broadcast message to network
+    /// Currently unimplemented - P2P integration pending
+    pub async fn broadcast_message(&self, _message: P2PMessage) -> Result<(), P2PNotImplementedError> {
+        Err(P2PNotImplementedError)
     }
 }
 
 impl MultiHopRouting {
-    pub async fn select_route(&self, _sender: &str, _receiver: &str) -> Vec<String> {
-        // TODO: Implement once bleep_p2p is available
-        vec![]
+    /// Select a route for message
+    /// Currently unimplemented - P2P integration pending
+    pub async fn select_route(&self, _sender: &str, _receiver: &str) -> Result<Vec<String>, P2PNotImplementedError> {
+        Err(P2PNotImplementedError)
     }
 
-    pub async fn forward_message(&self, _route: Vec<String>, _message: P2PMessage) {
-        // TODO: Implement once bleep_p2p is available
+    /// Forward message along route
+    /// Currently unimplemented - P2P integration pending
+    pub async fn forward_message(&self, _route: Vec<String>, _message: P2PMessage) -> Result<(), P2PNotImplementedError> {
+        Err(P2PNotImplementedError)
     }
 }
 
 impl DarkRouting {
-    pub async fn select_anonymous_route(&self, _sender: &str) -> Vec<String> {
-        // TODO: Implement once bleep_p2p is available
-        vec![]
+    /// Select anonymous route
+    /// Currently unimplemented - P2P integration pending
+    pub async fn select_anonymous_route(&self, _sender: &str) -> Result<Vec<String>, P2PNotImplementedError> {
+        Err(P2PNotImplementedError)
     }
 
-    pub async fn forward_anonymous(&self, _route: Vec<String>, _message: P2PMessage) {
-        // TODO: Implement once bleep_p2p is available
+    /// Forward message anonymously
+    /// Currently unimplemented - P2P integration pending
+    pub async fn forward_anonymous(&self, _route: Vec<String>, _message: P2PMessage) -> Result<(), P2PNotImplementedError> {
+        Err(P2PNotImplementedError)
     }
 }
 

@@ -1,10 +1,9 @@
 use std::time::{Duration, Instant};
 use tokio::sync::mpsc;
 use tokio::time::sleep;
-use super::kademlia_dht::{Kademlia, NodeId};
+use super::kademlia_dht::{NodeId};
 use super::ai_security::{PeerScoring, SybilDetector};
-use super::quantum_crypto::{Kyber, SphincsPlus};
-use super::message_protocol::{MessageProtocol, SecureMessage};
+use super::message_protocol::{MessageProtocol, SecureMessage, MessageType};
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
 
@@ -38,7 +37,7 @@ impl GossipProtocol {
     /// Adds a new peer to the gossip network
     pub fn add_peer(&self, peer_id: NodeId) {
         let mut peers = self.peers.lock().unwrap();
-        if !self.sybil_detector.is_suspicious(&peer_id) {
+        if !self.sybil_detector.is_suspicious(peer_id.as_str()) {
             peers.insert(peer_id);
         }
     }
@@ -67,13 +66,14 @@ impl GossipProtocol {
     /// Securely gossips a message to high-scoring peers
     pub async fn gossip_message(&self, message: SecureMessage) {
         let peers = self.peers.lock().unwrap().clone();
-        // Stub: just print
         for peer_id in peers {
             let encrypted_payload = self.encrypt_message(&message);
             let _secure_message = SecureMessage {
                 sender_id: message.sender_id.clone(),
+                message_type: MessageType::Custom("gossip".to_string()),
                 payload: encrypted_payload,
                 signature: message.signature.clone(),
+                hop_count: 1,
             };
             println!("Stub gossip to peer: {:?}", peer_id);
         }

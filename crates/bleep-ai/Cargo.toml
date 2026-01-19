@@ -20,6 +20,7 @@ futures = "0.3"
 rayon = "1.8"
 dashmap = "5.5"
 rand = "0.8"
+hex = "0.4"
 
 # --- Cryptography / Hashing ---
 sha2 = "0.10"

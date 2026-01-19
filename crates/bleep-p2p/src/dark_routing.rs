@@ -1,8 +1,6 @@
 use super::ai_security::PeerScoring;
 use super::peer_manager::PeerManager;
 use super::message_protocol::{MessageProtocol, SecureMessage};
-use super::quantum_crypto::{Kyber, SphincsPlus};
-use super::kademlia_dht::{Kademlia, NodeId};
 use std::sync::{Arc, Mutex};
 use rand::seq::SliceRandom;
 
@@ -19,9 +17,11 @@ pub struct DarkRouting {
 impl DarkRouting {
     /// Initializes Dark Routing with AI-driven peer selection
     pub fn new(peer_manager: Arc<PeerManager>, message_protocol: MessageProtocol) -> Self {
+        use std::sync::{Arc, Mutex};
         Self {
             peer_manager,
             message_protocol,
+            ai_security: Arc::new(Mutex::new(PeerScoring::new())),
         }
     }
 
@@ -40,7 +40,7 @@ impl DarkRouting {
     }
 
     /// Encrypts message in multiple layers (Onion Routing + Quantum Security)
-    fn onion_encrypt(&self, mut message: SecureMessage, route: &[String]) -> Vec<SecureMessage> {
+    fn onion_encrypt(&self, message: SecureMessage, route: &[String]) -> Vec<SecureMessage> {
         let mut encrypted_layers = Vec::new();
         for _node in route.iter().rev() {
             // Stub: just clone message, using quantum_crypto for encryption
@@ -50,7 +50,7 @@ impl DarkRouting {
     }
 
     /// Handles message forwarding with dark routing
-    pub async fn send_anonymous_message(&self, mut message: SecureMessage) {
+    pub async fn send_anonymous_message(&self, message: SecureMessage) {
         let route = self.select_anonymous_route(&message.sender_id);
         let encrypted_layers = self.onion_encrypt(message.clone(), &route);
 
