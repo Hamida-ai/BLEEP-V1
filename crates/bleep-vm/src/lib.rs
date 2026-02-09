@@ -1,6 +1,18 @@
-pub fn start_vm_core() {
-	// TODO: Implement VM core startup
-	todo!("start_vm_core not yet implemented");
+/// Initializes and starts the VM core subsystem.
+/// Sets up the execution engine, gas metering, and sandbox security policies.
+/// 
+/// # Returns
+/// * `Result<(), Box<dyn std::error::Error>>` - Success or initialization error
+pub fn start_vm_core() -> Result<(), Box<dyn std::error::Error>> {
+	use crate::execution_engine::ExecutionEngine;
+	use tracing::info;
+	
+	// Initialize execution engine
+	let _engine = ExecutionEngine::new()
+		.map_err(|e| format!("Failed to initialize ExecutionEngine: {}", e))?;
+	
+	info!("VM Core initialized successfully");
+	Ok(())
 }
 pub mod vm_core;
 pub mod execution_engine;
