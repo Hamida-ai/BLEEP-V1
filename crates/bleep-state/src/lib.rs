@@ -24,6 +24,10 @@ pub mod shard_isolation;
 pub mod shard_rollback;
 pub mod shard_validator_slashing;
 pub mod shard_healing;
+pub mod snapshot_engine;
+pub mod rollback_engine;
+pub mod advanced_fault_detector;
+pub mod self_healing_orchestrator;
 
 // PHASE 4: SHARD SELF-HEALING & ROLLBACK
 pub mod phase4_recovery_orchestrator;
@@ -39,10 +43,12 @@ mod phase2_integration_tests;
 #[cfg(test)]
 mod phase2_safety_invariants;
 #[cfg(test)]
+mod phase2_full_integration_tests;
+#[cfg(test)]
 mod phase4_integration_tests;
 
-pub fn start_state_services() {
-    // TODO: Implement state services startup
-    todo!("start_state_services not yet implemented");
-}
+pub use snapshot_engine::SnapshotEngine;
+pub use rollback_engine::RollbackEngine;
+pub use advanced_fault_detector::AdvancedFaultDetector;
+pub use self_healing_orchestrator::SelfHealingOrchestrator;
 

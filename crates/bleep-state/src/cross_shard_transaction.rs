@@ -376,7 +376,7 @@ impl PrepareVote {
 /// State lock identifier
 /// 
 /// SAFETY: Proves specific state keys are locked for a transaction
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, Hash)]
 pub struct StateLockId(pub u64);
 
 impl StateLockId {

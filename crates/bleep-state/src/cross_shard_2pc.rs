@@ -98,12 +98,14 @@ impl TwoPhaseCommitCoordinator {
         }
         
         // Record the vote
-        self.lifecycle.record_prepare_vote(vote.shard_id, vote);
+        let shard_id = vote.shard_id;
+        let can_commit = vote.can_commit;
+        self.lifecycle.record_prepare_vote(shard_id, vote);
         
         info!(
             "Received prepare vote from shard {:?}: can_commit={}",
-            vote.shard_id,
-            vote.can_commit
+            shard_id,
+            can_commit
         );
         
         // Check if we can make a decision
@@ -343,6 +345,11 @@ impl CoordinatorManager {
     /// Get count of active coordinators
     pub fn active_count(&self) -> usize {
         self.coordinators.len()
+    }
+    
+    /// Get iterator over all coordinators
+    pub fn iter_coordinators(&self) -> impl Iterator<Item = (&TransactionId, &TwoPhaseCommitCoordinator)> {
+        self.coordinators.iter()
     }
 }
 

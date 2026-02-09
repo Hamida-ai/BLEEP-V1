@@ -19,6 +19,8 @@ pub enum BLEEPError {
     QuantumSecurityError(String),
     DatabaseError(String),
     PredictionError(String),
+    MutexPoisoned,
+    BroadcastFailed,
 }
 
 /// Load threshold dynamically adjusts with AI predictions

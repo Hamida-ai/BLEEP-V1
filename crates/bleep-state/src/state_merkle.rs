@@ -1,5 +1,4 @@
 use blake3::Hasher; // Replaces SHA-256 for efficiency
-use rayon::prelude::*; // Enables parallel processing
 use serde::{Deserialize, Serialize};
 use crate::crypto::sphincs::verify_merkle_proof; // SPHINCS+ for quantum-secure verification
 
@@ -23,10 +22,9 @@ impl MerkleTree {
             return MerkleTree { root: String::new(), leaves: vec![] };
         }
 
-        let data_refs: Vec<&T> = data.iter().collect();
-        let mut hashes: Vec<String> = data_refs
-            .par_iter() // Parallel computation for speedup
-            .map(|item| {
+        let mut hashes: Vec<String> = data
+            .iter()
+            .map(|item: &T| {
                 let mut hasher = Hasher::new();
                 hasher.update(item.as_ref());
                 hex::encode(hasher.finalize().as_bytes())
@@ -35,7 +33,7 @@ impl MerkleTree {
 
         while hashes.len() > 1 {
             hashes = hashes
-                .par_chunks(2)
+                .chunks(2)
                 .map(|chunk| {
                     let left = &chunk[0];
                     let right = if chunk.len() > 1 { &chunk[1] } else { left };

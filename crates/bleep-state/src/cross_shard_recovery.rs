@@ -99,7 +99,7 @@ impl EpochBoundaryHandler {
         let mut to_abort = Vec::new();
         
         // Get all active coordinators
-        for coordinator in coordinator_manager.coordinators.values() {
+        for (_tx_id, coordinator) in coordinator_manager.iter_coordinators() {
             if coordinator.transaction.timeout_epoch < current_epoch {
                 // Transaction exceeded its timeout epoch
                 to_abort.push(coordinator.transaction.id);
@@ -217,10 +217,11 @@ impl RecoveryOrchestrator {
         &mut self,
         recovery: TransactionRecovery,
     ) {
-        self.recoveries.insert(recovery.transaction_id, recovery);
+        let tx_id = recovery.transaction_id;
+        self.recoveries.insert(tx_id, recovery);
         info!(
             "Registered recovery for transaction {}",
-            recovery.transaction_id.as_hex()
+            tx_id.as_hex()
         );
     }
     

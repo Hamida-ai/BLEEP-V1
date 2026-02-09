@@ -49,7 +49,8 @@ impl ShardManager {
 
     /// Adds a transaction to the appropriate shard
     pub fn add_transaction(&self, transaction: Transaction) -> Result<(), BLEEPError> {
-    let mut sharding_module = self.sharding_module.lock().unwrap();
+    let mut sharding_module = self.sharding_module.lock()
+        .map_err(|_| BLEEPError::MutexPoisoned)?;
         info!(
             "[ShardManager] Adding transaction ID {} from {} to {} with amount {}",
             transaction.id, transaction.from, transaction.to, transaction.amount
@@ -66,10 +67,12 @@ impl ShardManager {
 
     /// Manually assigns a transaction to a specific shard
     pub fn assign_transaction_to_shard(&self, transaction: Transaction, shard_id: u64) -> Result<(), BLEEPError> {
-        let mut sharding_module = self.sharding_module.lock().unwrap();
+        let mut sharding_module = self.sharding_module.lock()
+            .map_err(|_| BLEEPError::MutexPoisoned)?;
         
         if let Some(shard) = sharding_module.shards.get(&shard_id) {
-            let mut shard_guard = shard.lock().unwrap();
+            let mut shard_guard = shard.lock()
+                .map_err(|_| BLEEPError::MutexPoisoned)?;
             shard_guard.transactions.push_back(transaction.clone());
             shard_guard.load += 1;
             info!("[ShardManager] Manually assigned transaction ID {} to Shard {}", transaction.id, shard_id);
@@ -82,41 +85,56 @@ impl ShardManager {
     }
 
     /// Triggers a manual rebalance across all shards
-    pub fn rebalance_shards(&self) {
-        let mut sharding_module = self.sharding_module.lock().unwrap();
+    pub fn rebalance_shards(&self) -> Result<(), BLEEPError> {
+        let mut sharding_module = self.sharding_module.lock()
+            .map_err(|_| BLEEPError::MutexPoisoned)?;
         info!("[ShardManager] Triggering manual rebalance across all shards...");
         sharding_module.monitor_and_auto_rebalance();
+        Ok(())
     }
 
     /// Broadcasts all shard states to the P2P network for consistency
-    pub fn broadcast_shard_states(&self) {
-        let sharding_module = self.sharding_module.lock().unwrap();
+    pub fn broadcast_shard_states(&self) -> Result<(), BLEEPError> {
+        let sharding_module = self.sharding_module.lock()
+            .map_err(|_| BLEEPError::MutexPoisoned)?;
         info!("[ShardManager] Broadcasting shard states to the P2P network...");
         match sharding_module.p2p_node.broadcast(P2PMessage::ShardState(sharding_module.get_shard_summary())) {
-            Ok(_) => info!("[ShardManager] Shard states broadcasted successfully."),
-            Err(err) => error!("[ShardManager] Failed to broadcast shard states: {:?}", err),
+            Ok(_) => {
+                info!("[ShardManager] Shard states broadcasted successfully.");
+                Ok(())
+            },
+            Err(err) => {
+                error!("[ShardManager] Failed to broadcast shard states: {:?}", err);
+                Err(BLEEPError::BroadcastFailed)
+            }
         }
     }
 
     /// Returns the current state of all shards
-    pub fn get_shard_states(&self) -> HashMap<u64, usize> {
-        let sharding_module = self.sharding_module.lock().unwrap();
-        sharding_module.shards.iter().map(|(&id, shard)| {
-            let shard_guard = shard.lock().unwrap();
-            (id, shard_guard.load)
-        }).collect()
+    pub fn get_shard_states(&self) -> Result<HashMap<u64, usize>, BLEEPError> {
+        let sharding_module = self.sharding_module.lock()
+            .map_err(|_| BLEEPError::MutexPoisoned)?;
+        let mut states = HashMap::new();
+        for (&id, shard) in sharding_module.shards.iter() {
+            let shard_guard = shard.lock()
+                .map_err(|_| BLEEPError::MutexPoisoned)?;
+            states.insert(id, shard_guard.load);
+        }
+        Ok(states)
     }
 
-    /// Checks node health, removing inactive peers
-    pub fn check_node_health(&self) {
-    let p2p_node = self.sharding_module.lock().unwrap().p2p_node.clone();
-    let peers = p2p_node.peers().clone();
+    /// Checks node health (logs inactive peers)
+    pub fn check_node_health(&self) -> Result<(), BLEEPError> {
+        let p2p_node = self.sharding_module.lock()
+            .map_err(|_| BLEEPError::MutexPoisoned)?
+            .p2p_node.clone();
+        let peers = p2p_node.peers().clone();
         
         for peer in peers.iter() {
             if !p2p_node.is_peer_active(peer) {
-                warn!("[ShardManager] Peer {:?} is unresponsive; removing from network.", peer);
-                p2p_node.remove_peer(peer);
+                warn!("[ShardManager] Peer {:?} is unresponsive.", peer);
             }
         }
+        Ok(())
     }
 }
