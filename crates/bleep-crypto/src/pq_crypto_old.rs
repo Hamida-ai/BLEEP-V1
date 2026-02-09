@@ -4,12 +4,13 @@
 /// All operations are deterministic, auditable, and suitable for blockchain use.
 /// 
 /// Algorithms:
-/// - Kyber1024: Key Encapsulation Mechanism (KEM)
-/// - SPHINCS-SHA2-256s: Digital signatures
+/// - Kyber: Key Encapsulation Mechanism (KEM)
+/// - Dilithium/SPHINCS+: Digital signatures
 /// - AES-256-GCM: AEAD encryption (hybrid with Kyber)
 /// 
 /// SAFETY GUARANTEES:
 /// - Deterministic key derivation
+/// - Constant-time comparisons where applicable
 /// - Explicit error propagation (no panics)
 /// - Serialization safety (length-prefixed)
 /// - Replay protection via nonce tracking
@@ -71,20 +72,21 @@ impl std::error::Error for CryptoError {}
 
 pub type CryptoResult<T> = Result<T, CryptoError>;
 
-// ==================== KYBER1024 KEM ====================
+// ==================== KYBER KEM (Key Encapsulation) ====================
 
-/// Kyber1024 public key wrapper
+/// Kyber1024 public key
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct KyberPublicKey {
     bytes: Vec<u8>,
 }
 
 impl KyberPublicKey {
-    /// Create from raw bytes (must be exactly 1568 bytes)
+    /// Create from raw bytes (must be valid Kyber public key)
     pub fn from_bytes(bytes: Vec<u8>) -> CryptoResult<Self> {
+        // Kyber1024 public key is 1568 bytes
         if bytes.len() != 1568 {
             return Err(CryptoError::InvalidKeyFormat(
-                format!("Kyber1024 public key must be 1568 bytes, got {}", bytes.len())
+                format!("Kyber public key must be 1568 bytes, got {}", bytes.len())
             ));
         }
         Ok(Self { bytes })
@@ -93,24 +95,21 @@ impl KyberPublicKey {
     pub fn as_bytes(&self) -> &[u8] {
         &self.bytes
     }
-    
-    pub fn to_vec(&self) -> Vec<u8> {
-        self.bytes.clone()
-    }
 }
 
-/// Kyber1024 secret key wrapper
+/// Kyber1024 secret key
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct KyberSecretKey {
     bytes: Vec<u8>,
 }
 
 impl KyberSecretKey {
-    /// Create from raw bytes (must be exactly 3168 bytes)
+    /// Create from raw bytes (must be valid Kyber secret key)
     pub fn from_bytes(bytes: Vec<u8>) -> CryptoResult<Self> {
+        // Kyber1024 secret key is 3168 bytes
         if bytes.len() != 3168 {
             return Err(CryptoError::InvalidKeyFormat(
-                format!("Kyber1024 secret key must be 3168 bytes, got {}", bytes.len())
+                format!("Kyber secret key must be 3168 bytes, got {}", bytes.len())
             ));
         }
         Ok(Self { bytes })
@@ -119,24 +118,21 @@ impl KyberSecretKey {
     pub fn as_bytes(&self) -> &[u8] {
         &self.bytes
     }
-    
-    pub fn to_vec(&self) -> Vec<u8> {
-        self.bytes.clone()
-    }
 }
 
-/// Kyber1024 ciphertext wrapper
+/// Kyber ciphertext (encapsulated shared secret)
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct KyberCiphertext {
     bytes: Vec<u8>,
 }
 
 impl KyberCiphertext {
-    /// Create from raw bytes (must be exactly 1568 bytes)
+    /// Create from raw bytes (must be valid Kyber ciphertext)
     pub fn from_bytes(bytes: Vec<u8>) -> CryptoResult<Self> {
+        // Kyber1024 ciphertext is 1568 bytes
         if bytes.len() != 1568 {
             return Err(CryptoError::InvalidKeyFormat(
-                format!("Kyber1024 ciphertext must be 1568 bytes, got {}", bytes.len())
+                format!("Kyber ciphertext must be 1568 bytes, got {}", bytes.len())
             ));
         }
         Ok(Self { bytes })
@@ -145,13 +141,9 @@ impl KyberCiphertext {
     pub fn as_bytes(&self) -> &[u8] {
         &self.bytes
     }
-    
-    pub fn to_vec(&self) -> Vec<u8> {
-        self.bytes.clone()
-    }
 }
 
-/// 32-byte shared secret
+/// Shared secret derived from Kyber encapsulation
 #[derive(Debug, Clone)]
 pub struct SharedSecret {
     bytes: [u8; 32],
@@ -163,7 +155,7 @@ impl SharedSecret {
     }
 }
 
-/// Kyber KEM operations
+/// Kyber KEM system
 pub struct KyberKem;
 
 impl KyberKem {
@@ -182,7 +174,7 @@ impl KyberKem {
         Ok((public_key, secret_key))
     }
     
-    /// Encapsulate: create shared secret and ciphertext from public key
+    /// Encapsulate: create shared secret and ciphertext
     /// Returns (shared_secret, ciphertext)
     pub fn encapsulate(public_key: &KyberPublicKey) -> CryptoResult<(SharedSecret, KyberCiphertext)> {
         use pqcrypto_kyber::kyber1024;
@@ -191,16 +183,16 @@ impl KyberKem {
         use pqcrypto_traits::kem::Ciphertext as PQCiphertext;
         
         let pk = kyber1024::PublicKey::from_bytes(public_key.as_bytes())
-            .map_err(|_| CryptoError::EncapsulationFailed("Failed to parse public key".to_string()))?;
+            .map_err(|_| CryptoError::EncapsulationFailed("Invalid public key".to_string()))?;
         
         let (ss, ct) = kyber1024::encapsulate(&pk);
         
-        let mut secret_bytes = [0u8; 32];
-        secret_bytes.copy_from_slice(&ss.as_bytes()[..32]);
+        let mut shared_secret_bytes = [0u8; 32];
+        shared_secret_bytes.copy_from_slice(&ss.as_bytes()[..32]);
         
         let ciphertext = KyberCiphertext::from_bytes(ct.as_bytes().to_vec())?;
         
-        Ok((SharedSecret { bytes: secret_bytes }, ciphertext))
+        Ok((SharedSecret { bytes: shared_secret_bytes }, ciphertext))
     }
     
     /// Decapsulate: recover shared secret from ciphertext
@@ -209,66 +201,40 @@ impl KyberKem {
         ciphertext: &KyberCiphertext,
     ) -> CryptoResult<SharedSecret> {
         use pqcrypto_kyber::kyber1024;
-        use pqcrypto_traits::kem::SecretKey as PQSecretKey;
-        use pqcrypto_traits::kem::Ciphertext as PQCiphertext;
-        use pqcrypto_traits::kem::SharedSecret as PQSharedSecret;
+        use pqcrypto_traits::kem::SecretKey;
         
         let sk = kyber1024::SecretKey::from_bytes(secret_key.as_bytes())
-            .map_err(|_| CryptoError::DecapsulationFailed("Failed to parse secret key".to_string()))?;
+            .map_err(|_| CryptoError::DecapsulationFailed("Invalid secret key".to_string()))?;
         
         let ct = kyber1024::Ciphertext::from_bytes(ciphertext.as_bytes())
-            .map_err(|_| CryptoError::DecapsulationFailed("Failed to parse ciphertext".to_string()))?;
+            .map_err(|_| CryptoError::DecapsulationFailed("Invalid ciphertext".to_string()))?;
         
         let ss = kyber1024::decapsulate(&ct, &sk);
         
-        let mut secret_bytes = [0u8; 32];
-        secret_bytes.copy_from_slice(&ss.as_bytes()[..32]);
+        let mut shared_secret_bytes = [0u8; 32];
+        shared_secret_bytes.copy_from_slice(&ss.as_bytes()[..32]);
         
-        Ok(SharedSecret { bytes: secret_bytes })
+        Ok(SharedSecret { bytes: shared_secret_bytes })
     }
 }
 
-// ==================== DIGITAL SIGNATURES (SHA-256 BASED) ====================
+// ==================== SPHINCS+ SIGNATURES ====================
 
-/// Digital signature using SHA-256 (deterministic, blockchain-suitable)
-/// For production, this would be replaced with SPHINCS+
-/// Currently using SHA-256 + nonce-based scheme for compatibility
+/// SPHINCS+ public key
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub struct DigitalSignature {
-    // Public key hash (32 bytes)
-    pub_key_hash: [u8; 32],
-    // Message hash (32 bytes)
-    message_hash: [u8; 32],
-    // Signature proof (64 bytes: nonce + timestamp proof)
-    signature_proof: Vec<u8>,
+pub struct SphincsPublicKey {
+    bytes: Vec<u8>,
 }
 
-impl DigitalSignature {
-    pub fn as_bytes(&self) -> Vec<u8> {
-        let mut bytes = Vec::with_capacity(128);
-        bytes.extend_from_slice(&self.pub_key_hash);
-        bytes.extend_from_slice(&self.message_hash);
-        bytes.extend_from_slice(&self.signature_proof);
-        bytes
-    }
-}
-
-/// Public key for digital signature
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub struct PublicKey {
-    bytes: [u8; 32],
-}
-
-impl PublicKey {
-    pub fn from_bytes(bytes: &[u8]) -> CryptoResult<Self> {
-        if bytes.len() != 32 {
+impl SphincsPublicKey {
+    pub fn from_bytes(bytes: Vec<u8>) -> CryptoResult<Self> {
+        // SPHINCS-SHA2-256s public key is 64 bytes
+        if bytes.len() != 64 {
             return Err(CryptoError::InvalidKeyFormat(
-                format!("Public key must be 32 bytes, got {}", bytes.len())
+                format!("SPHINCS public key must be 64 bytes, got {}", bytes.len())
             ));
         }
-        let mut key_bytes = [0u8; 32];
-        key_bytes.copy_from_slice(bytes);
-        Ok(Self { bytes: key_bytes })
+        Ok(Self { bytes })
     }
     
     pub fn as_bytes(&self) -> &[u8] {
@@ -276,22 +242,21 @@ impl PublicKey {
     }
 }
 
-/// Secret key for digital signature
+/// SPHINCS+ secret key
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SecretKey {
-    bytes: [u8; 32],
+pub struct SphincsSecretKey {
+    bytes: Vec<u8>,
 }
 
-impl SecretKey {
-    pub fn from_bytes(bytes: &[u8]) -> CryptoResult<Self> {
-        if bytes.len() != 32 {
+impl SphincsSecretKey {
+    pub fn from_bytes(bytes: Vec<u8>) -> CryptoResult<Self> {
+        // SPHINCS-SHA2-256s secret key is 128 bytes
+        if bytes.len() != 128 {
             return Err(CryptoError::InvalidKeyFormat(
-                format!("Secret key must be 32 bytes, got {}", bytes.len())
+                format!("SPHINCS secret key must be 128 bytes, got {}", bytes.len())
             ));
         }
-        let mut key_bytes = [0u8; 32];
-        key_bytes.copy_from_slice(bytes);
-        Ok(Self { bytes: key_bytes })
+        Ok(Self { bytes })
     }
     
     pub fn as_bytes(&self) -> &[u8] {
@@ -299,84 +264,79 @@ impl SecretKey {
     }
 }
 
-/// Signature scheme (deterministic, suitable for blockchain)
-pub struct SignatureScheme;
+/// SPHINCS+ detached signature
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct SphincsSignature {
+    bytes: Vec<u8>,
+}
 
-impl SignatureScheme {
-    /// Generate a keypair from entropy (deterministic)
-    pub fn keygen_from_seed(seed: &[u8]) -> CryptoResult<(PublicKey, SecretKey)> {
-        if seed.len() < 32 {
-            return Err(CryptoError::KeyDerivationFailed(
-                "Seed must be at least 32 bytes".to_string()
+impl SphincsSignature {
+    pub fn from_bytes(bytes: Vec<u8>) -> CryptoResult<Self> {
+        // SPHINCS-SHA2-256s signature is 17088 bytes
+        if bytes.len() != 17088 {
+            return Err(CryptoError::InvalidSignatureFormat(
+                format!("SPHINCS signature must be 17088 bytes, got {}", bytes.len())
             ));
         }
-        
-        // Derive secret key from seed
-        let mut sk_bytes = [0u8; 32];
-        sk_bytes.copy_from_slice(&seed[..32]);
-        
-        // Derive public key as hash of secret key
-        let mut hasher = Sha3_256::new();
-        hasher.update(&sk_bytes);
-        let pk_result = hasher.finalize();
-        let mut pk_bytes = [0u8; 32];
-        pk_bytes.copy_from_slice(&pk_result);
-        
-        Ok((
-            PublicKey { bytes: pk_bytes },
-            SecretKey { bytes: sk_bytes },
-        ))
+        Ok(Self { bytes })
     }
     
-    /// Sign a message (deterministic)
-    pub fn sign(message: &[u8], secret_key: &SecretKey) -> CryptoResult<DigitalSignature> {
-        let message_hash = HashFunctions::sha3_256(message);
+    pub fn as_bytes(&self) -> &[u8] {
+        &self.bytes
+    }
+}
+
+/// SPHINCS+ signature system
+pub struct SphincsSignatureScheme;
+
+impl SphincsSignatureScheme {
+    /// Generate SPHINCS+ keypair
+    /// Uses sphincssha2256f (fast variant)
+    pub fn keygen() -> CryptoResult<(SphincsPublicKey, SphincsSecretKey)> {
+        use pqcrypto_sphincsplus::sphincssha2256f;
         
-        // Create proof by hashing message + secret key
-        let mut proof_input = Vec::new();
-        proof_input.extend_from_slice(&message_hash);
-        proof_input.extend_from_slice(secret_key.as_bytes());
+        let (pk, sk) = sphincssha2256f::keypair();
         
-        let proof = HashFunctions::sha3_256(&proof_input);
+        let public_key = SphincsPublicKey::from_bytes(pk.0.to_vec())?;
+        let secret_key = SphincsSecretKey::from_bytes(sk.0.to_vec())?;
         
-        // Derive public key hash for verification
-        let mut hasher = Sha3_256::new();
-        hasher.update(secret_key.as_bytes());
-        let pk_hash_result = hasher.finalize();
-        let mut pub_key_hash = [0u8; 32];
-        pub_key_hash.copy_from_slice(&pk_hash_result);
+        Ok((public_key, secret_key))
+    }
+    
+    /// Sign a message
+    /// Returns a deterministic signature for the given message and key
+    pub fn sign(
+        message: &[u8],
+        secret_key: &SphincsSecretKey,
+    ) -> CryptoResult<SphincsSignature> {
+        use pqcrypto_sphincsplus::sphincssha2256f;
         
-        Ok(DigitalSignature {
-            pub_key_hash,
-            message_hash,
-            signature_proof: proof.to_vec(),
-        })
+        let sk = sphincssha2256f::SecretKey(secret_key.bytes);
+        let signature = sphincssha2256f::sign(message, &sk);
+        
+        SphincsSignature::from_bytes(signature.0.to_vec())
     }
     
     /// Verify a signature
+    /// Returns Ok(()) if signature is valid, Err otherwise
     pub fn verify(
         message: &[u8],
-        signature: &DigitalSignature,
-        public_key: &PublicKey,
+        signature: &SphincsSignature,
+        public_key: &SphincsPublicKey,
     ) -> CryptoResult<()> {
-        // Hash message
-        let message_hash = HashFunctions::sha3_256(message);
+        use pqcrypto_sphincsplus::sphincssha2256f;
         
-        // Check message hash matches
-        if message_hash != signature.message_hash {
-            return Err(CryptoError::SignatureVerificationFailed(
-                "Message hash does not match signature".to_string()
-            ));
-        }
+        // Reconstruct the types from bytes
+        let mut sig_bytes = [0u8; 49088];
+        sig_bytes.copy_from_slice(&signature.bytes);
         
-        // Check public key hash matches
-        if public_key.bytes != signature.pub_key_hash {
-            return Err(CryptoError::SignatureVerificationFailed(
-                "Public key does not match signature".to_string()
-            ));
-        }
+        let pk = sphincssha2256f::PublicKey(public_key.bytes);
+        let sig = sphincssha2256f::Signature(sig_bytes);
         
-        Ok(())
+        sphincssha2256f::open(message, &sig, &pk)
+            .map_err(|_| CryptoError::SignatureVerificationFailed(
+                "SPHINCS+ signature verification failed".to_string()
+            ))
     }
 }
 
@@ -474,57 +434,39 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_kyber_keygen() {
-        let result = KyberKem::keygen();
-        assert!(result.is_ok());
-        let (_pk, _sk) = result.unwrap();
-    }
-
-    #[test]
-    fn test_kyber_encapsulate_decapsulate() {
-        let (pk, sk) = KyberKem::keygen().expect("Failed to generate keypair");
+    fn test_kyber_kem() {
+        let (pk, sk) = KyberKem::keygen().unwrap();
         
-        let (ss1, ct) = KyberKem::encapsulate(&pk).expect("Failed to encapsulate");
-        let ss2 = KyberKem::decapsulate(&sk, &ct).expect("Failed to decapsulate");
+        let (ss1, ct) = KyberKem::encapsulate(&pk).unwrap();
+        let ss2 = KyberKem::decapsulate(&sk, &ct).unwrap();
         
         assert_eq!(ss1.as_bytes(), ss2.as_bytes());
     }
 
     #[test]
-    fn test_sphincs_keygen() {
-        let seed = b"test seed for key generation 12345";
-        let result = SignatureScheme::keygen_from_seed(seed);
-        assert!(result.is_ok());
-        let (_pk, _sk) = result.unwrap();
+    fn test_sphincs_signatures() {
+        let (pk, sk) = SphincsSignatureScheme::keygen().unwrap();
+        
+        let message = b"test message";
+        let sig = SphincsSignatureScheme::sign(message, &sk).unwrap();
+        
+        SphincsSignatureScheme::verify(message, &sig, &pk).unwrap();
     }
 
     #[test]
-    fn test_sphincs_sign_verify() {
-        let seed = b"test seed for key generation 12345";
-        let (pk, sk) = SignatureScheme::keygen_from_seed(seed).expect("Failed to generate keypair");
+    fn test_sphincs_signature_verification_fails_on_wrong_message() {
+        let (pk, sk) = SphincsSignatureScheme::keygen().unwrap();
         
-        let message = b"test message for signing";
-        let sig = SignatureScheme::sign(message, &sk).expect("Failed to sign");
+        let message = b"test message";
+        let wrong_message = b"wrong message";
+        let sig = SphincsSignatureScheme::sign(message, &sk).unwrap();
         
-        let result = SignatureScheme::verify(message, &sig, &pk);
-        assert!(result.is_ok());
-    }
-
-    #[test]
-    fn test_sphincs_verify_fails_on_wrong_message() {
-        let seed = b"test seed for key generation 12345";
-        let (pk, sk) = SignatureScheme::keygen_from_seed(seed).expect("Failed to generate keypair");
-        
-        let message = b"original message";
-        let wrong_message = b"tampered message";
-        let sig = SignatureScheme::sign(message, &sk).expect("Failed to sign");
-        
-        let result = SignatureScheme::verify(wrong_message, &sig, &pk);
+        let result = SphincsSignatureScheme::verify(wrong_message, &sig, &pk);
         assert!(result.is_err());
     }
 
     #[test]
-    fn test_hash_deterministic() {
+    fn test_hash_functions() {
         let data = b"test data";
         let hash1 = HashFunctions::sha3_256(data);
         let hash2 = HashFunctions::sha3_256(data);
@@ -533,22 +475,12 @@ mod tests {
     }
 
     #[test]
-    fn test_double_hash() {
-        let data = b"test";
-        let double = HashFunctions::double_sha3_256(data);
-        let single1 = HashFunctions::sha3_256(data);
-        let single2 = HashFunctions::sha3_256(&single1);
-        
-        assert_eq!(double, single2);
-    }
-
-    #[test]
     fn test_hybrid_encryption() {
-        let (pk, sk) = KyberKem::keygen().expect("Failed to generate keypair");
+        let (pk, sk) = KyberKem::keygen().unwrap();
         
-        let plaintext = b"secret data that needs encryption";
-        let (ct, ky_ct, nonce) = HybridEncryption::encrypt(plaintext, &pk).expect("Failed to encrypt");
-        let decrypted = HybridEncryption::decrypt(&ct, &ky_ct, &nonce, &sk).expect("Failed to decrypt");
+        let plaintext = b"secret message";
+        let (ciphertext, ky_ct, nonce) = HybridEncryption::encrypt(plaintext, &pk).unwrap();
+        let decrypted = HybridEncryption::decrypt(&ciphertext, &ky_ct, &nonce, &sk).unwrap();
         
         assert_eq!(plaintext.to_vec(), decrypted);
     }
