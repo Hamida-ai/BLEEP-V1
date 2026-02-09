@@ -28,4 +28,3 @@ ark-groth16 = "0.4.0"
 ark-ff = "0.4.0"
 ark-serialize = "0.4.0"
 
-
