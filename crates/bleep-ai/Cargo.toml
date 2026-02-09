@@ -7,6 +7,10 @@ description = "BLEEP Unified AI + Self-Healing Quantum-Secure Blockchain Engine"
 license = "MIT"
 
 [dependencies]
+# --- Internal Crate Dependencies ---
+bleep-core = { path = "../bleep-core" }
+bleep-crypto = { path = "../bleep-crypto" }
+
 # --- Core System Dependencies ---
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
@@ -24,9 +28,11 @@ hex = "0.4"
 
 # --- Cryptography / Hashing ---
 sha2 = "0.10"
+sha3 = "0.10"
 blake3 = "1.5"
 pqcrypto-kyber = "0.7"         # Kyber512 post-quantum
 pqcrypto-sphincsplus = "0.7"   # SPHINCS+ post-quantum
+bincode = "1.3"
 
 # --- AI Inference & ONNX ---
 onnxruntime-ng = "1.16.1"
