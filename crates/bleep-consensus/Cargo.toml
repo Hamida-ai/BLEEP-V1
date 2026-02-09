@@ -21,7 +21,6 @@ bincode = "1.3.3"
 tokio = { version = "1.36", features = ["full"] }
 
 # AI & ML
-tch = "0.13"                            # Torch-based inference
 linfa = "0.7.1"                         # AI prediction logic
 linfa-nn = "0.7.2"                      # k-Nearest Neighbors
 ndarray = "0.15.1"                      # For tensor & array ops
@@ -30,8 +29,6 @@ ndarray = "0.15.1"                      # For tensor & array ops
 bleep-core = { path = "../bleep-core" }
 bleep-crypto = { path = "../bleep-crypto" }
 bleep-p2p = { path = "../bleep-p2p" }
-bleep-ai = { path = "../bleep-ai" }
-bleep-state = { path = "../bleep-state" }
 
 # Randomness
 rand = "0.8.5"
