@@ -195,6 +195,7 @@ pub struct ValidatorRecord {
 }
 
 /// Protocol Invariant Engine - Core enforcement module
+#[derive(Debug, Clone)]
 pub struct ProtocolInvariantEngine {
     economic_config: EconomicConfig,
     consensus_config: ConsensusInvariantConfig,
@@ -439,9 +440,9 @@ impl ProtocolInvariantEngine {
         }
         
         self.validators.insert(
-            validator_id,
+            validator_id.clone(),
             ValidatorRecord {
-                id: validator_id.clone(),
+                id: validator_id,
                 state: ValidatorState::Active,
                 stake,
                 join_epoch,

@@ -19,6 +19,7 @@ use crate::invariant_enforcement::{ProtectedState, StateTransitionError};
 use bleep_crypto::pq_crypto::HashFunctions;
 use serde::{Serialize, Deserialize};
 use std::sync::{Arc, Mutex};
+use sha3::Digest;
 
 // ==================== VERIFICATION RESULT TYPES ====================
 

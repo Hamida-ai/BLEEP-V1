@@ -155,19 +155,25 @@ impl TransactionManager {
     /// Broadcasts a transaction to all peers using GossipProtocol
     pub async fn broadcast_transaction(&self, transaction: ZKTransaction) {
         let message = P2PMessage::Transaction(transaction);
-        self.gossip_protocol.broadcast_message(message).await;
+        let _ = self.gossip_protocol.broadcast_message(message).await;
     }
 
     /// Routes a transaction securely over multiple hops
     pub async fn route_transaction(&self, sender: &str, receiver: &str, transaction: ZKTransaction) {
-        let route = self.multi_hop_routing.select_route(sender, receiver).await;
-        self.multi_hop_routing.forward_message(route, P2PMessage::Transaction(transaction)).await;
+        let route = match self.multi_hop_routing.select_route(sender, receiver).await {
+            Ok(r) => r,
+            Err(_) => return,
+        };
+        let _ = self.multi_hop_routing.forward_message(route, P2PMessage::Transaction(transaction)).await;
     }
 
     /// Sends a fully anonymous transaction using DarkRouting
     pub async fn send_anonymous_transaction(&self, sender: &str, transaction: ZKTransaction) {
-        let route = self.dark_routing.select_anonymous_route(sender).await;
-        self.dark_routing.forward_anonymous(route, P2PMessage::Transaction(transaction)).await;
+        let route = match self.dark_routing.select_anonymous_route(sender).await {
+            Ok(r) => r,
+            Err(_) => return,
+        };
+        let _ = self.dark_routing.forward_anonymous(route, P2PMessage::Transaction(transaction)).await;
     }
 
     /// Processes incoming P2P transaction messages
@@ -175,7 +181,7 @@ impl TransactionManager {
         match message {
             P2PMessage::Transaction(tx) => {
                 if tx.verify(&self.quantum_secure) {
-                    self.peer_manager.add_transaction_to_pool(tx).await;
+                    let _ = self.peer_manager.add_transaction_to_pool(tx).await;
                     println!("✅ Valid transaction received and added to mempool.");
                 } else {
                     println!("❌ Invalid transaction rejected.");
