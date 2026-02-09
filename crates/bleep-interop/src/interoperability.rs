@@ -7,7 +7,7 @@ use tokio::sync::{Mutex as TokioMutex};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use blake2::{Blake2b, Digest as BlakeDigest};
-use ed25519_dalek::{PublicKey, Signature, Verifier};
+use ed25519_dalek::{VerifyingKey, Signature, Verifier};
 use thiserror::Error;
 use crate::{
     quantum_secure::QuantumSecure,
@@ -123,7 +123,7 @@ impl Adapter for SolanaAdapter {
         }
         let pubkey_bytes = &data[..32];
         let signature_bytes = &data[32..];
-        let public_key = PublicKey::from_bytes(pubkey_bytes).map_err(|_| BLEEPError::InvalidSignatureError)?;
+        let public_key = VerifyingKey::from_bytes(pubkey_bytes).map_err(|_| BLEEPError::InvalidSignatureError)?;
         let signature = Signature::from_bytes(signature_bytes).map_err(|_| BLEEPError::InvalidSignatureError)?;
         public_key.verify(data, &signature).map_err(|_| BLEEPError::InvalidSignatureError)?;
         Ok(data.to_vec())
@@ -158,7 +158,7 @@ impl Transaction {
             receiver_balance: (self.amount - 10).into(),
         };
         let proof = zkp_module.generate_proof(circuit)?;
-        Ok(proof.to_bytes().unwrap())
+        Ok(proof.into_bytes())
     }
 }
 
