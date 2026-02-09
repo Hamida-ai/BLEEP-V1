@@ -1,3 +1,14 @@
+// PHASE 2: ON-CHAIN GOVERNANCE CORE
+pub mod governance_core;
+pub mod deterministic_executor;
+
+// PHASE 4: CONSTITUTIONAL GOVERNANCE LAYER
+pub mod constitution;
+pub mod zk_voting;
+pub mod proposal_lifecycle;
+pub mod forkless_upgrades;
+pub mod governance_binding;
+
 // PHASE 5: AI-Driven Protocol Evolution Layer
 pub mod governance_engine;
 pub mod protocol_rules;
@@ -15,6 +26,46 @@ mod phase5_integration_tests;
 
 #[cfg(test)]
 mod phase5_comprehensive_tests;
+
+#[cfg(test)]
+mod phase4_governance_tests;
+
+#[cfg(test)]
+mod phase2_governance_tests;
+
+pub use governance_core::{
+    ProposalType, ProposalState, VotingWindow, Vote, VoteTally,
+    Proposal, GovernancePayload, SanctionAction, GovernanceEngine, GovernanceError,
+};
+
+pub use deterministic_executor::{
+    DeterministicExecutor, ExecutionLogEntry, ExecutionStatus, ExecutionRecord, ExecutionError,
+};
+
+pub use constitution::{
+    BLEEPConstitution, ConstitutionalConstraint, ConstitutionalScope,
+    GovernanceAction, ValidationResult, ConstraintRule, RuleType,
+};
+
+pub use zk_voting::{
+    ZKVotingEngine, VotingBallot, EncryptedBallot, VoteCommitment,
+    EligibilityProof, VoterRole, VoteTally, TallyProof, ZKVotingError,
+};
+
+pub use proposal_lifecycle::{
+    ProposalLifecycleManager, ProposalRecord, ProposalState, ProposalArchive,
+    ProposalStateTransition, ProposalError,
+};
+
+pub use forkless_upgrades::{
+    ProtocolUpgradeManager, ApprovedUpgrade, UpgradePayload, Version,
+    UpgradeStatus, UpgradeCheckpoint, StateMigration, MigrationType,
+    UpgradePreconditions, UpgradeError,
+};
+
+pub use governance_binding::{
+    GovernanceConsensusBinding, ProposalOutcome, ActivationRecord,
+};
 
 pub use protocol_rules::{
     ProtocolRule, ProtocolRuleSet, ProtocolRuleSetFactory,
