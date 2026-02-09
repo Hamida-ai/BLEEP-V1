@@ -65,4 +65,3 @@ kyber = ["pqcrypto-kyber"]
 falcon = ["pqcrypto-falcon"]
 quantum = ["pqcrypto", "pqcrypto-kyber", "pqcrypto-falcon"]
 
-
