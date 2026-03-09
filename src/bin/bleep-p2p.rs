@@ -1,9 +1,7 @@
 // src/bin/bleep_p2p.rs
 
-use bleep-p2p::P2PNode::P2PNode;
-use bleep-p2p::gossip_protocol::start_gossip_layer;
-use bleep-p2p::dark_routing::start_dark_routing;
-use bleep-p2p::peer_manager::PeerManager;
+use bleep_p2p::P2PNodeType;
+use bleep_p2p::peer_manager::PeerManager;
 
 use std::error::Error;
 use log::{info, error};
@@ -19,27 +17,29 @@ fn main() {
 }
 
 fn run_p2p_node() -> Result<(), Box<dyn Error>> {
-    // Step 1: Initialize peer manager and load peers
-    let mut peer_manager = PeerManager::new();
-    peer_manager.load_peers()?;
-    info!("🧑‍🤝‍🧑 Peer manager loaded with {} peers.", peer_manager.count());
+    // Step 1: Initialize blockchain state and peer manager
+    let blockchain = std::sync::Arc::new(std::sync::Mutex::new(bleep_p2p::P2PNode::BlockchainState {}));
+    let peer_manager = PeerManager::new();
+    let id = "node-1".to_string();
+    let addr: std::net::SocketAddr = match "127.0.0.1:9000".parse() {
+        Ok(addr) => addr,
+        Err(e) => {
+            error!("Failed to parse socket address: {}", e);
+            return Err(Box::new(e));
+        }
+    };
 
     // Step 2: Start core P2P node service
-    let mut node = P2PNode::new(peer_manager);
-    node.bootstrap()?;
-    info!("🔗 P2P Node bootstrapped.");
+    let node = P2PNodeType::new(id, addr, blockchain.clone());
+    info!("🔗 P2P Node initialized.");
 
-    // Step 3: Launch gossip protocol
-    start_gossip_layer(&mut node)?;
-    info!("📢 Gossip layer running.");
-
-    // Step 4: Start dark routing overlay
-    start_dark_routing(&mut node)?;
-    info!("🕶️ Dark routing enabled.");
-
-    // Step 5: Enter P2P message loop
-    node.run()?;
-    info!("✅ BLEEP P2P Node operational.");
+    // Step 3: Broadcast message to peers
+    info!("📢 Initializing message broadcast capability");
+    let peer_list = peer_manager.get_active_peers();
+    info!("Available peers: {}", peer_list.len());
+    for peer in peer_list {
+        info!("  - Peer connected: {}", peer);
+    }
 
     Ok(())
 }

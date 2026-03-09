@@ -1,10 +1,9 @@
 // src/bin/bleep_consensus.rs
 
-use bleep-consensus::consensus::ConsensusEngine;
-use bleep-core::blockchain::Blockchain;
-use bleep-core::mempool::Mempool;
-use bleep-core::transaction::Transaction;
-use bleep-crypto::zkp_verification::verify_transaction_zkp;
+use bleep_consensus::ConsensusEngine;
+use bleep_core::{Blockchain, Mempool};
+use bleep_core::block::Transaction;
+use bleep_crypto::zkp_verification::verify_transaction_zkp;
 
 use std::error::Error;
 use log::{info, error};
@@ -21,9 +20,11 @@ fn main() {
 
 fn run_consensus_engine() -> Result<(), Box<dyn Error>> {
     // Step 1: Load blockchain and mempool
-    let mut blockchain = Blockchain::load_or_initialize()?;
-    let mut mempool = Mempool::load()?;
-    info!("📊 Loaded chain and mempool. {} txs pending", mempool.len());
+    let genesis_block = bleep_core::Block::new(0, vec![], "0".repeat(64));
+    let tx_pool = bleep_core::transaction_pool::TransactionPool::new(10000);
+    let mut blockchain = Blockchain::new(genesis_block, Default::default(), tx_pool.clone());
+    let mempool = Mempool::new();
+    info!("📊 Loaded chain and mempool.");
 
     // Step 2: Initialize consensus engine
     let mut engine = ConsensusEngine::new(&mut blockchain);

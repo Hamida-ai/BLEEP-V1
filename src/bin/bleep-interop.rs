@@ -1,34 +1,23 @@
 // src/bin/bleep_interop.rs
 
-use bleep-interop::interoperability::{InteropEngine, InteropConfig};
+use bleep_interop::interoperability::BLEEPInteroperabilityModule;
 use std::error::Error;
 use log::{info, error};
+
 
 fn main() {
     env_logger::init();
     info!("🌉 BLEEP Interop Engine Starting...");
 
-    if let Err(e) = run_interop_engine() {
-        error!("❌ Interop engine failed: {}", e);
-        std::process::exit(1);
-    }
-}
+    // Example: Initialize the interoperability module and register adapters
+    let mut module = BLEEPInteroperabilityModule::new();
+    module.register_adapter("ethereum".into(), Box::new(bleep_interop::interoperability::EthereumAdapter));
+    module.register_adapter("binance".into(), Box::new(bleep_interop::interoperability::BinanceAdapter));
+    module.register_adapter("cosmos".into(), Box::new(bleep_interop::interoperability::CosmosAdapter));
+    module.register_adapter("polkadot".into(), Box::new(bleep_interop::interoperability::PolkadotAdapter));
+    module.register_adapter("solana".into(), Box::new(bleep_interop::interoperability::SolanaAdapter));
 
-fn run_interop_engine() -> Result<(), Box<dyn Error>> {
-    // Step 1: Load interoperability configuration
-    let config = InteropConfig::load_or_default()?;
-    info!("✅ Loaded interop config for external network: {}", config.target_chain);
-
-    // Step 2: Initialize interop engine
-    let mut interop = InteropEngine::new(config);
-    interop.initialize()?;
-    info!("🔧 Interop engine initialized.");
-
-    // Step 3: Perform sync or cross-chain state exchange
-    interop.perform_handshake()?;
-    interop.sync_state()?;
-    info!("🔁 State synchronized with external chain.");
-
-    Ok(())
+    info!("✅ Interop module initialized with adapters.");
+    // Further logic would go here, e.g., cross-chain sync, etc.
 }
  
