@@ -1,0 +1,25 @@
+[package]
+name = "bleep-state-fuzz"
+version = "0.0.1"
+edition = "2021"
+publish = false
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = { version = "0.4", features = ["arbitrary-derive"] }
+bleep-state    = { path = ".." }
+arbitrary      = { version = "1", features = ["derive"] }
+
+[[bin]]
+name = "fuzz_merkle_insert"
+path = "fuzz_targets/fuzz_merkle_insert.rs"
+test = false
+doc  = false
+
+[[bin]]
+name = "fuzz_state_apply_tx"
+path = "fuzz_targets/fuzz_state_apply_tx.rs"
+test = false
+doc  = false
