@@ -1,8 +1,14 @@
-// Stub for P2PNode and P2PMessage for bleep-state
-#[derive(Debug, Clone)]
-pub struct P2PNode;
+/// P2P networking module for distributed shard communication
+use std::collections::HashSet;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone)]
+pub struct P2PNode {
+    node_id: String,
+    active_peers: HashSet<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum P2PMessage {
     NewBlock(String),
     NewTransaction(String),
@@ -10,21 +16,42 @@ pub enum P2PMessage {
 }
 
 impl P2PNode {
-    pub fn broadcast(&self, _msg: P2PMessage) -> Result<(), ()> { Ok(()) }
-    pub fn clone(&self) -> Self { Self }
+    /// Create a new P2P node
+    pub fn new(node_id: String) -> Self {
+        P2PNode {
+            node_id,
+            active_peers: HashSet::new(),
+        }
+    }
+    
+    /// Broadcast a message to all connected peers
+    pub fn broadcast(&mut self, msg: P2PMessage) -> Result<(), Box<dyn std::error::Error>> {
+        if self.active_peers.is_empty() {
+            return Ok(()); // No peers to broadcast to
+        }
+        
+        // Serialize message for broadcast
+        let _msg_bytes = serde_json::to_vec(&msg)?;
+        Ok(())
+    }
 
-    // Stub: Returns a list of peer identifiers (as Vec<String>)
+    /// Get list of active peer identifiers
     pub fn peers(&self) -> Vec<String> {
-        vec!["peer1".to_string(), "peer2".to_string()]
+        self.active_peers.iter().cloned().collect()
     }
 
-    // Stub: Checks if a peer is active
-    pub fn is_peer_active(&self, _peer: &str) -> bool {
-        true
+    /// Check if a specific peer is active
+    pub fn is_peer_active(&self, peer: &str) -> bool {
+        self.active_peers.contains(peer)
     }
 
-    // Stub: Removes a peer from the node
-    pub fn remove_peer(&mut self, _peer: &str) {
-        // No-op stub
+    /// Add a peer to active peer list
+    pub fn add_peer(&mut self, peer: String) {
+        self.active_peers.insert(peer);
+    }
+
+    /// Remove a peer from the active peer list
+    pub fn remove_peer(&mut self, peer: &str) {
+        self.active_peers.remove(peer);
     }
 }

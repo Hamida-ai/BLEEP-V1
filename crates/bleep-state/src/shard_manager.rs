@@ -1,8 +1,13 @@
 use crate::state_storage::BlockchainState;
+
 impl ShardManager {
-    pub fn get_state_for_shard(&self, _shard_id: u64) -> Option<BlockchainState> {
-        // Stub: always return None
-        None
+    /// Retrieve the current state for a specific shard
+    /// 
+    /// Returns None if shard is not found or state is not available
+    pub fn get_state_for_shard(&self, shard_id: u64) -> Option<BlockchainState> {
+        // Attempt to lock the sharding module and retrieve shard state
+        let sharding = self.sharding_module.lock().ok()?;
+        sharding.get_shard_state(shard_id)
     }
 }
 use std::collections::HashMap;

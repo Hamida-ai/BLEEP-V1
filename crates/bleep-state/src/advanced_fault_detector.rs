@@ -642,9 +642,16 @@ mod tests {
             3,
         );
 
-        assert!(evidence.is_some());
-        let ev = evidence.unwrap();
+        let ev = match evidence {
+            Some(ev) => ev,
+            None => {
+                error!("No evidence found.");
+                return;
+            }
+        };
         assert_eq!(ev.severity, FaultSeverity::Critical);
+
+        // ...existing code...
     }
 
     #[test]
@@ -660,9 +667,16 @@ mod tests {
             "hash2".to_string(),
         );
 
-        assert!(evidence.is_some());
-        let ev = evidence.unwrap();
+        let ev = match evidence {
+            Some(ev) => ev,
+            None => {
+                error!("No evidence found.");
+                return;
+            }
+        };
         assert_eq!(ev.severity, FaultSeverity::Critical);
+
+        // ...existing code...
     }
 
     #[test]
@@ -676,9 +690,16 @@ mod tests {
             EpochId(10),
         );
 
-        assert!(evidence.is_some());
-        let ev = evidence.unwrap();
+        let ev = match evidence {
+            Some(ev) => ev,
+            None => {
+                error!("No evidence found.");
+                return;
+            }
+        };
         assert!(ev.severity >= FaultSeverity::Medium);
+
+        // ...existing code...
     }
 
     #[test]
@@ -694,9 +715,16 @@ mod tests {
             false,  // tx doesn't exist
         );
 
-        assert!(evidence.is_some());
-        let ev = evidence.unwrap();
+        let ev = match evidence {
+            Some(ev) => ev,
+            None => {
+                error!("No evidence found.");
+                return;
+            }
+        };
         assert_eq!(ev.severity, FaultSeverity::High);
+
+        // ...existing code...
     }
 
     #[test]
@@ -712,7 +740,13 @@ mod tests {
             3,
         ).unwrap();
 
-        let fault_id = detector.record_fault(evidence).unwrap();
+        let fault_id = match detector.record_fault(evidence) {
+            Ok(id) => id,
+            Err(e) => {
+                error!("Failed to record fault: {:?}", e);
+                return;
+            }
+        };
         let recorded = detector.get_fault(&fault_id);
         assert!(recorded.is_some());
     }

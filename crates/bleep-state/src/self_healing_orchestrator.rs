@@ -85,7 +85,40 @@ impl HealingOperation {
         );
 
         HealingOperation {
-            operation_id: format!("healing_{}_{}_{}", shard_id.as_u64(), fault_evidence.detected_at, std::process::id()),
+            // H-05 FIX: Deterministic operation ID
+            //
+            // Previous code:
+            //   operation_id: format!("healing_{}_{}_{}", shard_id.as_u64(),
+            //                         fault_evidence.detected_at, std::process::id())
+            //
+            // `std::process::id()` returns the OS process ID of the current
+            // process at the moment HealingOperation::new() is called.
+            // This is non-deterministic across:
+            //   - Different nodes (process IDs are OS-assigned, not protocol-derived)
+            //   - Restarts on the same node (PID changes every restart)
+            //   - Platforms (Windows PIDs may be 5 digits; Linux up to 22 bits)
+            //
+            // Two nodes observing the same fault produce different IDs, so they
+            // cannot reach consensus on a healing operation: they are literally
+            // referring to different objects with different names. The protocol
+            // cannot distinguish "operation ID clash" from "different operations".
+            //
+            // Fix: Derive the ID deterministically from the inputs that all
+            // nodes share: shard_id, detected_at, fault severity, and a short
+            // description hash. The SHA3-256 truncation to 16 hex chars gives
+            // 64-bit collision resistance — sufficient for a single shard's
+            // operation log while keeping IDs short enough to embed in log lines.
+            operation_id: {
+                use sha3::{Digest, Sha3_256};
+                let mut h = Sha3_256::new();
+                h.update(b"bleep-healing-op-v1");
+                h.update(shard_id.as_u64().to_le_bytes());
+                h.update(fault_evidence.detected_at.to_le_bytes());
+                h.update(format!("{:?}", fault_evidence.severity).as_bytes());
+                h.update(fault_evidence.description.as_bytes());
+                // Truncate to 16 hex chars (64-bit) for readability
+                format!("healing-{}", &hex::encode(h.finalize())[..16])
+            },
             shard_id,
             fault_evidence,
             mode: HealingMode::Monitoring,

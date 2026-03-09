@@ -52,3 +52,4 @@ pub use rollback_engine::RollbackEngine;
 pub use advanced_fault_detector::AdvancedFaultDetector;
 pub use self_healing_orchestrator::SelfHealingOrchestrator;
 
+#[cfg(test)] mod proptest_sprint8;
