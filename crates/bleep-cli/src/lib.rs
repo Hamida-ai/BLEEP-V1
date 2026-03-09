@@ -1,21 +1,18 @@
-use clap::{Parser, Subcommand};
-use anyhow::Result;
-use tracing::{info};
+//! # bleep-cli — Sprint 6
+//!
+//! Command-line interface library for the BLEEP node.
+//! Sprint 6 additions:
+//!   - `validator stake`   — register as a validator by locking stake
+//!   - `validator unstake` — initiate graceful exit and stake withdrawal
+//!   - `validator list`    — list all active validators and their stakes
+//!   - `validator status`  — show own validator status and slashing history
 
-use bleep_core::blockchain;
-use bleep_wallet_core::wallet_core;
-use bleep_p2p::p2p_network;
-use bleep_consensus::consensus;
-use bleep_governance::governance_engine;
-use bleep_ai::{ai_assistant, machine_learning};
-use bleep_crypto::zkp_verification;
-use bleep_state::state_manager;
-use bleep_telemetry::telemetry;
-use bleep_pat::pat_engine;
+use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
 #[command(name = "bleep-cli")]
-#[command(about = "BLEEP Blockchain CLI", long_about = None)]
+#[command(about = "BLEEP Blockchain CLI — Sprint 6", long_about = None)]
+#[command(version = "1.1.0")]
 pub struct Cli {
     #[command(subcommand)]
     pub command: Commands,
@@ -23,40 +20,317 @@ pub struct Cli {
 
 #[derive(Subcommand)]
 pub enum Commands {
+    /// Start a full BLEEP node
     StartNode,
+
+    /// Wallet operations
     Wallet {
         #[command(subcommand)]
         action: WalletCommand,
     },
+
+    /// Send and manage transactions
     Tx {
         #[command(subcommand)]
         action: TxCommand,
     },
+
+    /// Validator staking operations (Sprint 6)
+    Validator {
+        #[command(subcommand)]
+        action: ValidatorCommand,
+    },
+
+    /// AI advisory utilities
     Ai {
         #[command(subcommand)]
         task: AiCommand,
     },
+
+    /// Governance proposals and voting
     Governance {
         #[command(subcommand)]
         task: GovernanceCommand,
     },
-    Zkp {
-        proof: String,
-    },
+
+    /// Verify ZKPs
+    Zkp { proof: String },
+
+    /// State management
     State {
         #[command(subcommand)]
         task: StateCommand,
     },
+
+    /// Print telemetry metrics
     Telemetry,
+
+    /// PAT (Programmable Asset Token) tasks
     Pat {
         #[command(subcommand)]
         task: PatCommand,
     },
+
+    /// Display node information
     Info,
+
+    /// Blockchain operations
     Block {
         #[command(subcommand)]
         task: BlockCommand,
     },
+
+    /// Oracle price feed operations (Sprint 7)
+    Oracle {
+        #[command(subcommand)]
+        task: OracleCommand,
+    },
+
+    /// Tokenomics and economics queries (Sprint 7)
+    Economics {
+        #[command(subcommand)]
+        task: EconomicsCommand,
+    },
 }
 
-// Define subcommands here (WalletCommand, TxCommand, etc.) as shown in the CLI earlier
+// ── Wallet ────────────────────────────────────────────────────────────────────
+
+#[derive(Subcommand)]
+pub enum WalletCommand {
+    /// Generate a new SPHINCS+ + Kyber-768 keypair and encrypted wallet
+    Create,
+    /// Query balance from /rpc/state (offline fallback to local RocksDB)
+    Balance,
+    /// Import from BIP-39 mnemonic (PBKDF2-HMAC-SHA512, 2048 rounds)
+    Import { phrase: String },
+    /// Export wallet addresses
+    Export,
+}
+
+// ── Transactions ──────────────────────────────────────────────────────────────
+
+#[derive(Subcommand)]
+pub enum TxCommand {
+    /// Sign and broadcast a transfer transaction
+    Send {
+        /// Recipient BLEEP1 address
+        to: String,
+        /// Amount in BLEEP (8 decimal places)
+        amount: f64,
+    },
+    /// Retrieve transaction history
+    History,
+}
+
+// ── Validator (Sprint 6) ──────────────────────────────────────────────────────
+
+#[derive(Subcommand)]
+pub enum ValidatorCommand {
+    /// Register as a validator by locking stake on-chain.
+    ///
+    /// Builds and broadcasts a `StakeTx` that locks `amount` BLEEP from your wallet
+    /// into the validator bond contract. The node must be running and reachable at
+    /// BLEEP_RPC. Your SPHINCS+ signing key is loaded from the wallet and used to
+    /// authenticate the transaction.
+    Stake {
+        /// Amount to stake in BLEEP (minimum: 1,000 BLEEP)
+        #[arg(long)]
+        amount: u64,
+        /// Human-readable label for this validator identity
+        #[arg(long, default_value = "my-validator")]
+        label: String,
+    },
+
+    /// Initiate a graceful validator exit and begin the stake unbonding period.
+    ///
+    /// After submitting the unstake transaction the validator enters `PendingExit`
+    /// state. Stake becomes withdrawable after the unbonding period (1 epoch).
+    /// The validator continues to sign blocks and earn rewards during this period.
+    Unstake {
+        /// Validator ID (hex prefix of public key) to unstake
+        #[arg(long)]
+        validator_id: String,
+    },
+
+    /// List all active validators, their stakes, and liveness scores.
+    List,
+
+    /// Show the status of your own validator (stake, slashing history, state).
+    Status {
+        /// Validator ID to query (defaults to the wallet's derived validator ID)
+        #[arg(long)]
+        validator_id: Option<String>,
+    },
+
+    /// Submit slashing evidence for a misbehaving validator.
+    ///
+    /// Evidence format: JSON-encoded `SlashingEvidence` (DoubleSigning | Equivocation | Downtime).
+    /// If valid, the SlashingEngine applies the penalty immediately.
+    SubmitEvidence {
+        /// Path to JSON file containing SlashingEvidence
+        #[arg(long)]
+        evidence_file: String,
+    },
+}
+
+// ── AI ────────────────────────────────────────────────────────────────────────
+
+#[derive(Subcommand)]
+pub enum AiCommand {
+    Ask { prompt: String },
+    Status,
+}
+
+// ── Governance ────────────────────────────────────────────────────────────────
+
+#[derive(Subcommand)]
+pub enum GovernanceCommand {
+    Propose { proposal: String },
+    Vote { proposal_id: u32, yes: bool },
+    List,
+}
+
+// ── State ─────────────────────────────────────────────────────────────────────
+
+#[derive(Subcommand)]
+pub enum StateCommand {
+    Snapshot,
+    Restore { snapshot_path: String },
+}
+
+// ── PAT ───────────────────────────────────────────────────────────────────────
+
+#[derive(Subcommand)]
+pub enum PatCommand {
+    Status,
+    List,
+    /// Create a new PAT (owner only; sets supply cap and burn rate)
+    Create {
+        /// Token symbol (e.g. USDB, WETH-PAT)
+        #[arg(long)]
+        symbol: String,
+        /// Human-readable name
+        #[arg(long)]
+        name: String,
+        /// Decimal places (default 8)
+        #[arg(long, default_value = "8")]
+        decimals: u8,
+        /// Owner address (sole minter)
+        #[arg(long)]
+        owner: String,
+        /// Maximum supply cap (0 = unlimited)
+        #[arg(long, default_value = "0")]
+        supply_cap: u128,
+        /// Deflationary burn rate on transfers (basis points, max 1000)
+        #[arg(long, default_value = "50")]
+        burn_rate_bps: u16,
+    },
+    /// Mint new PAT tokens (owner only)
+    Mint {
+        /// Token symbol
+        #[arg(long)]
+        symbol: String,
+        /// Caller / owner address
+        #[arg(long)]
+        from: String,
+        /// Recipient address
+        #[arg(long)]
+        to: String,
+        /// Amount to mint (8 decimal places)
+        #[arg(long)]
+        amount: u64,
+    },
+    /// Burn PAT tokens
+    Burn {
+        /// Token symbol
+        #[arg(long)]
+        symbol: String,
+        /// Address burning tokens
+        #[arg(long)]
+        from: String,
+        /// Amount to burn (8 decimal places)
+        #[arg(long)]
+        amount: u64,
+    },
+    /// Transfer PAT tokens
+    Transfer {
+        /// Token symbol
+        #[arg(long)]
+        symbol: String,
+        /// Sender address
+        #[arg(long)]
+        from: String,
+        /// Recipient address
+        #[arg(long)]
+        to: String,
+        /// Amount to transfer (8 decimal places; burn_rate applied automatically)
+        #[arg(long)]
+        amount: u64,
+    },
+    /// Query PAT balance for an address
+    Balance {
+        /// Token symbol
+        #[arg(long)]
+        symbol: String,
+        /// Address to query
+        address: String,
+    },
+    /// Show PAT token info (supply, burn rate, owner)
+    Info {
+        /// Token symbol
+        symbol: String,
+    },
+}
+
+// ── Oracle ────────────────────────────────────────────────────────────────────
+
+#[derive(Subcommand)]
+pub enum OracleCommand {
+    /// Query the aggregated oracle price for an asset (e.g. "BLEEP/USD")
+    Price {
+        /// Asset pair, e.g. BLEEP/USD
+        asset: String,
+    },
+    /// Submit a price update as an oracle operator
+    Submit {
+        /// Asset pair
+        #[arg(long)]
+        asset: String,
+        /// Price in micro-units (6 decimals for USD)
+        #[arg(long)]
+        price: u128,
+        /// Confidence in basis points (e.g. 100 = 1%)
+        #[arg(long, default_value = "100")]
+        confidence_bps: u16,
+        /// Operator ID (hex-encoded public key)
+        #[arg(long)]
+        operator_id: String,
+    },
+}
+
+// ── Economics ─────────────────────────────────────────────────────────────────
+
+#[derive(Subcommand)]
+pub enum EconomicsCommand {
+    /// Show current token supply (circulating, minted, burned)
+    Supply,
+    /// Show current base fee
+    Fee,
+    /// Show epoch economics output
+    Epoch {
+        /// Epoch number to query
+        epoch: u64,
+    },
+}
+
+// ── Block ─────────────────────────────────────────────────────────────────────
+
+#[derive(Subcommand)]
+pub enum BlockCommand {
+    /// Print the latest block
+    Latest,
+    /// Get a block by hash or height
+    Get { identifier: String },
+    /// Validate a block by hash
+    Validate { hash: String },
+}
