@@ -13,10 +13,10 @@ use std::collections::BTreeMap;
 use sha2::{Sha256, Digest};
 use thiserror::Error;
 
-/// Maximum possible supply: 200 million BLEEP
-pub const MAX_SUPPLY: u128 = 200_000_000 * 10u128.pow(8); // 8 decimals
+/// Maximum possible supply: 200 million BLEEP (IMMUTABLE — cannot be changed by governance)
+pub const MAX_SUPPLY: u128 = 200_000_000 * 10u128.pow(8); // 8 decimals = 20_000_000_000_000_000 µBLEEP
 
-/// Initial supply at genesis
+/// Initial supply at genesis (before any distribution unlocks)
 pub const GENESIS_SUPPLY: u128 = 0;
 
 /// Maximum annual inflation rate (5% per epoch, bounded by constitution)
@@ -24,6 +24,32 @@ pub const MAX_INFLATION_RATE_BPS: u16 = 500; // 5.00% = 500 basis points
 
 /// Minimum slashing amount (to prevent dust attacks)
 pub const MIN_SLASHING_AMOUNT: u128 = 1_000_000; // 0.01 BLEEP
+
+// ── Distribution model constants (re-exported from distribution module) ───────
+
+/// Validator Rewards allocation: 30% = 60,000,000 BLEEP
+pub const ALLOC_VALIDATOR_REWARDS_BLEEP: u64 = 60_000_000;
+/// Ecosystem Development Fund: 25% = 50,000,000 BLEEP
+pub const ALLOC_ECOSYSTEM_FUND_BLEEP: u64 = 50_000_000;
+/// Community Incentives: 15% = 30,000,000 BLEEP
+pub const ALLOC_COMMUNITY_INCENTIVES_BLEEP: u64 = 30_000_000;
+/// Foundation Treasury: 15% = 30,000,000 BLEEP
+pub const ALLOC_FOUNDATION_TREASURY_BLEEP: u64 = 30_000_000;
+/// Core Contributors: 10% = 20,000,000 BLEEP (1yr cliff + 4yr linear vest)
+pub const ALLOC_CORE_CONTRIBUTORS_BLEEP: u64 = 20_000_000;
+/// Strategic Reserve: 5% = 10,000,000 BLEEP (governance-controlled unlock)
+pub const ALLOC_STRATEGIC_RESERVE_BLEEP: u64 = 10_000_000;
+
+/// Initial circulating supply at mainnet launch: 25,000,000 BLEEP
+pub const INITIAL_CIRCULATING_BLEEP: u64 = 25_000_000;
+
+// Transaction fee distribution splits (must sum to 10,000 bps)
+/// 25% of transaction fees are burned — deflationary pressure
+pub const FEE_BURN_BPS: u32 = 2_500;
+/// 50% of transaction fees go to validator rewards
+pub const FEE_VALIDATOR_BPS: u32 = 5_000;
+/// 25% of transaction fees go to the Foundation Treasury
+pub const FEE_TREASURY_BPS: u32 = 2_500;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum EmissionType {
@@ -239,8 +265,11 @@ pub struct BurnConfig {
 impl BurnConfig {
     pub fn new() -> Self {
         BurnConfig {
-            fee_burn_percentage_bps: 2500, // 25% of fees burned
-            slashing_burn_multiplier: 1,   // 100% of slash burned
+            // Distribution model: 25% of fees burned (FEE_BURN_BPS = 2500).
+            // Remaining 75% split: 50% validator rewards + 25% treasury.
+            // This matches the canonical fee split in distribution::FeeDistribution.
+            fee_burn_percentage_bps: FEE_BURN_BPS as u16, // 2500 = 25%
+            slashing_burn_multiplier: 1,                   // 100% of slash burned
         }
     }
 

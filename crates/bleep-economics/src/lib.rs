@@ -11,6 +11,7 @@
 /// After Phase 5, BLEEP survives not just bugs — but greed.
 
 pub mod tokenomics;
+pub mod distribution;
 pub mod fee_market;
 pub mod validator_incentives;
 pub mod oracle_bridge;
@@ -21,6 +22,19 @@ pub mod runtime;
 pub use tokenomics::{
     CanonicalTokenomicsEngine, EmissionSchedule, BurnConfig, SupplyState,
     EmissionType, BurnType, TokenomicsError,
+};
+
+pub use distribution::{
+    AllocationBucket, VestingPolicy, ValidatorEmissionSchedule, LinearVestingSchedule,
+    GenesisAllocation, FeeDistribution, DistributionSnapshot, BucketSnapshot,
+    SupplyDynamics, DistributionError,
+    // Distribution constants
+    MAX_SUPPLY_MICRO, ALLOCATION_TOTAL,
+    ALLOC_VALIDATOR_REWARDS, ALLOC_ECOSYSTEM_FUND, ALLOC_COMMUNITY_INCENTIVES,
+    ALLOC_FOUNDATION_TREASURY, ALLOC_CORE_CONTRIBUTORS, ALLOC_STRATEGIC_RESERVE,
+    INITIAL_CIRCULATING_SUPPLY,
+    FEE_BURN_BPS, FEE_VALIDATOR_REWARD_BPS, FEE_TREASURY_BPS,
+    VALIDATOR_EMISSION_YEAR,
 };
 
 pub use fee_market::{
