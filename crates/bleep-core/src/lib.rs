@@ -10,6 +10,7 @@ pub mod transaction;
 pub mod transaction_manager;
 pub mod transaction_pool;
 pub mod mempool;
+pub mod mempool_bridge;
 
 // === Identity and Security ===
 pub mod proof_of_identity;
@@ -24,7 +25,7 @@ pub mod decision_attestation;
 pub mod decision_verification;
 
 // === Re-exports for broader ecosystem access ===
-pub use block::{Block};
+pub use block::{Block, derive_block_keypair};
 pub use block_validation::*;
 pub use blockchain::*;
 pub use transaction::{ZKTransaction};
@@ -41,3 +42,6 @@ pub use decision_verification::*;
 // === Internal Unit Tests ===
 #[cfg(test)]
 mod tests;
+
+
+pub use mempool_bridge::run_mempool_bridge;

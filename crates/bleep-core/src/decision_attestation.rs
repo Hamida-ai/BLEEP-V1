@@ -11,8 +11,7 @@
 /// No decision executes without full cryptographic attestation.
 /// Silent defaults and implicit trust are prohibited.
 
-use crate::protocol_invariants::InvariantResult;
-use bleep_crypto::pq_crypto::{SignatureScheme, PublicKey, SecretKey, DigitalSignature, HashFunctions};
+use bleep_crypto::pq_crypto::{SignatureScheme, PublicKey, DigitalSignature};
 use bleep_crypto::merkle_commitment::Commitment;
 use bleep_crypto::merkletree::MerkleTree;
 use serde::{Serialize, Deserialize};
@@ -258,7 +257,7 @@ impl DecisionAttestationEngine {
         let _public_key = self.authorized_signers.get(&attestation.signer_pubkey)
             .ok_or_else(|| AttestationError::UnauthorizedSigner(
                 format!("Signer {} not authorized", attestation.signer_pubkey)
-            ))?;;
+            ))?;
         
         // 2. Check nonce is fresh
         if let Some(used_at) = self.used_nonces.get(&attestation.nonce) {

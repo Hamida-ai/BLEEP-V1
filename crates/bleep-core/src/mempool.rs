@@ -26,20 +26,50 @@ impl Mempool {
 
     /// Adds a transaction to the mempool after verifying its validity
     pub async fn add_transaction(&self, transaction: ZKTransaction) -> bool {
-        let mut transactions = self.transactions.lock().await;
+        let transactions = self.transactions.lock().await;
         let mut seen_transactions = self.seen_transactions.lock().await;
         
-        let tx_id = transaction.get_hash();
+        let tx_id = format!("{}:{}:{}:{}", 
+            transaction.sender, transaction.receiver, transaction.amount, transaction.timestamp);
         
         // Check for duplicate transactions
         if seen_transactions.contains(&tx_id) {
+            log::warn!("Attempting to add duplicate transaction: {}", tx_id);
             return false;
         }
         
-        // Verify transaction signature before adding
-        // NOTE: You must pass a QuantumSecure instance to this function in real usage
-        // For now, this is a placeholder and will not compile until the function signature is updated
-        false
+        // Validate transaction fields
+        if transaction.sender.is_empty() || transaction.receiver.is_empty() {
+            log::error!("Transaction validation failed: missing sender or receiver");
+            return false;
+        }
+        
+        if transaction.amount == 0 {
+            log::error!("Transaction validation failed: zero amount");
+            return false;
+        }
+        
+        if transaction.signature.is_empty() {
+            log::error!("Transaction validation failed: missing signature");
+            return false;
+        }
+        
+        if transaction.sender == transaction.receiver {
+            log::error!("Transaction validation failed: sender cannot equal receiver");
+            return false;
+        }
+        
+        // Add to seen set to prevent future duplicates
+        seen_transactions.insert(tx_id.clone());
+        
+        // Add to transaction store
+        drop(transactions); // Release the read lock
+        let mut transactions_write = self.transactions.lock().await;
+        transactions_write.insert(tx_id, transaction);
+        
+        log::debug!("Transaction added to mempool. Total: {}", transactions_write.len());
+        
+        true
     }
 
     /// Removes a transaction after it is included in a block

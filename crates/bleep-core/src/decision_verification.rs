@@ -11,11 +11,11 @@
 /// No decision executes if ANY step fails.
 /// All failures are logged with cryptographic evidence.
 
-use crate::protocol_invariants::{ProtocolInvariantEngine, InvariantError};
+use crate::protocol_invariants::ProtocolInvariantEngine;
 use crate::decision_attestation::{
-    AttestedDecision, DecisionType, DecisionAttestationEngine, AttestationError,
+    AttestedDecision, DecisionType, DecisionAttestationEngine,
 };
-use crate::invariant_enforcement::{ProtectedState, StateTransitionError};
+use crate::invariant_enforcement::ProtectedState;
 use bleep_crypto::pq_crypto::HashFunctions;
 use serde::{Serialize, Deserialize};
 use std::sync::{Arc, Mutex};
