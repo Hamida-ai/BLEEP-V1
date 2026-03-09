@@ -1,36 +1,37 @@
 [package]
-name = "bleep-rpc"
-version = "1.0.0"
-edition = "2021"
-authors = ["Muhammad Attahir"]
-license = "MIT OR Apache-2.0"
-description = "BLEEP Blockchain - AI-powered, quantum-secure, cross-chain decentralized ecosystem."
-repository = "https://github.com/bleep-project/bleep"
-readme = "README.md"
+name        = "bleep-rpc"
+version     = "1.0.0"
+edition     = "2021"
+authors     = ["Muhammad Attahir"]
+license     = "MIT OR Apache-2.0"
+description = "BLEEP Blockchain JSON-RPC layer"
 
 [dependencies]
-tokio = { version = "1.36", features = ["full"] }
-warp = "0.3.6"
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-tracing = "0.1.40"
+tokio              = { version = "1.36", features = ["full"] }
+warp               = "0.3.6"
+serde              = { version = "1.0", features = ["derive"] }
+serde_json         = "1.0"
+bytes              = "1.5"
+tracing            = "0.1.40"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
-anyhow = "1.0.80"
+anyhow             = "1.0.80"
+sha2 = "0.10.8"
+hex  = "0.4.3"
 
-# Your internal crates (assumed path or workspace setup)
-bleep-core = { path = "../bleep-core" }
+# Internal crates needed for route handlers
+bleep-core        = { path = "../bleep-core" }
 bleep-wallet-core = { path = "../bleep-wallet-core" }
-bleep-ai = { path = "../bleep-ai" }
-bleep-crypto = { path = "../bleep-crypto" }
-bleep-pat = { path = "../bleep-pat" }
-bleep-state = { path = "../bleep-state" }
-bleep-telemetry = { path = "../bleep-telemetry" }
-bleep-governance = { path = "../bleep-governance" }
+bleep-ai          = { path = "../bleep-ai" }
+bleep-crypto      = { path = "../bleep-crypto" }
+bleep-pat         = { path = "../bleep-pat" }
+bleep-state       = { path = "../bleep-state" }
+bleep-consensus   = { path = "../bleep-consensus" }
+bleep-economics   = { path = "../bleep-economics" }
+bleep-interop     = { path = "../bleep-interop" }
+bleep-telemetry   = { path = "../bleep-telemetry" }
+bleep-governance  = { path = "../bleep-governance" }
 
 [[bin]]
-name = "bleep-cli"
-path = "src/bin/cli.rs"
-
-[[bin]]
-name = "rpc"
+name = "bleep-rpc"
 path = "src/bin/rpc.rs"
+parking_lot        = "0.12.1"
