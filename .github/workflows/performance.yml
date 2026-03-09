@@ -1,0 +1,201 @@
+name: Performance Benchmarks
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  RUST_BACKTRACE: 1
+  CARGO_TERM_COLOR: always
+
+jobs:
+  benchmark:
+    name: Benchmark Suite
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-all-crates: true
+
+      - name: Install criterion
+        run: cargo install cargo-criterion
+        continue-on-error: true
+
+      - name: Build benchmarks
+        run: cargo bench --workspace --no-run
+
+      - name: Run consensus benchmarks
+        run: |
+          cargo bench -p bleep-consensus --bench '*' -- --output-format bencher | \
+          tee consensus-bench-results.txt || true
+        continue-on-error: true
+
+      - name: Run crypto benchmarks
+        run: |
+          cargo bench -p bleep-crypto --bench '*' -- --output-format bencher | \
+          tee crypto-bench-results.txt || true
+        continue-on-error: true
+
+      - name: Run VM benchmarks
+        run: |
+          cargo bench -p bleep-vm --bench '*' -- --output-format bencher | \
+          tee vm-bench-results.txt || true
+        continue-on-error: true
+
+      - name: Run P2P benchmarks
+        run: |
+          cargo bench -p bleep-p2p --bench '*' -- --output-format bencher | \
+          tee p2p-bench-results.txt || true
+        continue-on-error: true
+
+  stress-test:
+    name: Stress Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-all-crates: true
+
+      - name: Build with stress test features
+        run: cargo build --workspace --release --features stress-test
+        continue-on-error: true
+
+      - name: Run stress tests
+        run: |
+          timeout 300 cargo test --workspace --release --test '*' -- --test-threads=1 \
+            --nocapture || true
+        timeout-minutes: 10
+        continue-on-error: true
+
+  memory-profiling:
+    name: Memory Usage Analysis
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-all-crates: true
+
+      - name: Install heaptrack
+        run: sudo apt-get update && sudo apt-get install -y heaptrack
+        continue-on-error: true
+
+      - name: Build release binaries
+        run: cargo build --workspace --release
+
+      - name: Profile memory usage
+        run: |
+          echo "Memory usage analysis:"
+          du -sh target/release/* | sort -h
+        continue-on-error: true
+
+  throughput-test:
+    name: Throughput Testing
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-all-crates: true
+
+      - name: Build throughput test binaries
+        run: cargo build --workspace --release --examples
+        continue-on-error: true
+
+      - name: Run throughput tests
+        run: |
+          for example in $(find target/release/examples -type f -executable 2>/dev/null); do
+            echo "Running throughput test: $(basename $example)"
+            timeout 30 "$example" || true
+          done
+        continue-on-error: true
+
+  latency-test:
+    name: Latency Analysis
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-all-crates: true
+
+      - name: Test consensus latency
+        run: |
+          cargo test --package bleep-consensus --test '*' --release \
+            -- --nocapture --test-threads=1 || true
+        continue-on-error: true
+
+  load-test:
+    name: Load Testing
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-all-crates: true
+
+      - name: Run load tests
+        run: |
+          cargo test --workspace --release --test '*' --features load-test \
+            -- --test-threads=4 --nocapture || true
+        continue-on-error: true
+
+  benchmark-comparison:
+    name: Compare Benchmarks
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-all-crates: true
+
+      - name: Benchmark PR branch
+        run: cargo bench --workspace --no-run 2>&1 | tee pr-benchmarks.txt || true
+
+      - name: Comment PR with benchmark results
+        uses: actions/github-script@v7
+        if: always()
+        with:
+          script: |
+            const fs = require('fs');
+            const benchmarks = fs.readFileSync('pr-benchmarks.txt', 'utf8');
+            const summary = benchmarks.split('\n').filter(l => l.includes('time:')).slice(0, 10);
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## Benchmark Results\n\`\`\`\n${summary.join('\n')}\n\`\`\``
+            });

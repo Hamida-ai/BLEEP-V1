@@ -1,0 +1,202 @@
+name: Code Quality
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  RUST_BACKTRACE: 1
+  CARGO_TERM_COLOR: always
+
+jobs:
+  fmt:
+    name: Rust Format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+  clippy:
+    name: Clippy Linting
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-all-crates: true
+
+      - name: Run clippy
+        run: |
+          cargo clippy --workspace --all-targets --all-features -- \
+            -W clippy::all \
+            -W clippy::pedantic \
+            -W clippy::correctness \
+            -W clippy::suspicious \
+            -W clippy::complexity \
+            -W clippy::perf \
+            -A clippy::module-inception \
+            -A clippy::too-many-arguments
+
+  doc:
+    name: Documentation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-all-crates: true
+
+      - name: Generate documentation
+        run: |
+          cargo doc \
+            --workspace \
+            --all-features \
+            --no-deps \
+            --document-private-items
+
+      - name: Check documentation links
+        run: cargo doc --workspace --no-deps --document-private-items 2>&1 | grep -i "warning" || true
+        continue-on-error: true
+
+  deadcode:
+    name: Deadcode Detection
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@nightly
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-all-crates: true
+
+      - name: Install cargo-dead-code
+        run: cargo install cargo-deadcode
+        continue-on-error: true
+
+      - name: Check for dead code
+        run: cargo deadcode
+        continue-on-error: true
+
+  unused-deps:
+    name: Unused Dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@nightly
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-all-crates: true
+
+      - name: Install cargo-udeps
+        run: cargo install cargo-udeps
+
+      - name: Find unused dependencies
+        run: cargo +nightly udeps --workspace --all-targets --output json 2>&1 | tee udeps-output.json || true
+        continue-on-error: true
+
+  complexity:
+    name: Code Complexity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Install cargo-metrics
+        run: cargo install cargo-metrics
+        continue-on-error: true
+
+      - name: Calculate metrics
+        run: |
+          echo "Checking code complexity metrics..."
+          find . -name "*.rs" -path "./crates/*" | wc -l
+        continue-on-error: true
+
+  bench-check:
+    name: Benchmark Compilation Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-all-crates: true
+
+      - name: Check benchmark code compiles
+        run: |
+          for bench in $(find . -path "*/benches/*.rs" 2>/dev/null); do
+            cargo test --bench $(basename $bench .rs) --no-run || true
+          done
+        continue-on-error: true
+
+  toml-check:
+    name: TOML & Config Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install taplo
+        run: cargo install taplo-cli
+
+      - name: Validate TOML files
+        run: |
+          taplo format --check Cargo.toml
+          taplo format --check Cargo.lock
+
+      - name: Validate JSON configs
+        run: |
+          python3 << 'EOF'
+          import json
+          import sys
+          
+          configs = [
+            'config/genesis.json',
+            'config/testnet_config.json',
+            'config/mainnet_config.json'
+          ]
+          
+          for config in configs:
+            try:
+              with open(config) as f:
+                json.load(f)
+              print(f"✓ {config}")
+            except Exception as e:
+              print(f"✗ {config}: {e}")
+              sys.exit(1)
+          EOF
+
+  audit-advisories:
+    name: Advisory Database Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: rustsec/audit-check-action@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}

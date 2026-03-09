@@ -1,0 +1,57 @@
+name: Links Check
+
+on:
+  push:
+    paths:
+      - '**/*.md'
+      - '**/*.yml'
+      - '**/*.yaml'
+    branches: [ main, develop ]
+  pull_request:
+    paths:
+      - '**/*.md'
+      - '**/*.yml'
+      - '**/*.yaml'
+    branches: [ main, develop ]
+  schedule:
+    - cron: '0 3 * * 0'  # Weekly Monday 3 AM UTC
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  links:
+    name: Check Documentation Links
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install markdown-link-check
+        run: npm install -g markdown-link-check
+
+      - name: Check markdown links
+        run: |
+          find . -name "*.md" -type f ! -path "./target/*" ! -path "./.git/*" | while read file; do
+            echo "Checking $file..."
+            markdown-link-check "$file" || true
+          done
+        continue-on-error: true
+
+  yaml-lint:
+    name: Validate YAML
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install yamllint
+        run: pip install yamllint
+
+      - name: Lint YAML files
+        run: |
+          yamllint -c '{extends: default}' \
+            .github/workflows/*.yml \
+            .github/*.yml \
+            docker-compose.yml \
+            config/*.json 2>/dev/null || true

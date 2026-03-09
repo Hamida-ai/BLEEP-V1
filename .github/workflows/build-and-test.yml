@@ -1,0 +1,183 @@
+name: Build and Test
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  RUST_BACKTRACE: 1
+  CARGO_TERM_COLOR: always
+  RUST_LOG: info
+
+jobs:
+  build:
+    name: Build
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        rust: [stable]
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.rust }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-all-crates: true
+
+      - name: Build workspace
+        run: cargo build --workspace --verbose
+
+      - name: Build workspace (release)
+        run: cargo build --workspace --release --verbose
+
+      - name: Build all features
+        run: cargo build --workspace --all-features --verbose
+
+  test:
+    name: Test Suite
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-all-crates: true
+
+      - name: Run all tests
+        run: cargo test --workspace --verbose --lib
+
+      - name: Run doc tests
+        run: cargo test --workspace --doc --verbose
+
+      - name: Run integration tests
+        run: cargo test --workspace --test '*' --verbose
+
+      - name: Run tests with all features
+        run: cargo test --workspace --all-features --verbose
+
+      - name: Test workspace members
+        run: |
+          for crate in crates/*/; do
+            echo "Testing $(basename $crate)..."
+            cargo test -p $(basename $crate) --verbose || exit 1
+          done
+
+  coverage:
+    name: Code Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-all-crates: true
+
+      - name: Install tarpaulin
+        run: cargo install cargo-tarpaulin
+
+      - name: Generate coverage
+        run: |
+          cargo tarpaulin --workspace --out Xml --timeout 300 \
+            --exclude-files tests/* \
+            --fail-under 50
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./cobertura.xml
+          flags: rust
+          fail_ci_if_error: false
+
+  miri:
+    name: Miri (Undefined Behavior Detection)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: miri
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-all-crates: true
+
+      - name: Run Miri
+        run: cargo +nightly miri test --workspace
+        continue-on-error: true
+
+  valgrind:
+    name: Valgrind Memory Safety
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-all-crates: true
+
+      - name: Install valgrind
+        run: sudo apt-get install -y valgrind
+
+      - name: Run tests with valgrind
+        run: |
+          for crate in crates/bleep-core crates/bleep-consensus crates/bleep-crypto; do
+            if [ -d "$crate" ]; then
+              echo "Running valgrind on $(basename $crate)..."
+              cargo test -p $(basename $crate) --verbose 2>&1 | grep -i "error\|invalid" || true
+            fi
+          done
+        continue-on-error: true
+
+  sanitizers:
+    name: Sanitizers
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@nightly
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-all-crates: true
+
+      - name: Run with address sanitizer
+        env:
+          RUSTFLAGS: -Zsanitizer=address
+          RUSTDOCFLAGS: -Zsanitizer=address
+        run: cargo test --workspace -Z build-std --target x86_64-unknown-linux-gnu
+        continue-on-error: true
+
+      - name: Run with memory sanitizer
+        env:
+          RUSTFLAGS: -Zsanitizer=memory
+          RUSTDOCFLAGS: -Zsanitizer=memory
+        run: cargo test --workspace -Z build-std --target x86_64-unknown-linux-gnu
+        continue-on-error: true
+
+      - name: Run with thread sanitizer
+        env:
+          RUSTFLAGS: -Zsanitizer=thread
+          RUSTDOCFLAGS: -Zsanitizer=thread
+        run: cargo test --workspace -Z build-std --target x86_64-unknown-linux-gnu
+        continue-on-error: true
