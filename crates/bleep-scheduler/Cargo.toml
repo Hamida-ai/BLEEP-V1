@@ -1,0 +1,25 @@
+[package]
+name = "bleep-scheduler"
+version = "0.1.0"
+edition = "2021"
+authors = ["Muhammad Attahir <bleepecosystem@gmail.com>"]
+description = "Production-grade task scheduler for BLEEP. Manages all recurring protocol maintenance: epoch advancement, validator rewards, self-healing sweeps, governance advancement, fee market updates, supply verification, shard rebalancing, session purges, mempool pruning, indexer checkpoints, cross-shard timeout sweeps, and audit log rotation."
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+serde       = { version = "1.0", features = ["derive"] }
+serde_json  = "1.0"
+thiserror   = "1.0"
+anyhow      = "1.0"
+tokio       = { version = "1.36", features = ["full"] }
+async-trait = "0.1"
+futures     = "0.3"
+dashmap     = "5.5"
+parking_lot = "0.12"
+chrono      = { version = "0.4", features = ["serde"] }
+log         = "0.4"
+tracing     = "0.1"
+uuid        = { version = "1.7", features = ["v4"] }
+
+[dev-dependencies]
+tokio-test  = "0.4"
