@@ -11,8 +11,7 @@ use crate::epoch::EpochState;
 use crate::engine::{ConsensusEngine, ConsensusError};
 use bleep_core::block::{Block, Transaction, ConsensusMode};
 use bleep_core::blockchain::BlockchainState;
-use std::collections::HashMap;
-use log::{info, warn};
+use log::info;
 
 /// Validator stake information.
 #[derive(Debug, Clone)]
@@ -63,6 +62,23 @@ impl PoSConsensusEngine {
         }
     }
 
+    /// Get this validator's stake weight.
+    pub fn my_stake(&self) -> u64 {
+        self.my_stake
+    }
+
+    /// Get the last block height this validator signed.
+    pub fn last_signed_block_height(&self) -> u64 {
+        self.last_signed_block_height
+    }
+
+    /// Update the last signed block height.
+    pub fn update_last_signed_block(&mut self, height: u64) {
+        if height > self.last_signed_block_height {
+            self.last_signed_block_height = height;
+        }
+    }
+
     /// Select the block proposer for a given height.
     /// 
     /// SAFETY: This function is deterministic.
@@ -70,7 +86,9 @@ impl PoSConsensusEngine {
     /// 
     /// Uses weighted random selection: each validator has probability
     /// proportional to their stake.
-    fn select_proposer(
+    /// 
+    /// PUBLIC: Called by orchestrator during block proposal selection.
+    pub fn select_proposer(
         height: u64,
         validators: &[ValidatorStake],
         prev_block_hash: &str,
@@ -102,19 +120,23 @@ impl PoSConsensusEngine {
         let selection = seed % total_stake;
 
         let mut accumulated = 0;
-        for validator in active {
+        let selected_validator = active.iter().find(|validator| {
             accumulated += validator.stake;
-            if accumulated > selection {
-                return Ok(validator.id.clone());
-            }
-        }
+            accumulated > selection
+        });
 
-        // Fallback (should not reach here if logic is correct)
-        Ok(active[0].id.clone())
+        // Return selected or first validator as fallback
+        if let Some(validator) = selected_validator {
+            Ok(validator.id.clone())
+        } else {
+            Ok(active[0].id.clone())
+        }
     }
 
     /// Compute a deterministic seed from height and previous hash.
-    fn compute_seed(height: u64, prev_hash: &str) -> u64 {
+    /// 
+    /// PUBLIC: Called by select_proposer to generate deterministic selection.
+    pub fn compute_seed(height: u64, prev_hash: &str) -> u64 {
         use std::collections::hash_map::DefaultHasher;
         use std::hash::{Hash, Hasher};
 
@@ -125,7 +147,9 @@ impl PoSConsensusEngine {
     }
 
     /// Check if a validator is allowed to participate.
-    fn check_validator_health(validator: &ValidatorStake) -> Result<(), ConsensusError> {
+    /// 
+    /// PUBLIC: Called when validating block proposals.
+    pub fn check_validator_health(validator: &ValidatorStake) -> Result<(), ConsensusError> {
         if !validator.active {
             return Err(ConsensusError::ProposalRejected {
                 reason: format!("Validator {} is not active", validator.id),
@@ -204,13 +228,16 @@ impl ConsensusEngine for PoSConsensusEngine {
         _blockchain_state: &BlockchainState,
     ) -> Result<Block, ConsensusError> {
         // SAFETY: Create block with correct consensus fields
-        let mut block = Block::with_consensus(
+        let mut block = Block::with_consensus_and_sharding(
             height,
             transactions,
             previous_hash,
             epoch_state.epoch_id,
             ConsensusMode::PosNormal,
             1, // protocol_version
+            String::new(), // shard_registry_root
+            0, // shard_id - default to main shard
+            String::new(), // shard_state_root
         );
 
         // SAFETY: Sign the block with our validator key

@@ -321,14 +321,16 @@ impl ValidatorRegistry {
     /// 
     /// SAFETY: Updates the active validator set and total stake.
     pub fn activate_validator(&mut self, id: &str) -> Result<(), String> {
-        let validator = self
-            .get_mut(id)
-            .ok_or_else(|| format!("Validator {} not found", id))?;
-
-        validator.activate()?;
+        let validator_stake = {
+            let validator = self
+                .get_mut(id)
+                .ok_or_else(|| format!("Validator {} not found", id))?;
+            validator.activate()?;
+            validator.stake
+        };
 
         self.active_validators.insert(id.to_string());
-        self.total_active_stake = self.total_active_stake.saturating_add(validator.stake);
+        self.total_active_stake = self.total_active_stake.saturating_add(validator_stake);
 
         Ok(())
     }

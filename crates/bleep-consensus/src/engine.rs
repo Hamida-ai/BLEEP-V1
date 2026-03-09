@@ -7,7 +7,7 @@
 // 3. No internal state mutations (state parameter is explicit)
 
 use crate::epoch::{EpochState, ConsensusMode};
-use bleep_core::block::{Block, ConsensusMode as BlockConsensusMode};
+use bleep_core::block::Block;
 use bleep_core::blockchain::BlockchainState;
 use std::fmt;
 
@@ -15,7 +15,7 @@ use std::fmt;
 /// 
 /// SAFETY: All errors are logged and may trigger consensus mode switching
 /// or chain halts, so error variants must be precise and actionable.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum ConsensusError {
     /// Block hash is invalid (indicates tampering or computation error)
     InvalidBlockHash { block_height: u64, reason: String },

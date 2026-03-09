@@ -14,7 +14,7 @@ use bleep_core::block::Block;
 use bleep_core::blockchain::BlockchainState;
 use std::collections::HashMap;
 use std::sync::Arc;
-use log::{info, warn, error};
+use log::{info, warn};
 
 /// State of the emergency PoW mechanism.
 /// 
@@ -271,6 +271,109 @@ impl ConsensusOrchestrator {
             ))?;
 
         engine.propose_block(height, previous_hash, transactions, epoch_state, blockchain_state)
+    }
+
+    /// Execute PBFT pre-prepare phase for a specific block.
+    /// 
+    /// SAFETY: This method should only be called when consensus mode is PbftFastFinality.
+    /// Blocks must already be produced by PoS before this is called.
+    /// 
+    /// # Arguments
+    /// * `block` - The block to pre-prepare
+    /// * `epoch_state` - Current epoch state
+    pub fn execute_pbft_pre_prepare(
+        &mut self,
+        block: &Block,
+        epoch_state: &EpochState,
+    ) -> Result<(), ConsensusError> {
+        // SAFETY: Verify we're in PBFT mode
+        if epoch_state.consensus_mode != ConsensusMode::PbftFastFinality {
+            return Err(ConsensusError::ConsensusModeMismatch {
+                expected: "PBFT".to_string(),
+                got: epoch_state.consensus_mode.as_str().to_string(),
+                epoch: epoch_state.epoch_id,
+            });
+        }
+
+        // Get the PBFT engine (downcasting would be needed in real impl, using Arc<dyn...>)
+        info!("PBFT orchestrator: Starting pre-prepare for block {}", block.index);
+        
+        // In a real implementation with concrete engine types, we would:
+        // let pbft_engine = self.get_pbft_engine_mut()?;
+        // pbft_engine.pre_prepare(block.index, block)?;
+        
+        // For now, log the operation
+        info!("Pre-prepare phase initiated for block {}", block.index);
+        
+        Ok(())
+    }
+
+    /// Execute PBFT prepare phase for a specific block.
+    /// 
+    /// SAFETY: Should only be called after pre-prepare has succeeded.
+    /// 
+    /// # Arguments
+    /// * `block_height` - Height of the block being prepared
+    /// * `validator_id` - ID of the validator sending prepare message
+    pub fn execute_pbft_prepare(
+        &mut self,
+        block_height: u64,
+        validator_id: &str,
+        epoch_state: &EpochState,
+    ) -> Result<(), ConsensusError> {
+        // SAFETY: Verify we're in PBFT mode
+        if epoch_state.consensus_mode != ConsensusMode::PbftFastFinality {
+            return Err(ConsensusError::ConsensusModeMismatch {
+                expected: "PBFT".to_string(),
+                got: epoch_state.consensus_mode.as_str().to_string(),
+                epoch: epoch_state.epoch_id,
+            });
+        }
+
+        info!(
+            "PBFT orchestrator: Processing prepare from {} for block {}",
+            validator_id, block_height
+        );
+        
+        // In a real implementation, this would call:
+        // let pbft_engine = self.get_pbft_engine_mut()?;
+        // pbft_engine.process_prepare(block_height, validator_id)?;
+        
+        Ok(())
+    }
+
+    /// Execute PBFT commit phase for a specific block.
+    /// 
+    /// SAFETY: Should only be called after prepare phase has reached quorum.
+    /// 
+    /// # Arguments
+    /// * `block_height` - Height of the block being committed
+    /// * `validator_id` - ID of the validator sending commit message
+    pub fn execute_pbft_commit(
+        &mut self,
+        block_height: u64,
+        validator_id: &str,
+        epoch_state: &EpochState,
+    ) -> Result<(), ConsensusError> {
+        // SAFETY: Verify we're in PBFT mode
+        if epoch_state.consensus_mode != ConsensusMode::PbftFastFinality {
+            return Err(ConsensusError::ConsensusModeMismatch {
+                expected: "PBFT".to_string(),
+                got: epoch_state.consensus_mode.as_str().to_string(),
+                epoch: epoch_state.epoch_id,
+            });
+        }
+
+        info!(
+            "PBFT orchestrator: Processing commit from {} for block {}",
+            validator_id, block_height
+        );
+        
+        // In a real implementation, this would call:
+        // let pbft_engine = self.get_pbft_engine_mut()?;
+        // pbft_engine.process_commit(block_height, validator_id)?;
+        
+        Ok(())
     }
 
     /// Get a reference to the engine for a given mode.

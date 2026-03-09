@@ -13,7 +13,7 @@ use crate::engine::{ConsensusEngine, ConsensusError};
 use bleep_core::block::{Block, Transaction, ConsensusMode};
 use bleep_core::blockchain::BlockchainState;
 use sha2::{Sha256, Digest};
-use log::{info, warn};
+use log::info;
 
 /// Emergency PoW consensus engine.
 /// 
@@ -62,6 +62,31 @@ impl EmergencyPoWEngine {
         }
     }
 
+    /// Get the current difficulty setting.
+    pub fn difficulty(&self) -> u32 {
+        self.difficulty
+    }
+
+    /// Get the target block time in milliseconds.
+    pub fn target_block_time_ms(&self) -> u64 {
+        self.target_block_time_ms
+    }
+
+    /// Get the difficulty adjustment period.
+    pub fn difficulty_adjustment_period(&self) -> u64 {
+        self.difficulty_adjustment_period
+    }
+
+    /// Get the number of blocks mined in current period.
+    pub fn blocks_mined(&self) -> u64 {
+        self.blocks_mined
+    }
+
+    /// Get the start time of current adjustment period.
+    pub fn period_start_time(&self) -> u64 {
+        self.period_start_time
+    }
+
     /// Compute the Proof-of-Work for a block.
     /// 
     /// SAFETY: This is computationally expensive but deterministic.
@@ -99,11 +124,30 @@ impl EmergencyPoWEngine {
     /// Verify that a block's PoW is valid.
     /// 
     /// SAFETY: Checks that the hash meets the difficulty requirement.
-    fn verify_pow(&self, block_data: &str, hash: &str) -> Result<(), ConsensusError> {
+    /// The block_data is verified by comparing the expected hash to the provided hash.
+    /// 
+    /// PUBLIC: Called by orchestrator to verify PoW blocks.
+    /// 
+    /// # Arguments
+    /// * `block_data` - The block data that was hashed
+    /// * `hash` - The hash claimed to prove work
+    pub fn verify_pow(&self, block_data: &str, hash: &str) -> Result<(), ConsensusError> {
+        // SAFETY: Verify that block_data is non-empty (prevents trivial PoW)
+        if block_data.is_empty() {
+            return Err(ConsensusError::ProposalRejected {
+                reason: "Block data cannot be empty".to_string(),
+            });
+        }
+
         let target = "0".repeat(self.difficulty as usize);
 
         if hash.starts_with(&target) {
-            info!("PoW verification passed: difficulty={}, hash={}", self.difficulty, &hash[..16]);
+            info!(
+                "PoW verification passed: difficulty={}, hash={}, data_len={}",
+                self.difficulty,
+                &hash[..std::cmp::min(16, hash.len())],
+                block_data.len()
+            );
             Ok(())
         } else {
             Err(ConsensusError::InsufficientProofOfWork {
@@ -121,7 +165,9 @@ impl EmergencyPoWEngine {
     /// SAFETY: Difficulty adjustment is deterministic.
     /// If blocks are coming too fast, increase difficulty.
     /// If blocks are coming too slowly, decrease difficulty.
-    fn adjust_difficulty(&mut self, actual_block_time_ms: u64) {
+    /// 
+    /// PUBLIC: Called by orchestrator to dynamically adjust PoW difficulty.
+    pub fn adjust_difficulty(&mut self, actual_block_time_ms: u64) {
         let target = self.target_block_time_ms as f64;
         let actual = actual_block_time_ms as f64;
         let ratio = actual / target;
@@ -201,13 +247,16 @@ impl ConsensusEngine for EmergencyPoWEngine {
         _blockchain_state: &BlockchainState,
     ) -> Result<Block, ConsensusError> {
         // SAFETY: Create block with PoW mode
-        let mut block = Block::with_consensus(
+        let mut block = Block::with_consensus_and_sharding(
             height,
             transactions,
             previous_hash,
             epoch_state.epoch_id,
             ConsensusMode::EmergencyPow,
             1, // protocol_version
+            String::new(), // shard_registry_root
+            0, // shard_id
+            String::new(), // shard_state_root
         );
 
         // Sign with validator key

@@ -8,11 +8,10 @@
 // 4. Slashing is irreversible (frozen in block history)
 // 5. Slashing never panics (all errors are handled)
 
-use crate::validator_identity::{ValidatorIdentity, ValidatorRegistry, ValidatorState};
-use bleep_core::block::Block;
+use crate::validator_identity::{ValidatorIdentity, ValidatorRegistry};
 use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
-use log::{info, warn, error};
+use log::info;
 
 /// Evidence of a slashable offense.
 /// 
@@ -221,8 +220,21 @@ impl SlashingEngine {
 
         let slash_amount = self.calculate_slash_amount(&evidence, validator)?;
 
+        // Extract metadata before consuming `evidence` in the match below.
+        // This avoids a borrow-after-move compile error.
+        let evidence_type_str: String = match &evidence {
+            SlashingEvidence::DoubleSigning { .. } => "DOUBLE_SIGNING",
+            SlashingEvidence::Equivocation  { .. } => "EQUIVOCATION",
+            SlashingEvidence::Downtime      { .. } => "DOWNTIME",
+        }.to_string();
+        let block_height_val: u64 = match &evidence {
+            SlashingEvidence::DoubleSigning { height, .. } => *height,
+            SlashingEvidence::Equivocation  { height, .. } => *height,
+            SlashingEvidence::Downtime      { .. }         => 0,
+        };
+
         // SAFETY: Apply the slash (this modifies the validator registry)
-        match evidence {
+        match &evidence {
             SlashingEvidence::DoubleSigning { .. } => {
                 validator_registry.slash_validator_double_sign(&validator_id, slash_amount)?;
                 info!("Slashed validator {} for double-signing: {} microBLEEP", validator_id, slash_amount);
@@ -239,17 +251,9 @@ impl SlashingEngine {
 
         // SAFETY: Record the slashing event for audit trail
         let event = SlashingEvent {
-            evidence_type: match evidence {
-                SlashingEvidence::DoubleSigning { .. } => "DOUBLE_SIGNING".to_string(),
-                SlashingEvidence::Equivocation { .. } => "EQUIVOCATION".to_string(),
-                SlashingEvidence::Downtime { .. } => "DOWNTIME".to_string(),
-            },
+            evidence_type: evidence_type_str,
             validator_id,
-            block_height: match &evidence {
-                SlashingEvidence::DoubleSigning { height, .. } => *height,
-                SlashingEvidence::Equivocation { height, .. } => *height,
-                SlashingEvidence::Downtime { .. } => 0,
-            },
+            block_height: block_height_val,
             slash_amount,
             processed_at_epoch: current_epoch,
             timestamp,
@@ -265,17 +269,44 @@ impl SlashingEngine {
     fn calculate_slash_amount(&self, evidence: &SlashingEvidence, validator: &ValidatorIdentity) -> Result<u128, String> {
         let slash_amount = match evidence {
             SlashingEvidence::DoubleSigning { .. } => {
-                let amount = (validator.stake as f64 * self.penalties.double_signing_penalty) as u128;
-                // Double-signing results in full ejection, so slash everything
-                validator.stake
+                // Double-signing results in full ejection
+                let slash_percentage = self.penalties.double_signing_penalty;
+                let amount = (validator.stake as f64 * slash_percentage) as u128;
+                // For double-signing, confiscate the full calculated penalty
+                info!(
+                    "Double-signing detected: will slash {:.2}% of {} microBLEEP from {}",
+                    slash_percentage * 100.0,
+                    validator.stake,
+                    validator.id
+                );
+                amount
             }
             SlashingEvidence::Equivocation { .. } => {
-                ((validator.stake as f64 * self.penalties.equivocation_penalty) as u128).min(validator.stake)
+                let penalty_percentage = self.penalties.equivocation_penalty;
+                let amount = (validator.stake as f64 * penalty_percentage) as u128;
+                info!(
+                    "Equivocation detected: will slash {:.2}% from {}",
+                    penalty_percentage * 100.0,
+                    validator.id
+                );
+                amount.min(validator.stake)
             }
-            SlashingEvidence::Downtime { missed_blocks, total_blocks_in_epoch } => {
+            SlashingEvidence::Downtime { validator_id, missed_blocks, total_blocks_in_epoch } => {
+                // Calculate downtime penalty based on missed blocks
                 let missed_ratio = *missed_blocks as f64 / *total_blocks_in_epoch as f64;
-                let penalty = missed_ratio * self.penalties.downtime_penalty_per_block * 1000.0;
-                ((validator.stake as f64 * penalty) as u128).min(validator.stake)
+                let penalty_percentage = missed_ratio * self.penalties.downtime_penalty_per_block;
+                let amount = (validator.stake as f64 * penalty_percentage) as u128;
+                
+                info!(
+                    "Downtime detected for {}: missed {}/{} blocks ({:.2}%); slashing {:.2}% ({})",
+                    validator_id,
+                    missed_blocks,
+                    total_blocks_in_epoch,
+                    missed_ratio * 100.0,
+                    penalty_percentage * 100.0,
+                    amount
+                );
+                amount.min(validator.stake)
             }
         };
 

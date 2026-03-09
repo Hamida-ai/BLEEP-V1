@@ -10,7 +10,7 @@
 
 use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
-use log::{info, warn};
+use log::info;
 
 /// A finality certificate: cryptographic proof that a block is finalized.
 /// 

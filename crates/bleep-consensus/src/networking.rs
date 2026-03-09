@@ -16,7 +16,17 @@ impl NetworkingModule {
         1000000 // Default value for now
     }
 
-    pub fn broadcast_proposal(&self, block: &Block, leader_id: &str) -> bool {
+    pub fn broadcast_proposal(&self, block: &Block, leader_id: &str) -> Result<(), String> {
+        // SAFETY: Log the leader's block proposal for audit trail and finality tracking
+        log::debug!(
+            "Broadcasting block proposal from leader {}: height={}, hash={}",
+            leader_id,
+            block.index,
+            block.index
+        );
+        
+        // Broadcast block to all connected peers
         self.inner.broadcast_block(block)
+            .map_err(|e| format!("Failed to broadcast block from leader {}: {:?}", leader_id, e))
     }
 }
