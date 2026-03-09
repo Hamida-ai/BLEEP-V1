@@ -1,50 +1,51 @@
 [package]
-name = "bleep-state"
+name    = "bleep-state"
 version = "1.0.0"
 edition = "2021"
 
 [dependencies]
-# Blockchain cryptography and SDKs
-# Blockchain & Runtime
-log = "0.4.21"
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-bincode = "1.3.3"
+log          = "0.4.21"
+serde        = { version = "1.0", features = ["derive"] }
+serde_json   = "1.0"
+bincode      = "1.3.3"
+thiserror    = "1.0"
 
 # Thread-safe containers
-dashmap = "5.5.3"
-parking_lot = "0.12"
-rayon = "1.10.0"
+dashmap      = "5.5.3"
+parking_lot  = "0.12"
+rayon        = "1.10.0"
 
 # Cryptography
-blake3 = "1.5.0"
-sha2 = "0.10.8"
-rand = "0.8.5"
-hex = "0.4.3"
-
-# Quantum Cryptography (you must implement wrappers or FFI to these)
-pqcrypto = "0.18.1"
+blake3       = "1.5.0"
+sha2         = "0.10.8"
+sha3         = "0.10"
+rand         = "0.8.5"
+hex          = "0.4.3"
+pqcrypto     = "0.18.1"
 pqcrypto-kyber = "0.8.0"
-pqcrypto-falcon = "0.4.0"
 
-# Zero-Knowledge Proofs (ZK-SNARKS, SPHINCS+ and others)
-ark-groth16 = "0.4.0"
-ark-bls12-381 = "0.4.0"
-ark-ff = "0.4.0"
+# ZKP — ark 0.4 consistent with workspace
+ark-groth16           = "0.4.0"
+ark-bls12-381         = "0.4.0"
+ark-ff                = "0.4.0"
 ark-crypto-primitives = "0.4.0"
 
-# AI (ML Prediction)
-linfa = "0.7.1"
-linfa-nn = "0.7.2"
-ndarray = "0.15.1"
-tch = { version = "0.13", features = ["download-libtorch"] }
-
 # Persistent storage
-rocksdb = "0.21.0"
+rocksdb      = "0.21.0"
 
-# Networking & P2P
-tokio = { version = "1.36", features = ["full"] }
+# Async
+tokio        = { version = "1.36", features = ["full"] }
+
+# NOTE: Removed for MVP:
+#   tch      — LibTorch (not used in any lib.rs module)
+#   linfa    — ML toolkit (not used in any lib.rs module)
+#   linfa-nn — same
+#   pqcrypto-falcon — needs clang/cmake; not used in lib.rs
 
 [features]
 default = []
+ml = []
 
+
+[dev-dependencies]
+proptest = "1.4"
