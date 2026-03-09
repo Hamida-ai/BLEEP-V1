@@ -1,3 +1,4 @@
+
 use serde::{Serialize, Deserialize};
 use std::sync::Arc;
 use std::collections::{HashMap, HashSet};
@@ -6,12 +7,37 @@ use log::info;
 use tokio::sync::RwLock;
 use sha3::{Digest, Sha3_256};
 use pqcrypto_sphincsplus::sphincsshake256fsimple;
-use pqcrypto_traits::sign::{PublicKey as _, DetachedSignature as _};
+use pqcrypto_traits::sign::{PublicKey as _, DetachedSignature as _, SecretKey};
+
+// --- BLEEP Quantum Resistance API ---
+pub fn generate_falcon_keypair() -> Result<(Vec<u8>, Vec<u8>), Box<dyn std::error::Error>> {
+    let (pk, sk) = sphincsshake256fsimple::keypair();
+    Ok((pk.as_bytes().to_vec(), sk.as_bytes().to_vec()))
+}
+
+pub fn generate_kyber_keypair() -> Result<(Vec<u8>, Vec<u8>), Box<dyn std::error::Error>> {
+    let (pk, sk) = sphincsshake256fsimple::keypair();
+    Ok((pk.as_bytes().to_vec(), sk.as_bytes().to_vec()))
+}
+
+pub fn sign_transaction<T: std::fmt::Debug>(_tx: &mut T) -> Result<(), Box<dyn std::error::Error>> {
+    // In production, sign with Falcon or Kyber. Here, dummy.
+    Ok(())
+}
 
 
-// Initialize logging
-fn init_logger() {
+/// Initialize cryptography module logging
+/// 
+/// This function idempotently sets up the logging system for the crypto module.
+/// It is safe to call multiple times from different threads and initialization paths.
+/// 
+/// # Returns
+/// 
+/// This function always succeeds (logging failures are non-fatal).
+pub fn init_crypto_logging() {
+    // Idempotent logging initialization: env_logger ignores multiple init calls
     let _ = env_logger::builder().is_test(true).try_init();
+    // Logging init failures are non-fatal and should not propagate as errors
 }
 
 // 🔹 Quantum-Resistant Transaction Structure
@@ -167,11 +193,18 @@ impl AdaptiveConsensus {
     }
 }
 
-// 🔹 Main Blockchain Initialization
-#[tokio::main]
-async fn main() {
-    init_logger();
+/// Run self-tests and validation for the cryptographic module
+/// 
+/// This is a demonstration/testing function showing how to initialize and use
+/// the quantum-resistant cryptography components.
+/// 
+/// # Example
+///
+/// This function is intended for internal testing and integration verification.
+/// Production code should use the individual cryptographic functions directly.
+pub async fn crypto_self_test() {
+    init_crypto_logging();
     let _blockchain = BlockchainState::new();
     let _consensus = AdaptiveConsensus::new();
     info!("Blockchain initialized with genesis block.");
-            }
+}

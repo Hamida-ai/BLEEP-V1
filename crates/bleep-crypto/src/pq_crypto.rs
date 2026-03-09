@@ -97,6 +97,22 @@ impl KyberPublicKey {
     pub fn to_vec(&self) -> Vec<u8> {
         self.bytes.clone()
     }
+
+    /// Validate the quality of the key material
+    pub fn validate(&self) -> CryptoResult<()> {
+        // Check for known weak keys (example: all zeros or repeated patterns)
+        if self.bytes.iter().all(|&b| b == 0) {
+            return Err(CryptoError::InvalidKeyFormat("Public key is all zeros, which is insecure".to_string()));
+        }
+
+        // Check for entropy quality (example: Shannon entropy threshold)
+        let entropy = calculate_entropy(&self.bytes);
+        if entropy < 7.5 {
+            return Err(CryptoError::InvalidKeyFormat("Public key has insufficient entropy".to_string()));
+        }
+
+        Ok(())
+    }
 }
 
 /// Kyber1024 secret key wrapper
@@ -122,6 +138,22 @@ impl KyberSecretKey {
     
     pub fn to_vec(&self) -> Vec<u8> {
         self.bytes.clone()
+    }
+
+    /// Validate the quality of the key material
+    pub fn validate(&self) -> CryptoResult<()> {
+        // Check for known weak keys (example: all zeros or repeated patterns)
+        if self.bytes.iter().all(|&b| b == 0) {
+            return Err(CryptoError::InvalidKeyFormat("Secret key is all zeros, which is insecure".to_string()));
+        }
+
+        // Check for entropy quality (example: Shannon entropy threshold)
+        let entropy = calculate_entropy(&self.bytes);
+        if entropy < 7.5 {
+            return Err(CryptoError::InvalidKeyFormat("Secret key has insufficient entropy".to_string()));
+        }
+
+        Ok(())
     }
 }
 
@@ -179,6 +211,10 @@ impl KyberKem {
         let public_key = KyberPublicKey::from_bytes(pk.as_bytes().to_vec())?;
         let secret_key = KyberSecretKey::from_bytes(sk.as_bytes().to_vec())?;
         
+        // Validate the generated keys
+        public_key.validate()?;
+        secret_key.validate()?;
+
         Ok((public_key, secret_key))
     }
     
@@ -552,4 +588,21 @@ mod tests {
         
         assert_eq!(plaintext.to_vec(), decrypted);
     }
+}
+
+/// Calculate Shannon entropy of a byte slice
+fn calculate_entropy(data: &[u8]) -> f64 {
+    let mut counts = [0usize; 256];
+    for &byte in data {
+        counts[byte as usize] += 1;
+    }
+
+    let len = data.len() as f64;
+    counts.iter()
+        .filter(|&&count| count > 0)
+        .map(|&count| {
+            let p = count as f64 / len;
+            -p * p.log2()
+        })
+        .sum()
 }

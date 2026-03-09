@@ -28,6 +28,10 @@ pub enum BLEEPError {
     Io(#[from] std::io::Error),
     #[error("Bincode error: {0}")]
     Bincode(#[from] Box<bincode::ErrorKind>),
+    /// C-03 FIX: Added so finalize_block can return a typed error instead of
+    /// recursing indefinitely.
+    #[error("Consensus failed: {0}")]
+    ConsensusFailed(String),
 }
 
 /// **ZKP Module with Advanced Security & Performance**
@@ -68,23 +72,96 @@ impl BLEEPZKPModule {
         Ok(())
     }
 
-    /// Load proving & verifying keys with decryption and integrity verification
+    /// Load proving & verifying keys from disk with decryption and integrity verification.
+    ///
+    /// # C-02 FIX
+    ///
+    /// The previous implementation used `unsafe { std::mem::zeroed() }` to
+    /// construct `ProvingKey` and `VerifyingKey` values when the key files
+    /// could not be loaded:
+    ///
+    /// ```rust,ignore
+    /// let dummy_pk: ProvingKey<Bls12_381> = unsafe { std::mem::zeroed() };
+    /// let dummy_vk: VerifyingKey<Bls12_381> = unsafe { std::mem::zeroed() };
+    /// ```
+    ///
+    /// This is undefined behaviour. `ProvingKey` and `VerifyingKey` contain
+    /// non-nullable pointers and `Vec` internals — zeroing them produces
+    /// invalid Rust objects. Any subsequent use (cloning, serialising, or
+    /// calling `verify()`) immediately triggers UB and almost certainly
+    /// crashes or corrupts memory silently.
+    ///
+    /// Worse, because the function still returned `Ok(...)`, callers believed
+    /// key loading succeeded and used the broken objects in real ZKP
+    /// verification paths, meaning every proof could be accepted or rejected
+    /// unpredictably.
+    ///
+    /// # Correct behaviour
+    ///
+    /// Key loading failure must be a hard error. There is no safe "dummy"
+    /// Groth16 key. The caller (node startup code) must either:
+    ///   - Supply real keys generated offline with `BLEEPZKPModule::generate_and_save_keys()`
+    ///   - Handle the error and refuse to start rather than operating with
+    ///     broken crypto.
+    ///
+    /// # Production path
+    ///
+    /// Replace the placeholder `fs::read` + `bincode::deserialize` with the
+    /// Kyber-AES hybrid decryption path once `ark_serialize` is wired up:
+    ///   1. Read ciphertext from disk.
+    ///   2. Decrypt with `KyberAESHybrid::decrypt(node_kyber_sk, ciphertext)`.
+    ///   3. Deserialise with `ark_serialize::CanonicalDeserialize`.
+    ///   4. Verify integrity checksum.
     pub fn load_keys(
-        _proving_key_path: &str,
-        _verifying_key_path: &str,
+        proving_key_path: &str,
+        verifying_key_path: &str,
     ) -> Result<Self, BLEEPError> {
-        // Dummy keys for test/integration
-        use ark_bls12_381::Bls12_381;
-        use ark_groth16::{ProvingKey, VerifyingKey};
-        // Use Box::leak(Box::new(...)) to create static dummy keys for test/demo
-        let dummy_pk: ProvingKey<Bls12_381> = unsafe { std::mem::zeroed() };
-        let dummy_vk: VerifyingKey<Bls12_381> = unsafe { std::mem::zeroed() };
-        Ok(Self {
-            proving_key: dummy_pk,
-            verifying_key: dummy_vk,
-            revocation_tree: MerkleTree::new(),
-            logger: BLEEPLogger::new(),
-        })
+        // Validate that the key files exist and are non-empty before attempting
+        // to deserialise. This gives a clear error message rather than a
+        // confusing deserialisation failure.
+        let pk_bytes = fs::read(proving_key_path).map_err(|e| BLEEPError::Generic(
+            format!("Cannot read proving key at '{}': {}. \
+                     Run key generation first.", proving_key_path, e)
+        ))?;
+
+        let vk_bytes = fs::read(verifying_key_path).map_err(|e| BLEEPError::Generic(
+            format!("Cannot read verifying key at '{}': {}. \
+                     Run key generation first.", verifying_key_path, e)
+        ))?;
+
+        if pk_bytes.is_empty() || vk_bytes.is_empty() {
+            return Err(BLEEPError::Generic(
+                "Key file(s) are empty. Regenerate keys with BLEEPZKPModule::generate_and_save_keys()."
+                .to_string()
+            ));
+        }
+
+        // PRODUCTION: replace the block below with proper ark_serialize
+        // deserialization + Kyber-AES hybrid decryption:
+        //
+        //   let pk_plain = KyberAESHybrid::decrypt(&node_kyber_sk, &pk_bytes)?;
+        //   let pk = ProvingKey::deserialize_with_mode(&*pk_plain, Compress::No, Validate::Yes)
+        //       .map_err(|e| BLEEPError::SerializationError)?;
+        //
+        // Until then, reject anything that isn't the known development
+        // placeholder so that real nodes are not inadvertently started with
+        // no actual key material.
+        if pk_bytes == b"dummy_proving_key" || vk_bytes == b"dummy_verifying_key" {
+            return Err(BLEEPError::Generic(
+                "Development-only placeholder keys detected. \
+                 These MUST NOT be used in production. \
+                 Generate real Groth16 keys and store them encrypted.".to_string()
+            ));
+        }
+
+        // If we reach here we have non-empty, non-placeholder bytes but cannot
+        // yet deserialise them (ark_serialize integration pending). Return an
+        // explicit error rather than UB.
+        Err(BLEEPError::Generic(
+            "ZKP key deserialisation not yet implemented for this key format. \
+             See load_keys() documentation for the production integration path."
+            .to_string()
+        ))
     }
 
     /// Aggregate multiple proofs using Bulletproofs-style compression
