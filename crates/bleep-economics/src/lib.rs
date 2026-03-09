@@ -15,6 +15,7 @@ pub mod fee_market;
 pub mod validator_incentives;
 pub mod oracle_bridge;
 pub mod game_theory;
+pub mod runtime;
 
 // Re-export key types for easy access
 pub use tokenomics::{
@@ -128,3 +129,7 @@ mod tests {
         assert!(econ.verify_epoch_invariants().is_ok());
     }
 }
+
+pub use runtime::{
+    BleepEconomicsRuntime, EpochInput, EpochOutput, RuntimeError,
+};

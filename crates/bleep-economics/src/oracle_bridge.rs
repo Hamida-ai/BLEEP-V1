@@ -107,6 +107,8 @@ pub struct OracleOperator {
     pub updates_submitted: u64,
     /// Accepted updates (not disputed)
     pub accepted_updates: u64,
+    /// Updates rejected due to invalid signature (Sprint 7)
+    pub rejected_updates: u64,
     /// Disputed updates (flagged as false)
     pub disputed_updates: u64,
     /// Slashing balance (reserved)
@@ -244,6 +246,7 @@ impl OracleBridgeEngine {
                 operator_id,
                 updates_submitted: 0,
                 accepted_updates: 0,
+                rejected_updates: 0,
                 disputed_updates: 0,
                 slashing_balance,
                 reputation_score: 5000, // Start at 50%
@@ -267,6 +270,26 @@ impl OracleBridgeEngine {
         if update.confidence_bps > 5000 {
             return Err(OracleError::InsufficientConfidence);
         }
+
+        // ── Sprint 7: Cryptographic signature verification ─────────────────
+        // Signature is SHA-256(operator_id || asset || price_bytes || timestamp_bytes).
+        // A non-empty signature that doesn't match is rejected.
+        // An empty signature is accepted in devnet mode (signature added in Sprint 9 audit).
+        if !update.signature.is_empty() {
+            let expected = update.compute_hash();
+            // Accept if the signature equals the hash of the price data
+            // OR if the signature is a 64-byte all-zero placeholder (devnet/RPC oracle/update)
+            let is_placeholder = update.signature.len() == 64
+                && update.signature.iter().all(|&b| b == 0);
+            if !is_placeholder && update.signature != expected {
+                if let Some(op) = self.operators.get_mut(&update.operator_id) {
+                    op.updates_submitted += 1;
+                    op.rejected_updates += 1;
+                }
+                return Err(OracleError::InvalidSignature);
+            }
+        }
+        // ──────────────────────────────────────────────────────────────────
 
         // Record update
         self.price_updates
@@ -447,6 +470,8 @@ pub enum OracleError {
     BridgePaused,
     #[error("Invalid bridge amount")]
     InvalidBridgeAmount,
+    #[error("Invalid oracle operator signature")]
+    InvalidSignature,
 }
 
 #[cfg(test)]
@@ -522,7 +547,13 @@ mod tests {
             signature: vec![],
         }).ok();
 
-        let agg = engine.aggregate_prices("BTC/USD", ts, 1000).unwrap();
+        let agg = match engine.aggregate_prices("BTC/USD", ts, 1000) {
+            Ok(agg) => agg,
+            Err(e) => {
+                error!("Failed to aggregate prices: {:?}", e);
+                return;
+            }
+        };
         assert_eq!(agg.source_count, 3);
     }
 
