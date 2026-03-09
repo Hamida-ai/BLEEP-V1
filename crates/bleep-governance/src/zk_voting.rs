@@ -16,7 +16,7 @@ use log::{info, warn, error};
 use thiserror::Error;
 use std::collections::{HashMap, HashSet};
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, PartialEq, Eq)]
 pub enum ZKVotingError {
     #[error("Invalid voter proof")]
     InvalidVoterProof,

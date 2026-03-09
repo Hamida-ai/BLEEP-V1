@@ -206,9 +206,10 @@ impl ProposalVotingState {
         end_epoch: u64,
         total_active_stake: u64,
     ) -> Self {
+        let proposal_id_clone = proposal_id.clone();
         ProposalVotingState {
             proposal_id,
-            window: VotingWindow::new(proposal_id.clone(), start_epoch, end_epoch),
+            window: VotingWindow::new(proposal_id_clone, start_epoch, end_epoch),
             stake_for: 0,
             stake_against: 0,
             voters: HashSet::new(),

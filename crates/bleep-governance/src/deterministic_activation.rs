@@ -217,12 +217,13 @@ impl DeterministicActivationManager {
         current_epoch: u64,
         current_height: u64,
     ) -> Result<Vec<ActivationRecord>, ActivationError> {
-        let plan = self.plans.get_mut(proposal_id)
-            .ok_or(ActivationError::NotReady)?;
-        
+        // Check readiness before taking mutable reference
         if !self.check_activation_ready(proposal_id, current_epoch) {
             return Err(ActivationError::NotReady);
         }
+        
+        let plan = self.plans.get_mut(proposal_id)
+            .ok_or(ActivationError::NotReady)?;
         
         plan.state = ActivationState::Activating;
         

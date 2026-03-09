@@ -43,6 +43,12 @@ pub enum ProtocolEvolutionError {
     InvariantViolation(String),
 }
 
+impl From<crate::safety_constraints::SafetyConstraintError> for ProtocolEvolutionError {
+    fn from(err: crate::safety_constraints::SafetyConstraintError) -> Self {
+        ProtocolEvolutionError::ValidationFailed(err.to_string())
+    }
+}
+
 /// Governance vote on an A-PIP
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProposalVote {

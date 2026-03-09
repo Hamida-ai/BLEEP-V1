@@ -10,6 +10,7 @@
 // 6. All rules must satisfy invariant constraints before use
 
 use serde::{Serialize, Deserialize};
+use serde_json;
 use sha2::{Digest, Sha256};
 use log::{info, warn, error};
 use std::collections::BTreeMap;
@@ -152,7 +153,7 @@ impl ProtocolRule {
 }
 
 /// Semantic versioning for protocol rules
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Default)]
 pub struct RuleVersion {
     pub major: u16,
     pub minor: u16,
@@ -300,7 +301,7 @@ impl ProtocolRuleSetFactory {
             "Threshold in state bytes for shard splitting".to_string(),
             true,
             0,
-        ))?;
+        )?)?;
         
         rules.add_rule(ProtocolRule::new(
             "SHARD_MERGE_THRESHOLD".to_string(),
@@ -309,7 +310,7 @@ impl ProtocolRuleSetFactory {
             "Threshold for merging underutilized shards".to_string(),
             true,
             0,
-        ))?;
+        )?)?;
         
         // VALIDATOR RULES
         rules.add_rule(ProtocolRule::new(
@@ -319,7 +320,7 @@ impl ProtocolRuleSetFactory {
             "Number of epochs between validator set changes".to_string(),
             true,
             0,
-        ))?;
+        )?)?;
         
         rules.add_rule(ProtocolRule::new(
             "MIN_VALIDATOR_STAKE".to_string(),
@@ -328,7 +329,7 @@ impl ProtocolRuleSetFactory {
             "Minimum stake to become a validator".to_string(),
             true,
             0,
-        ))?;
+        )?)?;
         
         // CROSS-SHARD RULES
         rules.add_rule(ProtocolRule::new(
@@ -338,7 +339,7 @@ impl ProtocolRuleSetFactory {
             "Blocks to wait for cross-shard transaction completion".to_string(),
             true,
             0,
-        ))?;
+        )?)?;
         
         // SLASHING RULES
         rules.add_rule(ProtocolRule::new(
@@ -348,7 +349,7 @@ impl ProtocolRuleSetFactory {
             "Percentage of validator stake slashed for Byzantine behavior".to_string(),
             true,
             0,
-        ))?;
+        )?)?;
         
         // CHECKPOINT RULES
         rules.add_rule(ProtocolRule::new(
@@ -358,7 +359,7 @@ impl ProtocolRuleSetFactory {
             "Number of blocks between mandatory checkpoints".to_string(),
             true,
             0,
-        ))?;
+        )?)?;
         
         // FINALITY RULES
         rules.add_rule(ProtocolRule::new(
@@ -368,7 +369,7 @@ impl ProtocolRuleSetFactory {
             "Percentage of validators required for finality".to_string(),
             false, // Immutable: critical for safety
             0,
-        ))?;
+        )?)?;
         
         // AI GOVERNANCE RULES
         rules.add_rule(ProtocolRule::new(
@@ -378,7 +379,7 @@ impl ProtocolRuleSetFactory {
             "Minimum AI confidence score for proposal consideration".to_string(),
             true,
             0,
-        ))?;
+        )?)?;
         
         rules.add_rule(ProtocolRule::new(
             "AI_REPUTATION_DECAY_RATE".to_string(),
@@ -387,7 +388,7 @@ impl ProtocolRuleSetFactory {
             "Percentage retained for old AI decisions (100 = no decay)".to_string(),
             true,
             0,
-        ))?;
+        )?)?;
         
         // Compute commitment hash
         rules.compute_commitment_hash()?;

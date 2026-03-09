@@ -506,7 +506,8 @@ impl ProposalLifecycleManager {
         let proposal = self.proposals.get_mut(proposal_id)
             .ok_or(ProposalError::ProposalNotFound)?;
         
-        let validation_result = self.constitution.validate_action(&proposal.action)?;
+        let validation_result = self.constitution.validate_action(&proposal.action)
+            .map_err(|_| ProposalError::ConstitutionalValidationFailed)?;
         
         proposal.record_constitutional_validation(
             validation_result.clone(),

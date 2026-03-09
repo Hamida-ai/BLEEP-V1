@@ -14,7 +14,7 @@
 
 #[cfg(test)]
 mod phase5_comprehensive_tests {
-    use bleep_governance::{
+    use crate::{
         protocol_rules::{ProtocolRuleSetFactory, RuleBounds, ProtocolRule},
         apip::{APIPBuilder, RuleChange, AIModelMetadata, RiskLevel, SafetyBounds},
         safety_constraints::SafetyConstraintsEngine,
@@ -147,6 +147,11 @@ mod phase5_comprehensive_tests {
     fn test_governance_voting_stake_weighted() {
         let mut voting_engine = setup_voting_engine();
         
+        // Create dummy signatures for testing
+        let mut sig1_sig2 = vec![1u8, 2u8];
+        let mut sig3_sig4 = vec![3u8, 4u8];
+        let mut sig5_sig6 = vec![5u8, 6u8];
+        
         // Start voting
         voting_engine.start_voting(
             "APIP-VOTE-001".to_string(),
@@ -160,7 +165,7 @@ mod phase5_comprehensive_tests {
             vec![1, 2, 3],
             true,
             2,
-            vec![sig1, sig2],
+            sig1_sig2,
         ).unwrap();
         
         // Validator 2 votes yes (2000 stake)
@@ -169,7 +174,7 @@ mod phase5_comprehensive_tests {
             vec![4, 5, 6],
             true,
             2,
-            vec![sig3, sig4],
+            sig3_sig4,
         ).unwrap();
         
         // Validator 3 votes no (3000 stake)
@@ -178,7 +183,7 @@ mod phase5_comprehensive_tests {
             vec![7, 8, 9],
             false,
             3,
-            vec![sig5, sig6],
+            sig5_sig6,
         ).unwrap();
         
         // Finalize voting at epoch 6

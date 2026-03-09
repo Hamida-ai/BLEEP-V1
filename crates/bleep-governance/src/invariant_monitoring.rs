@@ -411,8 +411,8 @@ impl GlobalInvariantMonitor {
         let mut total_health = 0.0;
         let shard_count = self.monitors.len();
         
-        let mut min_health = 100.0;
-        let mut max_health = 0.0;
+        let mut min_health: f64 = 100.0;
+        let mut max_health: f64 = 0.0;
         let mut total_violated = 0u64;
         
         for monitor in self.monitors.values() {

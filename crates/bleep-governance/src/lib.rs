@@ -30,9 +30,6 @@ mod phase5_comprehensive_tests;
 #[cfg(test)]
 mod phase4_governance_tests;
 
-#[cfg(test)]
-mod phase2_governance_tests;
-
 pub use governance_core::{
     ProposalType, ProposalState, VotingWindow, Vote, VoteTally,
     Proposal, GovernancePayload, SanctionAction, GovernanceEngine, GovernanceError,
@@ -49,11 +46,11 @@ pub use constitution::{
 
 pub use zk_voting::{
     ZKVotingEngine, VotingBallot, EncryptedBallot, VoteCommitment,
-    EligibilityProof, VoterRole, VoteTally, TallyProof, ZKVotingError,
+    EligibilityProof, VoterRole, VoteTally as ZKVoteTally, TallyProof, ZKVotingError,
 };
 
 pub use proposal_lifecycle::{
-    ProposalLifecycleManager, ProposalRecord, ProposalState, ProposalArchive,
+    ProposalLifecycleManager, ProposalRecord, ProposalState as LifecycleProposalState, ProposalArchive,
     ProposalStateTransition, ProposalError,
 };
 
@@ -82,11 +79,11 @@ pub use safety_constraints::{
 };
 
 pub use ai_reputation::{
-    AIReputationTracker, AIReputation, ProposalOutcome, ReputationRecord,
+    AIReputationTracker, AIReputation, ProposalOutcome as ReputationProposalOutcome, ReputationRecord,
 };
 
 pub use protocol_evolution::{
-    ProtocolEvolutionOrchestrator, VotingResult, ActivationRecord,
+    ProtocolEvolutionOrchestrator, VotingResult, ActivationRecord as EvolutionActivationRecord,
 };
 
 pub use ai_hooks::{
@@ -100,8 +97,8 @@ pub use invariant_monitoring::{
 };
 
 pub use governance_voting::{
-    GovernanceVotingEngine, ValidatorVote, VotingWindow, ProposalVotingState,
-    VotingResult, VotingError,
+    GovernanceVotingEngine, ValidatorVote, VotingWindow as GovernanceVotingWindow, ProposalVotingState,
+    VotingResult as GovernanceVotingResult, VotingError,
 };
 
 pub use deterministic_activation::{
@@ -118,3 +115,11 @@ pub fn init_governance() -> Result<ProtocolEvolutionOrchestrator, Box<dyn std::e
     Ok(orchestrator)
 }
 
+
+// ── Sprint 9 modules ──────────────────────────────────────────────────────────
+pub mod live_governance;
+
+pub use live_governance::{
+    LiveGovernanceEngine, GovernanceConfig, Proposal, ProposalState,
+    Vote, GovernableParam, ExecutionResult, GovernanceError, GovernanceEvent,
+};

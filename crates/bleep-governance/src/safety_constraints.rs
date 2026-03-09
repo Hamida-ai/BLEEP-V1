@@ -36,6 +36,12 @@ pub enum SafetyConstraintError {
     ValidationError(String),
 }
 
+impl From<crate::protocol_rules::ProtocolRuleError> for SafetyConstraintError {
+    fn from(err: crate::protocol_rules::ProtocolRuleError) -> Self {
+        SafetyConstraintError::ValidationError(err.to_string())
+    }
+}
+
 /// Result of a constraint check
 #[derive(Debug, Clone)]
 pub struct ConstraintCheckResult {
@@ -194,7 +200,8 @@ impl SafetyConstraintsEngine {
         report: &mut ValidationReport,
     ) -> Result<(), SafetyConstraintError> {
         for change in &apip.rule_changes {
-            let rule = ruleset.get_rule(&change.rule_name)?;
+            let rule = ruleset.get_rule(&change.rule_name)
+                .map_err(|e| SafetyConstraintError::UnknownRule(format!("Failed to get rule {}: {}", change.rule_name, e)))?;
             
             // Check new value is within rule bounds
             let in_bounds = rule.bounds.contains(change.new_value);
@@ -401,7 +408,8 @@ impl SafetyConstraintsEngine {
         ruleset: &ProtocolRuleSet,
         report: &mut ValidationReport,
     ) -> Result<(), SafetyConstraintError> {
-        let min_confidence = ruleset.get_rule_value("AI_PROPOSAL_MIN_CONFIDENCE")?;
+let min_confidence = ruleset.get_rule_value("AI_PROPOSAL_MIN_CONFIDENCE")
+                .map_err(|e| SafetyConstraintError::UnknownRule(format!("AI_PROPOSAL_MIN_CONFIDENCE not found: {}", e)))?;
         
         let confidence_met = apip.confidence_score >= min_confidence as u8;
         

@@ -269,9 +269,13 @@ pub enum GovernanceError {
     #[error("Rollback failed: {0}")]
     RollbackFailed(String),
     
-    #[error("Invalid proposal")]
+    #[error("Internal error: {0}")]
+    InternalError(String),
+    
+    #[error("Invalid proposal: {0}")]
     InvalidProposal(String),
 }
+
 
 /// On-chain governance proposal
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -425,7 +429,7 @@ impl Proposal {
             stake_reject,
             total_network_stake,
             self.approval_threshold,
-        )?;
+        ).map_err(|e| GovernanceError::InternalError(e))?;
         
         self.tally = Some(tally.clone());
         
@@ -644,8 +648,9 @@ impl GovernanceEngine {
         proposal_id: &str,
         current_epoch: u64,
     ) -> Result<(), GovernanceError> {
+        let total_stake = self.total_network_stake;
         let proposal = self.get_proposal_mut(proposal_id)?;
-        proposal.close_voting(current_epoch, self.total_network_stake)
+        proposal.close_voting(current_epoch, total_stake)
     }
     
     /// Execute proposal at execution epoch
@@ -694,6 +699,33 @@ impl GovernanceEngine {
             }
         }
         
+        Ok(())
+    }
+
+    /// Persist the current governance state to disk (JSON snapshot).
+    ///
+    /// In the MVP this writes to `./governance_state.json`.
+    /// Sprint 2 will replace this with RocksDB storage via `bleep-state`.
+    pub fn persist(&self) -> Result<(), Box<dyn std::error::Error>> {
+        use std::fs;
+        #[derive(serde::Serialize)]
+        struct Snapshot<'a> {
+            total_network_stake: u128,
+            proposal_count: usize,
+            proposal_ids: &'a [String],
+        }
+        let snapshot = Snapshot {
+            total_network_stake: self.total_network_stake,
+            proposal_count: self.proposals.len(),
+            proposal_ids: &self.proposal_queue,
+        };
+        let json = serde_json::to_string_pretty(&snapshot)?;
+        fs::write("governance_state.json", json)?;
+        log::info!(
+            "Governance state persisted: {} proposals, stake={}",
+            snapshot.proposal_count,
+            snapshot.total_network_stake
+        );
         Ok(())
     }
 }
