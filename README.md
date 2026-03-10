@@ -289,7 +289,7 @@ response  = SHA3-256( challenge || validator_pk || block_index_le8 )
 zk_proof  = challenge[32] || response[32]   →  64 bytes
 ```
 
-Full Groth16 SNARK circuit (ark-bls12-381) replaces this in Sprint 6.
+Full Groth16 SNARK circuit (ark-bls12-381) is now the production scheme.
 
 #### Finality
 
@@ -401,7 +401,7 @@ pub struct StateDiff {
 }
 ```
 
-`BlockProducer` applies the diff under a single `StateManager` lock after all VM calls complete, eliminating the deadlock class from the Sprint 2 design.
+`BlockProducer` applies the diff under a single `StateManager` lock after all VM calls complete.
 
 ---
 
@@ -422,7 +422,7 @@ Built on `libp2p 0.53`. All transport-layer security is post-quantum.
 | `MessageProtocol` | TCP framing, AES-256-GCM encryption, Ed25519 message auth, anti-replay nonce cache |
 | `QuantumCrypto` | Kyber-768 session KEM, SPHINCS+-SHA2-128s message authentication |
 
-Ed25519 in `MessageProtocol` is scheduled for replacement with SPHINCS+ in Sprint 6.
+Ed25519 in `MessageProtocol` is scheduled for replacement with SPHINCS+ in a future release.
 
 ---
 
@@ -451,13 +451,13 @@ Ed25519 in `MessageProtocol` is scheduled for replacement with SPHINCS+ in Sprin
 | `GET` | `/rpc/validator/list` | All active validators with stake |
 | `GET` | `/rpc/validator/status/{id}` | Validator status + slashing history |
 | `POST` | `/rpc/validator/evidence` | Submit double-sign evidence (auto-execute) |
-| `GET` | `/rpc/economics/supply` | Circulating supply, minted, burned, base fee *(Sprint 7)* |
-| `GET` | `/rpc/economics/fee` | Current EIP-1559 base fee + last epoch *(Sprint 7)* |
-| `GET` | `/rpc/economics/epoch/{n}` | Full epoch output (emissions, burns, price) *(Sprint 7)* |
-| `GET` | `/rpc/oracle/price/{asset}` | Aggregated oracle price (median, sources) *(Sprint 7)* |
-| `POST` | `/rpc/oracle/update` | Submit oracle price update *(Sprint 7)* |
-| `GET` | `/rpc/connect/intents/pending` | Pending Layer 4 instant intents *(Sprint 7)* |
-| `POST` | `/rpc/connect/intent` | Submit a new instant intent *(Sprint 7)* |
+| `GET` | `/rpc/economics/supply` | Circulating supply, minted, burned, base fee  |
+| `GET` | `/rpc/economics/fee` | Current EIP-1559 base fee + last epoch  |
+| `GET` | `/rpc/economics/epoch/{n}` | Full epoch output (emissions, burns, price)  |
+| `GET` | `/rpc/oracle/price/{asset}` | Aggregated oracle price (median, sources)  |
+| `POST` | `/rpc/oracle/update` | Submit oracle price update  |
+| `GET` | `/rpc/connect/intents/pending` | Pending Layer 4 instant intents  |
+| `POST` | `/rpc/connect/intent` | Submit a new instant intent  |
 
 The `/rpc/economics/*` and `/rpc/oracle/*` handlers return HTTP 503 when `BleepEconomicsRuntime` is not attached.
 
@@ -468,7 +468,7 @@ let rpc_state = RpcState::new()
     .with_state_manager(Arc::clone(&state_arc))
     .with_validator_registry(Arc::clone(&validator_registry))
     .with_slashing_engine(Arc::clone(&slashing_engine))
-    .with_economics_runtime(Arc::clone(&economics_runtime));  // Sprint 7
+    .with_economics_runtime(Arc::clone(&economics_runtime));
 let routes = rpc_routes_with_state(rpc_state);
 warp::serve(routes).run(([0, 0, 0, 0], 8545)).await;
 ```
@@ -928,20 +928,20 @@ Commands:
   ai status                         AI engine status
   pat status                        PAT engine status
   pat list                          List asset tokens
-  pat mint --to <addr> --amount <n> Mint PAT tokens (owner only)        [Sprint 7]
-  pat burn --amount <n>             Burn PAT tokens                      [Sprint 7]
-  pat transfer --to <addr> --amount Transfer PAT with auto burn-rate     [Sprint 7]
-  pat balance <address>             Query PAT balance                    [Sprint 7]
-  oracle price <asset>              Query aggregated oracle price        [Sprint 7]
-  oracle submit --asset ... --price Submit oracle price update           [Sprint 7]
-  economics supply                  Circulating supply, minted, burned   [Sprint 7]
-  economics fee                     Current EIP-1559 base fee            [Sprint 7]
-  economics epoch <n>               Epoch emissions, burns, price        [Sprint 7]
+  pat mint --to <addr> --amount <n> Mint PAT tokens (owner only)        
+  pat burn --amount <n>             Burn PAT tokens                      
+  pat transfer --to <addr> --amount Transfer PAT with auto burn-rate     
+  pat balance <address>             Query PAT balance                    
+  oracle price <asset>              Query aggregated oracle price        
+  oracle submit --asset ... --price Submit oracle price update           
+  economics supply                  Circulating supply, minted, burned   
+  economics fee                     Current EIP-1559 base fee            
+  economics epoch <n>               Epoch emissions, burns, price        
   telemetry                         Print telemetry metrics
   info                              Node version and RPC health
 ```
 
-### Executor node (Sprint 7)
+### Executor node
 
 The `bleep-executor` binary is a separate process that participates in the Layer 4 instant intent market:
 
@@ -966,11 +966,11 @@ BLEEP_RPC=http://your-node:8545            \
 
 BLEEP treats a cryptographically relevant quantum computer as a near-term engineering assumption, not a distant theoretical risk. Accordingly:
 
-- **SPHINCS+-SHAKE-256** (NIST PQC, stateless hash-based) signs all transactions and is the planned block signing scheme (replacing the current SHA3 scheme in Sprint 6).
+- **SPHINCS+-SHAKE-256** (NIST PQC, stateless hash-based) signs all transactions and blocks.
 - **Kyber-768** (ML-KEM, NIST FIPS 203) is used for all key encapsulation.
 - **AES-256-GCM** is used for symmetric encryption (128-bit post-quantum security at 256-bit key size).
 - **SHA3-256 and BLAKE3** provide collision-resistant hashing.
-- **Ed25519** is retained in P2P message authentication at the 128-bit classical security level. It will be replaced with SPHINCS+ in Sprint 6.
+- **Ed25519** is retained in P2P message authentication at the 128-bit classical security level and is scheduled for replacement with SPHINCS+.
 
 ### Consensus safety
 
@@ -994,173 +994,96 @@ BLEEP treats a cryptographically relevant quantum computer as a near-term engine
 
 ---
 
-## Roadmap to Public Testnet
+## Development Roadmap
 
-Six sprints complete the journey from the current single-validator local node to a publicly accessible, adversarially tested mainnet. Each sprint has a concrete set of engineering deliverables and a binary definition of done.
-
----
-
-### Sprint 1 — Build Stability ✅ *Complete*
-
-All 20 workspace crates compile cleanly. Zero hard build errors. No `unwrap()` panics in hot paths.
+BLEEP follows a structured, phase-based development roadmap. Phases 1–3 are complete. The four upcoming phases — AI model training, public testnet expansion, pre-sale ICO, and mainnet launch — form the path to production.
 
 ---
 
-### Sprint 2 — State and Execution ✅ *Complete*
+### Phase 1 — Foundation ✅ *Complete*
 
-RocksDB `StateManager`, full `BlockProducer` execution loop (mempool → VM → state → sign → gossip), `bleep-vm` wired returning `StateDiff`, `MempoolBridge` 500 ms drain.
-
----
-
-### Sprint 3 — Correctness and P2P ✅ *Complete*
-
-Two-phase VM/lock eliminating `StateManager` deadlock. `GossipBridge` connecting block output to `P2PNode`. `SparseMerkleTrie` replacing hash-of-pairs root. Correct 32-byte block signing.
+All 19 crates compile cleanly. Post-quantum cryptography active (SPHINCS+-SHAKE-256, Kyber-1024). RocksDB `StateManager` with `SparseMerkleTrie`. Full `BlockProducer` loop. Real Groth16 ZK circuits. 4-node docker-compose devnet. BLEEP Connect Layer 4 live on Ethereum Sepolia. `BleepEconomicsRuntime` (EIP-1559 fee market, oracle bridge, validator incentives). `PATRegistry` live. `bleep-executor` standalone intent market maker.
 
 ---
 
-### Sprint 4 — End-to-End and Inbound Sync ✅ *Complete*
+### Phase 2 — Testnet Alpha ✅ *Complete*
 
-BIP-39 PBKDF2-HMAC-SHA512 derivation. SPHINCS+-SHAKE-256 transaction signing. `EncryptedWallet.signing_key`. `MerkleProof::verify()`. `InboundBlockHandler` Tokio task. `StateDiff` unified with `StateManager`.
-
----
-
-### Sprint 5 — Hardening ✅ *Complete*
-
-O(256) Merkle proofs. Full nonce accounting via `StateDiff.nonces`. 64-byte Fiat-Shamir ZKP binding all semantic block fields. AES-256-GCM wallet key encryption with `lock()`/`unlock()`. RPC `/rpc/state` and `/rpc/proof` with live `StateManager` integration. Per-tx SPHINCS+ sig verification in `InboundBlockHandler`. CLI `wallet balance` from live RPC with offline fallback.
+7-validator `bleep-testnet-1` genesis across 4 continents. Public DNS seeds at `seeds.testnet.bleep.network`. Public faucet (`POST /faucet/{address}`, 1,000 BLEEP per 24 hours). Block explorer (`GET /explorer`, 6 s refresh). JWT rotation, NDJSON audit export. Grafana dashboard (12 panels) + Prometheus for all 7 validators. Full CI pipeline: fmt, clippy, test, audit, build, fuzz-smoke, docker-smoke.
 
 ---
 
-### Sprint 6 — ZK Circuits and Multi-Validator Devnet ✅ *Complete*
+### Phase 3 — Protocol Hardening ✅ *Complete*
 
-Real Groth16 block validity circuit (ark-bls12-381, 5 public inputs, 6 R1CS constraints). Groth16 batch aggregation for tx proofs. 4-node docker-compose devnet with shared genesis. Validator stake/unstake via CLI. SPHINCS+ block signing migration replacing SHA3 scheme. Slashing auto-executed on double-sign evidence. 5 new `/rpc/validator/*` endpoints. `ValidatorRegistry` and `SlashingEngine` wired into the node.
+- ✅ **Independent security audit** — 14 findings (2 Critical, 3 High, 4 Medium, 3 Low, 2 Info); all Critical/High resolved — see `docs/SECURITY_AUDIT.md`
+- ✅ **Chaos testing** — 14 scenarios, 72-hour continuous harness — see `docs/CHAOS_TESTING.md`
+- ✅ **ZKP MPC ceremony** — 5-participant Powers-of-Tau on BLS12-381; transcript at `https://ceremony.bleep.network/transcript-v1.json`
+- ✅ **Cross-shard stress test** — 10 shards, 1,000 concurrent cross-shard txs, 100 epochs
+- ✅ **BLEEP Connect Layer 3** — Groth16 batch proof bridge live on testnet
+- ✅ **Live governance** — `LiveGovernanceEngine` with typed proposals, weighted voting, veto, on-chain execution
+- ✅ **Performance benchmark** — avg **10,921 TPS**, peak **13,200 TPS** across 10 shards for 1 hour
+- ✅ **Token distribution model** — 6 allocation buckets, vesting schedules, 25/50/25 fee split, compile-time verified constants
 
----
-
-### Sprint 7 — Cross-Chain Alpha and Live Economics ✅ *Complete — current codebase*
-
-**Goal:** BLEEP Connect Layer 4 operational on Ethereum Sepolia. Tokenomics engine live. PAT mint/burn/transfer fully wired.
-
-**Delivered:**
-
-- **`BleepEconomicsRuntime`** (`crates/bleep-economics/src/runtime.rs`) — full epoch processor live:
-  - `FeeMarket::update_base_fee()` — EIP-1559-style base fee adjustment per epoch
-  - `OracleBridgeEngine::aggregate_prices("BLEEP/USD")` — 3-of-5 operator quorum with **cryptographic signature verification** (Sprint 7)
-  - `ValidatorIncentivesEngine::compute_epoch_rewards()` — per-validator reward records distributed at epoch boundary
-  - `CanonicalTokenomicsEngine::record_emission() / record_burn() / finalize_epoch()` — supply accounting with hash commitment
-  - Full invariant: `circulating = minted − burned` verified after every epoch
-- **`SepoliaRelay`** (`crates/bleep-interop/src/bleep-connect-adapters/`) — Ethereum Sepolia testnet relay:
-  - `SepoliaRelay::build_relay_tx()` — ABI-encodes a `fulfillIntent(bytes32,address,uint256,uint256)` call
-  - `SepoliaRelay::simulate_relay()` — local calldata validation before broadcast
-  - `SepoliaRelay::relay_status()` — tx hash → relay status mapping
-  - Contract: `SEPOLIA_BLEEP_FULFILL_ADDR` on Sepolia (`chain_id = 11155111`)
-- **`BleepConnectOrchestrator` Sprint 7 API extensions:**
-  - `pending_intent_ids()` / `get_pending_intent()` — live intent pool for executor polling
-  - `build_sepolia_relay_tx()` — builds relay tx for any Ethereum-bound intent
-  - `sepolia_relay_status()` — relay confirmation status
-  - `start_background_tasks()` — hook for node startup sequence
-- **5 new `/rpc/connect/*` endpoints:**
-  - `GET /rpc/connect/intents/pending` — live Layer 4 intent pool (backed by real `Layer4Instant`)
-  - `POST /rpc/connect/intent` — submit intent to live pool with full `InstantIntent` fields
-  - `GET /rpc/connect/intent/{id}` — status with all 11 `TransferStatus` variants
-  - `GET /rpc/connect/intent/{id}/relay_tx` — Sepolia relay tx for Ethereum-bound intents
-- **`PATRegistry`** (`crates/bleep-pat/src/pat_engine.rs`) — production PAT engine:
-  - `create_token()` — configurable supply cap, burn rate (max 1000 bps), 8 decimals default
-  - `mint()` — owner-only, supply cap enforced
-  - `burn()` — any holder, updates `total_burned` + state hash
-  - `transfer()` — automatic deflationary burn deduction, returns net amount received
-  - Full event log: `TokenCreated`, `Mint`, `Burn`, `Transfer`
-- **7 new `/rpc/pat/*` endpoints:**
-  - `POST /rpc/pat/create` — create a new PAT token
-  - `POST /rpc/pat/mint` — mint tokens (owner only)
-  - `POST /rpc/pat/burn` — burn tokens
-  - `POST /rpc/pat/transfer` — transfer with auto-burn
-  - `GET /rpc/pat/balance/{symbol}/{address}` — token balance
-  - `GET /rpc/pat/info/{symbol}` — token metadata + supply stats
-  - `GET /rpc/pat/list` — all registered tokens
-- **`bleep-cli pat` fully wired** (7 subcommands):
-  - `create --symbol --name --owner --supply-cap --burn-rate-bps`
-  - `mint --symbol --from --to --amount`
-  - `burn --symbol --from --amount`
-  - `transfer --symbol --from --to --amount`
-  - `balance --symbol <address>`
-  - `info <symbol>`
-  - `list`
-- **`bleep-executor` standalone binary** (`src/bin/executor.rs`) — Layer 4 intent market maker with bid/claim loop
-- **Oracle signature verification live** — `submit_price_update` verifies `SHA-256(operator_id || asset || price || ts)` signatures; 64-byte zero placeholders accepted in devnet mode; `InvalidSignature` error + `rejected_updates` counter added
-- **3 `/rpc/economics/*` + 2 `/rpc/oracle/*` endpoints** live and wired to `BleepEconomicsRuntime`
-- **Node startup** — `BleepConnectOrchestrator` + `PATRegistry` initialized in `main.rs`, wired into `RpcState`
-
-**Definition of done:** 1,000 cross-chain transfers complete with full commitment chain proof; tokenomics emission and burns match the constitutional schedule for 100 epochs; PAT mint/burn/transfer all operational via CLI; Sepolia relay tx generation verified for all Ethereum-bound intents.
+**Definition of done:** Security audit fully resolved ✅ · Chaos suite 72 h ✅ · ≥10,000 TPS ✅
 
 ---
 
-### Sprint 8 — Public Testnet Alpha ✅ *Complete*
+### Phase 4 — AI Model Training ⏳ *Active*
 
-### Sprint 9 — Testnet Hardening ✅ *Complete*
+Upgrade `bleep-ai` from rule-based advisory to a trained on-chain inference engine.
 
-**Goal:** Publicly accessible testnet with external validators, a faucet, and a block explorer.
+- `BLEEPAIAssistant v2` — training pipeline using on-chain governance history as training data
+- AI validator nodes — optional validator upgrade for AI-scored transaction prioritisation
+- `AIConstraintValidator v2` — trained classification models for governance pre-flight scoring
+- Determinism guarantee — all AI inference on consensus-critical paths uses fixed-seed reproducible models
 
-**Infrastructure:**
-
-- 7 geographically distributed validator nodes (minimum 3 continents)
-- Public DNS seed nodes: `seeds.testnet.bleep.network`
-- Persistent chain state; no resets after genesis
-- `testnet` Cargo feature active (100 blocks per epoch)
-
-**Deliverables:**
-
-- ✅ **`testnet-genesis.toml`** — 7-validator genesis with 4 continents, pre-funded faucet and treasury accounts, oracle bonds, executor bonds
-- ✅ **Node join guide** — `docs/VALIDATOR_GUIDE.md` — step-by-step operator onboarding with hardware requirements, keygen, staking, systemd and Docker configs, slashing conditions, and troubleshooting
-- ✅ **Public faucet** — `POST /faucet/{address}` dispensing 1,000 test BLEEP per address per 24 hours; rate-limited by both IP (`X-Forwarded-For`) and address; faucet balance tracked live; `GET /faucet/status` for monitoring
-- ✅ **Block explorer** — read-only web UI at `GET /explorer` with live chain height, peer count, validator table, block list; auto-refreshes every 6 s; backed by `GET /rpc/explorer/blocks` and `GET /rpc/explorer/validators`
-- ✅ **`bleep-auth` hardening** — async JWT secret rotation via `POST /rpc/auth/rotate` with base64 secret validation; `rotation_count` tracked; audit log NDJSON export at `GET /rpc/auth/audit` with optional `?limit=N`; `export_ndjson()` and `export_range_ndjson()` methods on `AuditLog`
-- ✅ **Telemetry dashboard** — Grafana JSON dashboard (`devnet/grafana/dashboards/bleep-testnet-overview.json`) with 12 panels; Prometheus scrape config for all 7 validators; provisioning configs for automated Grafana setup; `GET /metrics` Prometheus text endpoint on every node
-- ✅ **Full CI pipeline** — `.github/workflows/ci.yml` with 7 jobs: `fmt` (rustfmt --check), `clippy` (deny warnings + unwrap_used), `test` (full workspace), `audit` (cargo-audit CVE scan), `build` (release binary), `fuzz-smoke` (60 s libFuzzer runs), `docker-smoke` (health + faucet + explorer + metrics checks)
-- ✅ **Security audit preparation** — `docs/THREAT_MODEL.md` with 30 catalogued threats across 6 categories, full invariant list (18 invariants), trust boundary map, known gaps for Sprint 9; `proptest` property tests in `bleep-state/src/proptest_sprint8.rs` (8 properties); `cargo-fuzz` targets for `bleep-crypto` (hash, SPHINCS+, Kyber) and `bleep-state` (Merkle, state apply_tx)
-- ✅ **7-validator docker-compose** — `devnet/docker-compose-testnet.yml` with health checks, Prometheus, and Grafana
-
-**Definition of done:** External validators join without assistance, the chain produces blocks for 7 consecutive days without intervention, and the public block explorer shows live data updated every block.
+**Definition of done:** AI advisory engine passes determinism test suite; governance pre-flight achieves ≥95% accuracy on labelled test set.
 
 ---
 
-### Sprint 9 — Testnet Hardening ✅ *Complete*
+### Phase 5 — Public Testnet Expansion ⏳ *Upcoming*
 
-**Goal:** Adversarial robustness demonstrated before mainnet commit.
+Open validator onboarding to the public. Target: ≥50 validators across ≥6 continents.
 
-**Deliverables:**
+- Open validator registration with public `VALIDATOR_GUIDE.md`
+- Validator incentive programme from Ecosystem Fund
+- `testnet.bleep.network` — multi-validator explorer, leaderboard, public dashboard
+- 30-day sustained test with live validator join/leave events
+- Cross-shard expansion: 10 → 20 shards as validator count permits
+- Community bug bounty: up to 100,000 BLEEP for documented protocol vulnerabilities
 
-- ✅ **Independent security audit** — 14 findings (2 Critical, 3 High, 4 Medium, 3 Low, 2 Info); all Critical/High resolved; see `docs/SECURITY_AUDIT_SPRINT9.md`
-- ✅ **Chaos testing** — 14 adversarial scenarios (crashes, partitions, reorgs, double-sign, replay, eclipse, flood, load); 72-hour continuous harness; see `docs/CHAOS_TESTING.md`
-- ✅ **ZKP MPC ceremony** — 5-participant Powers-of-Tau ceremony for BLS12-381; transcript published at `https://ceremony.bleep.network/transcript-v1.json`; GET `/rpc/ceremony/status`
-- ✅ **Cross-shard stress test** — 10-shard configuration; 1,000 concurrent cross-shard transactions; 100 epochs; all txs committed or rolled back
-- ✅ **BLEEP Connect Layer 3 (ZK Proof)** — Groth16 batch proof bridge live on testnet; `crates/bleep-interop/src/layer3_bridge.rs`; POST `/rpc/layer3/intent`
-- ✅ **Governance live** — `LiveGovernanceEngine` with typed parameter-change proposals, weighted voting, on-chain execution, veto mechanism; POST `/rpc/governance/propose` + `/vote`
-- ✅ **Performance benchmark** — avg **10,921 TPS**, peak **13,200 TPS**, min **9,840 TPS** across 10 shards for 1 hour; GET `/rpc/benchmark/latest`
-- ✅ **All audit findings addressed** — `AuditReport::sprint9_report()` verified in CI `audit` job on every PR
-- ✅ **Audit fixes** — `GlobalNullifierSet` (SA-C1), JWT entropy gate (SA-C2), proxy CIDR guard (SA-H1), RocksDB CAS (SA-H2), gossip size cap (SA-H3), `AuditLogStore` persistence (SA-L1), `Zeroizing<>` for SK (SA-L3)
-- ✅ **12 CI jobs** — fmt, clippy, test, audit, build, fuzz-smoke, chaos-smoke, mpc-ceremony, layer3-bridge, governance-live, docker-smoke, benchmark-report
-- ✅ **441-line integration test suite** — `tests/sprint9_integration.rs`
-
-**Definition of done:** Security audit report fully resolved ✅ · Chaos suite passes 72 hours ✅ · 10,000 TPS benchmark met (avg 10,921 TPS) ✅
+**Definition of done:** 50+ active validators; 30 consecutive days without manual intervention.
 
 ---
 
-### Sprint 10 — Mainnet Launch 🔜 *Planned*
+### Phase 6 — Pre-Sale / ICO ⏳ *Upcoming*
 
-**Goal:** Production mainnet with post-quantum security, live economics, and cross-chain connectivity from genesis.
+Community token sale in two tranches. Deploy on-chain vesting contracts.
 
-**Deliverables:**
+| Tranche | Source | Lockup |
+|---|---|---|
+| Strategic Pre-Sale | Strategic Reserve (5M BLEEP) | 12-month cliff + 24-month linear |
+| Public ICO | Community Incentives (up to 10M BLEEP) | 6-month linear vest |
 
-- **Mainnet genesis ceremony** — public, multi-party verifiable genesis block construction
-- **Validator onboarding program** — documentation, tooling, and a minimum 21-validator initial set with geographic diversity
-- **BLEEP Connect mainnet** — Layer 4 and Layer 3 live on Ethereum mainnet and Solana mainnet from day one
-- **Governance from genesis** — community-controlled parameter upgrades, treasury spend proposals active immediately
-- **Full tokenomics** — emission, burn, staking rewards, oracle price feed, and EIP-1559 fee market all active
-- **Mainnet block explorer** — production deployment at `explorer.bleep.network`
-- **SDK releases** — `bleep-sdk-js` and `bleep-sdk-python` wrapping the complete RPC API
-- **Developer documentation** — contract deployment guide (EVM and WASM), cross-chain integration guide, validator operations manual
+KYC/AML compliant infrastructure · Multi-sig treasury custody · `LinearVestingSchedule` contracts deployed · `GenesisAllocation` engine activated for all 6 buckets.
 
-**Definition of done:** Mainnet genesis block produced by ≥ 21 independent validators, a governance proposal passes on-chain within the first week, and a cross-chain transfer from Ethereum mainnet confirms within 1 second.
+**Definition of done:** ICO completed; all vesting contracts deployed and verified on-chain.
+
+---
+
+### Phase 7 — Mainnet Launch 🔜 *Planned*
+
+Production mainnet with post-quantum security, live economics, and cross-chain connectivity from the genesis block.
+
+- Mainnet genesis ceremony — public, multi-party verifiable
+- ≥21 validators with geographic diversity enforced by genesis rules
+- BLEEP Connect L4 + L3 live on Ethereum mainnet and Solana from genesis
+- Governance active from block 1
+- Full tokenomics live — emission, burn, staking rewards, oracle, EIP-1559 fee market
+- Block explorer at `explorer.bleep.network`
+- `bleep-sdk-js` and `bleep-sdk-python` SDK releases
+- NTP drift guard at node startup (warn >1 s, halt >30 s)
+
+**Definition of done:** Genesis block produced by ≥21 independent validators; governance proposal passes on-chain within first week; cross-chain Ethereum transfer confirms within 1 second.
 
 ---
 

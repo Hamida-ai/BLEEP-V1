@@ -114,6 +114,7 @@ testnet  = []
 quantum  = ["pqcrypto", "pqcrypto-kyber"]
 
 [workspace]
+resolver = "2"
 members = [
     "crates/bleep-ai",
     "crates/bleep-auth",
