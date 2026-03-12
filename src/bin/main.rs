@@ -1,4 +1,3 @@
-//! # BLEEP Node — Sprint 5 Entry Point
 //!
 //! **End-to-end block production with every subsystem wired:**
 //!
@@ -26,9 +25,9 @@
 //!                    RPC server (warp :8545)
 //! ```
 
-//! # BLEEP Node — Sprint 9 Entry Point
+//! # BLEEP Node — Entry Point
 //!
-//! **Sprint 9 additions:**
+//! **Recent additions:**
 //!   - BleepEconomicsRuntime: live epoch-end emission, fee burns, oracle price
 //!   - 3 new `/rpc/economics/*` endpoints (supply, fee, epoch)
 //!   - 2 new `/rpc/oracle/*` endpoints (price query, price submit)
@@ -43,10 +42,11 @@ use tracing::{info, warn, error};
 
 // ── Crypto ────────────────────────────────────────────────────────────────────
 use bleep_crypto::quantum_secure::QuantumSecure;
-use bleep_crypto::quantum_resistance::{generate_falcon_keypair, generate_kyber_keypair};
+use bleep_crypto::pq_crypto::KyberKem;
+use bleep_crypto::tx_signer::generate_tx_keypair;
 
 // ── Core ──────────────────────────────────────────────────────────────────────
-use bleep_core::block::{Block, derive_block_keypair};
+use bleep_core::block::Block;
 use bleep_core::blockchain::{Blockchain, BlockchainState as CoreBlockchainState};
 use bleep_core::mempool::Mempool;
 use bleep_core::transaction_pool::TransactionPool;
@@ -106,7 +106,7 @@ async fn main() {
         .init();
 
     info!("╔══════════════════════════════════════════════════════════════╗");
-    info!("║  BLEEP Blockchain Node — Sprint 9                            ║");
+    info!("║  BLEEP Blockchain Node — Protocol v3                         ║");
     info!("║  Cross-Chain Alpha · Live Economics · PAT Engine             ║");
     info!("╚══════════════════════════════════════════════════════════════╝");
 
@@ -121,19 +121,20 @@ async fn run() -> Result<(), Box<dyn Error>> {
     // ── Step 1: Post-quantum keypair generation ───────────────────────────────
     info!("🔐 [1/13] Generating post-quantum keypairs…");
     let _qs = QuantumSecure::keygen();
-    let (sphincs_pk, _sphincs_sk) = generate_falcon_keypair()?;
-    let (_kyber_pk,  _kyber_sk)   = generate_kyber_keypair()?;
 
-    // Derive the 32-byte (sk, pk) block-signing keypair from the SPHINCS seed.
-    // This is the Sprint 3 fix: derive_block_keypair guarantees that
-    //   pk = sha3_256(sk), which is exactly what verify_signature checks.
-    let (_validator_sk, validator_pk) = derive_block_keypair(&sphincs_pk)?;
+    // Generate real SPHINCS+-SHAKE-256f-simple keypair for block signing.
+    // generate_tx_keypair() returns (pk_bytes: 32B, sk_bytes: 64B).
+    let (sphincs_pk, sphincs_sk) = generate_tx_keypair();
 
-    // Use the full SPHINCS pk as the seed for BlockProducer (it will re-derive internally)
-    let validator_seed: Vec<u8> = sphincs_pk.clone();
+    // Generate real Kyber-1024 keypair for validator KEM binding.
+    // KyberKem::keygen() returns (KyberPublicKey: 1568B, KyberSecretKey: 3168B).
+    let (kyber_pk, _kyber_sk) = KyberKem::keygen()
+        .map_err(|e| format!("Kyber-1024 keygen failed: {:?}", e))?;
 
-    info!("  ✅ SPHINCS+-SHAKE256 keypairs generated.");
-    info!("  ✅ Block signing keypair derived: pk={}", hex::encode(validator_pk));
+    info!("  ✅ SPHINCS+-SHAKE-256f-simple keypair generated (PK={} bytes, SK={} bytes).",
+          sphincs_pk.len(), sphincs_sk.len());
+    info!("  ✅ Kyber-1024 keypair generated (PK={} bytes).", kyber_pk.as_bytes().len());
+    info!("  ✅ Block signing PK: {}", hex::encode(&sphincs_pk[..8]));
 
     // ── Step 2: State + genesis ───────────────────────────────────────────────
     info!("⛓  [2/13] Initialising genesis block and persistent state…");
@@ -200,22 +201,22 @@ async fn run() -> Result<(), Box<dyn Error>> {
     governance.persist()?;
     info!("  ✅ Governance online (1B total stake).");
 
-    // ── Step 6b: ValidatorRegistry + SlashingEngine (Sprint 6) ───────────────
+    // ── Step 6b: ValidatorRegistry + SlashingEngine ───────────────────────────
     info!("🗳  [6b/16] Initialising ValidatorRegistry and SlashingEngine…");
     let validator_registry = Arc::new(Mutex::new(ValidatorRegistry::new()));
     let slashing_engine    = Arc::new(Mutex::new(SlashingEngine::new()));
 
-    // Register the local node as the genesis validator.
-    // ValidatorIdentity::new(id, kyber_pk[1568], signing_key_id, stake, epoch)
-    // We use a zeroed mock Kyber pk here; real Kyber integration is Sprint 7.
+    // Register the local node as the genesis validator with the real Kyber-1024 public key.
     {
         let mut reg = validator_registry.lock();
-        let validator_id   = hex::encode(&validator_pk[..8]);
-        let mock_kyber_pk  = vec![0u8; 1568]; // Kyber-1024 pk placeholder (Sprint 7)
-        let signing_key_id = hex::encode(&validator_pk);
+        // Use the first 8 bytes of the SPHINCS+ PK as the validator ID
+        let validator_id   = hex::encode(&sphincs_pk[..8]);
+        // Real Kyber-1024 PK bytes (1568 bytes) — wired from Step 1 keygen
+        let real_kyber_pk  = kyber_pk.as_bytes().to_vec();
+        let signing_key_id = hex::encode(&sphincs_pk);
         let genesis_validator = ValidatorIdentity::new(
             validator_id.clone(),
-            mock_kyber_pk,
+            real_kyber_pk,
             signing_key_id,
             1_000_000u128, // initial stake (matches BlockProducer config)
             0,             // genesis epoch
@@ -224,13 +225,13 @@ async fn run() -> Result<(), Box<dyn Error>> {
             Ok(mut v) => {
                 let _ = v.activate();
                 let _ = reg.register_validator(v);
-                info!("  ✅ Genesis validator registered: id={}", validator_id);
+                info!("  ✅ Genesis validator registered: id={} (Kyber-1024 PK wired)", validator_id);
             }
             Err(e) => warn!("  ⚠️  Genesis validator registration skipped: {}", e),
         }
     }
 
-    // ── Step 6c: Groth16 devnet SRS (Sprint 6) ────────────────────────────────
+    // ── Step 6c: Groth16 devnet SRS ───────────────────────────────────────────
     info!("🔐 [6c/16] Generating Groth16 devnet SRS (block circuit)…");
     info!("   MPC ceremony COMPLETE — 5-participant SRS. See /rpc/ceremony/status.");
     // Run setup in a blocking thread so we don't stall the async runtime
@@ -244,13 +245,13 @@ async fn run() -> Result<(), Box<dyn Error>> {
     }).await?;
     info!("  ✅ Groth16 batch tx circuit SRS ready.");
 
-    // ── Step 6d: BleepEconomicsRuntime (Sprint 7) ─────────────────────────────
+    // ── Step 6d: BleepEconomicsRuntime ────────────────────────────────────────
     info!("💰 [6d/16] Initialising BleepEconomicsRuntime (tokenomics + fee market + oracle)…");
     let economics_runtime = {
         let mut rt = BleepEconomicsRuntime::genesis();
 
         // Register genesis validator with economics engine
-        let genesis_val_id = hex::encode(&validator_pk[..8]);
+        let genesis_val_id = hex::encode(&sphincs_pk[..8]);
         let _ = rt.register_validator(genesis_val_id.as_bytes().to_vec(), 1_000_000u128);
 
         // Register 5 oracle operators for 3-of-5 BLEEP/USD quorum
@@ -262,20 +263,24 @@ async fn run() -> Result<(), Box<dyn Error>> {
         }
 
         // Seed initial BLEEP/USD price from devnet genesis price ($0.10)
+        // Uses empty signature (genesis bootstrap — no signing keys available yet).
+        // After mainnet launch, all oracle updates must carry a valid SPHINCS+ signature.
         let ts_now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap_or_default()
             .as_secs();
         for i in 0u8..3 {
-            let _ = rt.submit_price_update(PriceUpdate {
+            let update = PriceUpdate {
                 source:         OracleSource::Custom(vec![0xAA, i, 0, 0, 0, 0, 0, 0]),
                 asset:          "BLEEP/USD".to_string(),
                 price:          10_000_000u128,  // $0.10 with 8 decimals
                 timestamp:      ts_now,
                 confidence_bps: 100,
                 operator_id:    vec![0xAA, i, 0, 0, 0, 0, 0, 0],
-                signature:      vec![0u8; 64],
-            });
+                // Empty signature = genesis bootstrap (accepted); all-zero placeholder REMOVED.
+                signature:      vec![],
+            };
+            let _ = rt.submit_price_update(update);
         }
 
         info!("  ✅ EconomicsRuntime: genesis supply=0, base_fee={} µBLEEP, 5 oracle operators, 3 initial price seeds",
@@ -289,7 +294,7 @@ async fn run() -> Result<(), Box<dyn Error>> {
     start_interop_services()?;
     info!("  ✅ Chain adapters: ETH, BSC, SOL, COSMOS, DOT.");
 
-    // ── Sprint 7: BleepConnectOrchestrator (Layer 4 live intent pool) ────────
+    // ── BleepConnectOrchestrator (Layer 4 live intent pool) ───────────────────
     info!("  🔗 Initialising BleepConnectOrchestrator (Layer 4 + Sepolia relay)…");
     let connect_orchestrator: Arc<bleep_interop::core::BleepConnectOrchestrator> = {
         use bleep_interop::core::{BleepConnectBuilder, BleepConnectConfig};
@@ -322,7 +327,7 @@ async fn run() -> Result<(), Box<dyn Error>> {
     info!("  ✅ BleepConnectOrchestrator running (Sepolia relay: {}).",
           bleep_interop::SEPOLIA_BLEEP_FULFILL_ADDR);
 
-    // ── Sprint 7: PAT Registry ────────────────────────────────────────────────
+    // ── PAT Registry ───────────────────────────────────────────────────────────
     info!("  🪙 Initialising PAT Registry…");
     let pat_registry = {
         use bleep_pat::PATRegistry;
@@ -356,15 +361,16 @@ async fn run() -> Result<(), Box<dyn Error>> {
     // ── Step 11: Scheduler + BlockProducer ───────────────────────────────────
     info!("⚖  [11/16] Wiring BlockProducer and task Scheduler…");
 
-    // Build BlockProducer — Sprint 3: proper (sk, pk) keypair, VM execution per-tx
+    // Build BlockProducer — proper (sk, pk) keypair, VM execution per-tx
     // GossipBridge subscribes to block_tx and handles P2P broadcast externally
     let (block_producer, block_rx) = BlockProducer::new(
-        hex::encode(&validator_pk[..8]),     // validator_id (short hex)
+        hex::encode(&sphincs_pk[..8]),       // validator_id (first 8 bytes of SPHINCS+ PK)
         1_000_000u64,                        // stake weight
         Arc::clone(&tx_pool),
         Arc::clone(&blockchain),
         Arc::clone(&state),
-        validator_seed,
+        sphincs_sk.clone(),                  // full SPHINCS+ SK bytes (64 bytes)
+        sphincs_pk.clone(),                  // full SPHINCS+ PK bytes (32 bytes)
         Some(Arc::clone(&p2p_node)),         // direct gossip broadcast
     );
 
@@ -465,7 +471,7 @@ async fn run() -> Result<(), Box<dyn Error>> {
     let inbound_blockchain = Arc::clone(&blockchain);
     let inbound_p2p_node   = Arc::clone(&p2p_node);
     let inbound_state      = Arc::clone(&state);
-    let inbound_pk         = validator_pk; // used as a fallback verifier key
+    let inbound_pk         = sphincs_pk.clone(); // SPHINCS+ PK used as fallback block verifier key
 
     let inbound_handle = tokio::spawn(async move {
         info!("[InboundBlockHandler] Listening for P2P block gossip…");
@@ -496,7 +502,7 @@ async fn run() -> Result<(), Box<dyn Error>> {
                         continue;
                     }
 
-                    // Per-transaction SPHINCS+ signature verification (Sprint 5).
+                    // Per-transaction SPHINCS+ signature verification.
                     // Reject the whole block if any tx carries an invalid signature.
                     // Txs with an empty (legacy) signature are allowed for compatibility;
                     // they will be signed going forward now that wallet signing is wired.
@@ -608,26 +614,27 @@ async fn run() -> Result<(), Box<dyn Error>> {
     // ── Ready banner ──────────────────────────────────────────────────────────
     info!("");
     info!("🚀 ════════════════════════════════════════════════════════════════");
-    info!("   BLEEP Node LIVE — Sprint 9 (Testnet Hardened · Audit Complete · 10K TPS)");
+    info!("   BLEEP Node LIVE — Protocol Hardened · Audit Complete · 10K TPS");
     info!("   Protocol v3  |  Chain: bleep-testnet-1  |  10 shards  |  7 validators");
     info!("══ Core RPC ═════════════════════════════════════════════════════════");
     info!("   Health:       http://0.0.0.0:8545/rpc/health");
     info!("   State:        http://0.0.0.0:8545/rpc/state/{{address}}");
-    info!("   Supply:       http://0.0.0.0:8545/rpc/economics/supply");
+    info!("   Supply:       http://0.0.0.0:8545/rpc/economics/supply
+    info!("   Distribution: http://0.0.0.0:8545/rpc/economics/distribution  [Updated tokenomics]");");
     info!("   Oracle:       http://0.0.0.0:8545/rpc/oracle/price/BLEEP%2FUSD");
     info!("══ BLEEP Connect ════════════════════════════════════════════════════");
     info!("   L4 Intents:   http://0.0.0.0:8545/rpc/connect/intents/pending");
-    info!("   L3 ZK Bridge: http://0.0.0.0:8545/rpc/layer3/intents  [Sprint 9]");
+    info!("   L3 ZK Bridge: http://0.0.0.0:8545/rpc/layer3/intents  ");
     info!("   Sepolia:      relay contract at {}", bleep_interop::SEPOLIA_BLEEP_FULFILL_ADDR);
     info!("══ Governance (live) ════════════════════════════════════════════════");
-    info!("   Proposals:    http://0.0.0.0:8545/rpc/governance/proposals  [Sprint 9]");
-    info!("   Propose:      POST http://0.0.0.0:8545/rpc/governance/propose  [Sprint 9]");
-    info!("   Vote:         POST http://0.0.0.0:8545/rpc/governance/vote  [Sprint 9]");
-    info!("══ Sprint 9 Hardening ═══════════════════════════════════════════════");
-    info!("   Chaos suite:  http://0.0.0.0:8545/rpc/chaos/status  [Sprint 9]");
-    info!("   MPC Ceremony: http://0.0.0.0:8545/rpc/ceremony/status  [Sprint 9]");
-    info!("   Benchmark:    http://0.0.0.0:8545/rpc/benchmark/latest  [Sprint 9]");
-    info!("   Audit:        http://0.0.0.0:8545/rpc/audit/report  [Sprint 9]");
+    info!("   Proposals:    http://0.0.0.0:8545/rpc/governance/proposals  ");
+    info!("   Propose:      POST http://0.0.0.0:8545/rpc/governance/propose  ");
+    info!("   Vote:         POST http://0.0.0.0:8545/rpc/governance/vote  ");
+    info!("══ Protocol Hardening ══════════════════════════════════════════════");
+    info!("   Chaos suite:  http://0.0.0.0:8545/rpc/chaos/status  ");
+    info!("   MPC Ceremony: http://0.0.0.0:8545/rpc/ceremony/status  ");
+    info!("   Benchmark:    http://0.0.0.0:8545/rpc/benchmark/latest  ");
+    info!("   Audit:        http://0.0.0.0:8545/rpc/audit/report  ");
     info!("══ Testnet UI ════════════════════════════════════════════════════════");
     info!("   Explorer:     http://0.0.0.0:8545/explorer");
     info!("   Faucet:       POST http://0.0.0.0:8545/faucet/{{address}}");

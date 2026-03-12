@@ -1,4 +1,4 @@
-//! # BLEEP Connect Executor Node — Sprint 7
+//! # BLEEP Connect Executor Node
 //!
 //! Standalone binary that participates in the BLEEP Connect Layer 4
 //! intent-filling market.
@@ -58,7 +58,7 @@ async fn main() {
         .init();
 
     info!("╔══════════════════════════════════════════════════════════╗");
-    info!("║  BLEEP Connect Executor Node — Sprint 7                  ║");
+    info!("║  BLEEP Connect Executor Node                             ║");
     info!("║  Layer 4 Instant Intent Market Maker                     ║");
     info!("╚══════════════════════════════════════════════════════════╝");
 
