@@ -1,88 +1,93 @@
 [package]
-name = "bleep-vm"
-version = "0.1.0"
-edition = "2021"
+name        = "bleep-vm"
+version     = "0.5.0"
+edition     = "2021"
+authors     = ["BLEEP Core Team <bleepecosystem@gmail.com>"]
+description = "BLEEP Universal VM — 7-layer intent-driven execution architecture with EVM (revm), WASM, ZK engines, unified gas model, cross-chain native routing, and state-diff isolation"
+license     = "MIT OR Apache-2.0"
+
+[lib]
+name = "bleep_vm"
+path = "src/lib.rs"
 
 [dependencies]
-# Async
-tokio = { version = "1.36", features = ["full"] }
-rayon = "1.8.0"
+# ── Async ──────────────────────────────────────────────────────────────────────
+tokio        = { version = "1.36", features = ["full"] }
+rayon        = "1.8"
+futures      = "0.3"
+async-trait  = "0.1"
 
-# WebAssembly
-wasmer = "4.2.0"
+# ── WebAssembly ────────────────────────────────────────────────────────────────
+wasmer       = { version = "4.2", features = ["cranelift"] }
+wasmparser   = "0.118"
+wasm-encoder = "0.38"
 
-# Logging and metrics
-log = "0.4"
-tracing = "0.1.40"
-metrics = "0.21.1"
+# ── EVM (revm — production Ethereum-compatible runtime) ────────────────────────
+revm         = { version = "3.5", features = ["serde"] }
 
-# Cryptography
-sha2 = "0.10"
-blake2 = "0.10"
-blake3 = "1.5.0"
-aes-gcm = "0.10"
-base64 = "0.21"
-rand = "0.8"
-hex = "0.4"
-ed25519-dalek = { version = "1", features = ["std"] }
-dashmap = "5.5.3"
+# ── Serialization ─────────────────────────────────────────────────────────────
+serde        = { version = "1.0", features = ["derive"] }
+serde_json   = "1.0"
+bincode      = "1.3"
+hex          = "0.4"
+base64       = "0.22"
+bytes        = "1.5"
 
-# Blockchain & smart contracts
-frame-support = "32.0.0"
-frame-system = "32.0.0"
-sp-runtime = "32.0.0"
-ink = { version = "4.2.1", default-features = false, features = ["std"] }
+# ── Cryptography ──────────────────────────────────────────────────────────────
+sha2         = "0.10"
+sha3         = "0.10"
+blake2       = "0.10"
+blake3       = "1.5"
+aes-gcm      = "0.10"
+hkdf         = "0.12"
+rand         = "0.8"
+rand_core    = { version = "0.6", features = ["getrandom"] }
+ed25519-dalek = { version = "2.1.1", features = ["rand_core"] }
+zeroize      = { version = "1.7", features = ["zeroize_derive"] }
+primitive-types = { version = "0.12", features = ["serde"] }
 
-# Consensus and networking
-libp2p = { version = "0.53", features = ["tcp", "websocket", "noise", "yamux"] }
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-bincode = "1.3"
+# ── Post-Quantum ──────────────────────────────────────────────────────────────
+pqcrypto-sphincsplus = "0.7"
+pqcrypto-kyber       = "0.8.0"
+pqcrypto-traits      = "0.3"
 
-# ZKP and Circom
-ark-circom = "0.5.0"
-ark-groth16 = "0.4.0"
-ark-bn254 = "0.4.0"
+# ── ZK Proofs (Groth16 / BN254) ───────────────────────────────────────────────
+ark-groth16    = "0.4"
+ark-bn254      = "0.4"
+ark-ff         = "0.4"
+ark-ec         = "0.4"
+ark-std        = "0.4"
+ark-serialize  = "0.4"
+ark-relations  = "0.4"
+ark-r1cs-std   = "0.4"
+ark-snark      = "0.4"
 
-# Post-quantum cryptography (assumed modules)
-pqcrypto = "0.18.1"
+# ── Data Structures ───────────────────────────────────────────────────────────
+dashmap      = "5.5"
+lru          = "0.12"
+parking_lot  = "0.12"
 
-# RocksDB for shard persistence
-rocksdb = "0.21.0"
+# ── Logging / Metrics ─────────────────────────────────────────────────────────
+tracing             = "0.1"
+tracing-subscriber  = { version = "0.3", features = ["env-filter"] }
+metrics             = "0.21"
 
-# Ethereum / EVM
-ethers = { version = "2.0.10", features = ["abigen"] }
+# ── Error Handling ────────────────────────────────────────────────────────────
+thiserror    = "1.0"
+anyhow       = "1.0"
 
+# ── Utilities ─────────────────────────────────────────────────────────────────
+chrono       = { version = "0.4", features = ["serde"] }
+smallvec     = { version = "1.11", features = ["serde"] }
+once_cell    = "1.18"
+uuid         = { version = "1.6", features = ["v4", "serde"] }
 
-# Bitcoin
-bitcoin = "0.30"
+[dev-dependencies]
+tokio        = { version = "1.36", features = ["full", "test-util"] }
+tracing-test = "0.2"
+criterion    = { version = "0.5", features = ["async_tokio"] }
+tempfile     = "3"
 
-# Cosmos IBC (hypothetical SDK wrapper)
-
-
-# Sui
-sui-sdk = "0.0.0"  # Replace with actual or wrapper
-
-
-# Machine Learning / AI
-tch = "0.13.0"            # PyTorch for Rust
-tensorflow = "0.21.0"     # For smart contract optimizer model
-linfa = "0.7.1"           # Classical ML algorithms
-
-# LRU cache
-lru = "0.11.0"
-
-# Time and utilities
-chrono = { version = "0.4", features = ["serde"] }
-
-
-# Errors
-thiserror = "1.0"
-
-# Finite Fields
-ark-ff = "0.4.0"
-
-[features]
-default = ["std"]
-std = ["ink/std", "frame-support/std", "frame-system/std", "sp-runtime/std"]
-
+[[bench]]
+name    = "vm_bench"
+harness = false
