@@ -36,7 +36,7 @@ pub mod gossip_bridge;
 pub use gossip_bridge::{GossipBridge, encode_finalized_block, decode_finalized_block};
 
 
-// ── Sprint 9 modules ──────────────────────────────────────────────────────────
+// ── Hardening-phase modules ────────────────────────────────────────────────────
 pub mod chaos_engine;
 pub mod shard_coordinator;
 pub mod performance_bench;

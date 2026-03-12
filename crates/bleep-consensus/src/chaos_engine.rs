@@ -1,5 +1,5 @@
 //! bleep-consensus/src/chaos_engine.rs
-//! Sprint 9 — Chaos Testing Engine
+//! Chaos Testing Engine
 //!
 //! Simulates adversarial conditions: validator crashes, network partitions,
 //! long-range reorg attempts, and Byzantine double-sign attacks under load.
@@ -129,7 +129,7 @@ impl ChaosEngine {
         self
     }
 
-    /// Run all Sprint 9 chaos scenarios in order.
+    /// Run all chaos scenarios in order.
     /// Returns true iff every scenario passed.
     pub fn run_full_suite(&mut self, initial_height: u64) -> bool {
         let scenarios = self.build_scenario_list();

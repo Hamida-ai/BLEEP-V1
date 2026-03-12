@@ -1,7 +1,7 @@
 //! bleep-consensus/src/security_audit.rs
-//! Sprint 9 — Security Audit Report
+//! Security Audit Report
 //!
-//! Machine-readable record of all audit findings from the Sprint 9 independent
+//! Machine-readable record of all audit findings from the independent
 //! security review. Each finding maps to a crate, severity, status, and fix commit.
 
 use std::collections::HashMap;
@@ -63,18 +63,18 @@ pub struct AuditReport {
     pub auditor:        String,
     pub audit_date:     String,
     pub protocol_version: u32,
-    pub sprint:         u32,
+    pub phase:          String,
     pub scope:          Vec<String>,
     pub findings:       Vec<AuditFinding>,
 }
 
 impl AuditReport {
-    pub fn sprint9_report() -> Self {
+    pub fn report() -> Self {
         Self {
-            auditor:          "Trail of BLEEP Security (Sprint 9 Independent Audit)".into(),
+            auditor:          "Trail of BLEEP Security (Independent Audit)".into(),
             audit_date:       "2026-Q2".into(),
             protocol_version: 3,
-            sprint:           9,
+            phase:            "hardening".into(),
             scope: vec![
                 "bleep-crypto".into(),
                 "bleep-consensus".into(),
@@ -309,8 +309,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn sprint9_audit_report_all_findings_resolved_or_acknowledged() {
-        let report = AuditReport::sprint9_report();
+    fn audit_report_all_findings_resolved_or_acknowledged() {
+        let report = AuditReport::report();
         let summary = report.summary();
         assert!(summary.all_resolved,
             "{} findings neither resolved nor acknowledged", summary.total - summary.resolved - summary.acknowledged);
@@ -318,7 +318,7 @@ mod tests {
 
     #[test]
     fn critical_findings_all_resolved() {
-        let report = AuditReport::sprint9_report();
+        let report = AuditReport::report();
         for f in report.findings.iter().filter(|f| f.severity == Severity::Critical) {
             assert!(matches!(f.status, FindingStatus::Resolved { .. }),
                 "critical finding {} must be resolved, not just acknowledged", f.id);
@@ -327,7 +327,7 @@ mod tests {
 
     #[test]
     fn high_findings_all_resolved() {
-        let report = AuditReport::sprint9_report();
+        let report = AuditReport::report();
         for f in report.findings.iter().filter(|f| f.severity == Severity::High) {
             assert!(matches!(f.status, FindingStatus::Resolved { .. }),
                 "high finding {} must be resolved", f.id);
@@ -336,7 +336,7 @@ mod tests {
 
     #[test]
     fn audit_report_has_expected_finding_ids() {
-        let report = AuditReport::sprint9_report();
+        let report = AuditReport::report();
         let ids: Vec<&str> = report.findings.iter().map(|f| f.id.as_str()).collect();
         for expected in &["SA-C1","SA-C2","SA-H1","SA-H2","SA-H3","SA-M1","SA-M2","SA-M3","SA-M4","SA-L1","SA-L2","SA-L3","SA-I1","SA-I2"] {
             assert!(ids.contains(expected), "missing finding {}", expected);
@@ -345,7 +345,7 @@ mod tests {
 
     #[test]
     fn audit_summary_counts_are_consistent() {
-        let report = AuditReport::sprint9_report();
+        let report = AuditReport::report();
         let summary = report.summary();
         assert_eq!(summary.critical + summary.high + summary.medium + summary.low + summary.informational, summary.total);
     }

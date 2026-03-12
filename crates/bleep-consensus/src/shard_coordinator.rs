@@ -1,5 +1,5 @@
 //! bleep-consensus/src/shard_coordinator.rs
-//! Sprint 9 — Cross-Shard Stress Test Infrastructure
+//! Cross-Shard Stress Test Infrastructure
 //!
 //! 10-shard configuration sustaining 1,000 concurrent cross-shard transactions
 //! over 100 epochs. Implements deterministic shard assignment, cross-shard
@@ -200,7 +200,7 @@ impl ShardCoordinator {
         }
     }
 
-    /// Run the full Sprint 9 stress test: 100 epochs, 1,000 concurrent XS txs.
+    /// Run the full stress test: 100 epochs, 1,000 concurrent XS txs.
     pub fn run_stress_test(&mut self) -> StressTestResult {
         // Inject 1,000 concurrent cross-shard transactions
         for i in 0..CROSS_SHARD_CONCURRENT_TARGET {

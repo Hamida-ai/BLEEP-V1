@@ -1,5 +1,5 @@
 //! bleep-consensus/src/performance_bench.rs
-//! Sprint 9 — Performance Benchmark: ≥10,000 TPS across 10 shards, 1 hour
+//! Performance Benchmark: ≥10,000 TPS across 10 shards, 1 hour
 //!
 //! Measures end-to-end transaction throughput including state application,
 //! Merkle root computation, block signature, and Groth16 proof generation.

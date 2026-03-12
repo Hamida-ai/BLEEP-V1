@@ -1,4 +1,4 @@
-//! # GossipBridge — Sprint 3
+//! # GossipBridge
 //!
 //! Broadcasts `FinalizedBlock` events to all connected P2P peers using
 //! `P2PNode::broadcast(MessageType::Block, payload)`.
