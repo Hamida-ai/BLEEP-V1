@@ -1,0 +1,16 @@
+[package]
+name    = "bleep-connect-layer2-fullnode"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+bleep-connect-types            = { path = "../bleep-connect-types" }
+bleep-connect-crypto           = { path = "../bleep-connect-crypto" }
+bleep-connect-commitment-chain = { path = "../bleep-connect-commitment-chain" }
+tokio     = { version = "1.36", features = ["full"] }
+dashmap   = "5.5"
+serde     = { version = "1.0", features = ["derive"] }
+tracing   = "0.1"
+hex       = "0.4.3"
+thiserror = "1.0"
