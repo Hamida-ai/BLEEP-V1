@@ -1,0 +1,30 @@
+[package]
+name        = "bleep-interop"
+version     = "0.1.0"
+edition     = "2021"
+authors     = ["BLEEP Core Team <bleepecosystem@gmail.com>"]
+license     = "MIT OR Apache-2.0"
+description = "BLEEP Connect — quantum-secure cross-chain interoperability protocol"
+
+[dependencies]
+bleep-connect-types            = { path = "src/bleep-connect-types" }
+bleep-connect-crypto           = { path = "src/bleep-connect-crypto" }
+bleep-connect-commitment-chain = { path = "src/bleep-connect-commitment-chain" }
+bleep-connect-adapters         = { path = "src/bleep-connect-adapters" }
+bleep-connect-executor         = { path = "src/bleep-connect-executor" }
+bleep-connect-layer1-social    = { path = "src/bleep-connect-layer1-social" }
+bleep-connect-layer2-fullnode  = { path = "src/bleep-connect-layer2-fullnode" }
+bleep-connect-layer3-zkproof   = { path = "src/bleep-connect-layer3-zkproof" }
+bleep-connect-layer4-instant   = { path = "src/bleep-connect-layer4-instant" }
+bleep-connect-core             = { path = "src/bleep-connect-core" }
+
+tokio       = { version = "1.36", features = ["full"] }
+async-trait = "0.1.77"
+serde       = { version = "1.0", features = ["derive"] }
+serde_json  = "1.0"
+log         = "0.4"
+tracing     = "0.1"
+thiserror   = "1.0"
+anyhow      = "1.0"
+sha2        = "0.10"
+hex         = "0.4"
