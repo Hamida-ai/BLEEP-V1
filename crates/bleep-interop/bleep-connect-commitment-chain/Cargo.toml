@@ -1,0 +1,22 @@
+[package]
+name    = "bleep-connect-commitment-chain"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+bleep-connect-types  = { path = "../bleep-connect-types" }
+bleep-connect-crypto = { path = "../bleep-connect-crypto" }
+serde      = { version = "1.0", features = ["derive"] }
+bincode    = "1.3.3"
+rocksdb    = { version = "0.21", features = ["multi-threaded-cf"] }
+dashmap    = "5.5"
+tokio      = { version = "1.36", features = ["full"] }
+tracing    = "0.1"
+sha2       = "0.10.8"
+hex        = "0.4.3"
+thiserror  = "1.0"
+
+[dev-dependencies]
+tempfile = "3"
+tokio    = { version = "1.36", features = ["macros", "rt-multi-thread"] }
