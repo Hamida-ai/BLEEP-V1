@@ -1,4 +1,4 @@
-//! # Transaction Signer — Sprint 4
+//! # Transaction Signer
 //!
 //! Provides SPHINCS+-SHAKE-256 signing for BLEEP transactions.
 //!

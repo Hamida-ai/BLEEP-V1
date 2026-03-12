@@ -1,4 +1,4 @@
-//! # BIP-39 Mnemonic Key Derivation — Sprint 4
+//! # BIP-39 Mnemonic Key Derivation
 //!
 //! Implements the BIP-39 specification for deriving a master seed from a
 //! mnemonic phrase using PBKDF2-HMAC-SHA512.
@@ -62,7 +62,7 @@ pub fn mnemonic_to_seed(mnemonic: &str, passphrase: &str) -> Result<[u8; SEED_LE
 /// Validate a mnemonic phrase (basic structural check).
 ///
 /// Checks: word count is 12/15/18/21/24, all characters are ASCII.
-/// Full BIP-39 wordlist validation is out-of-scope (Sprint 5).
+/// Full BIP-39 wordlist validation is not yet implemented.
 pub fn validate_mnemonic(mnemonic: &str) -> Result<(), String> {
     let words: Vec<&str> = mnemonic.split_whitespace().collect();
     let count = words.len();
