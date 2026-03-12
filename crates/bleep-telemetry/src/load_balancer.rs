@@ -1,40 +1,59 @@
-use log::info;
-use crate::modules::energy::energy_module::EnergyMonitor;
-use crate::p2p::P2PNetwork;
+//! # LoadBalancer
+//!
+//! Tracks per-shard validator load and emits rebalance signals.
+//! An earlier version imported non-existent `crate::modules::energy` — removed.
 
-/// A load balancer that uses energy efficiency metrics to trigger balancing actions
+use crate::metrics::MetricGauge;
+use std::collections::HashMap;
+
+/// Tracks CPU / message-queue load per shard and recommends rebalancing.
 pub struct LoadBalancer {
-    p2p_network: P2PNetwork,
-    /// The load threshold is the minimum acceptable energy efficiency score (0-100)
+    /// Minimum acceptable load score (0.0–100.0) before rebalancing triggers.
     load_threshold: f64,
+    /// Per-shard load gauges.
+    shard_load: HashMap<u64, MetricGauge>,
 }
 
 impl LoadBalancer {
-    /// Initializes a new LoadBalancer with the given P2P network interface and threshold
-    pub fn new(p2p_network: P2PNetwork, load_threshold: f64) -> Self {
+    /// Create a balancer with the given threshold.
+    pub fn new(load_threshold: f64) -> Self {
         Self {
-            p2p_network,
             load_threshold,
+            shard_load: HashMap::new(),
         }
     }
 
-    /// Evaluates the energy efficiency score and triggers load balancing actions if needed
-    pub fn balance_load(&self, energy_monitor: &EnergyMonitor) {
-        if energy_monitor.energy_efficiency_score < self.load_threshold {
-            info!(
-                "LoadBalancer: Energy efficiency score ({:.2}) is below threshold ({:.2}). Initiating load balancing.",
-                energy_monitor.energy_efficiency_score, self.load_threshold
-            );
-            // Broadcast a load balancing signal to peers.
-            // This assumes that the P2PNetwork has a method `broadcast_load_balance_signal`
-            // which would be implemented as part of the overall system.
-            self.p2p_network.broadcast_load_balance_signal(energy_monitor.energy_usage);
-            info!("LoadBalancer: Load balancing action executed.");
-        } else {
-            info!(
-                "LoadBalancer: Energy efficiency score ({:.2}) is optimal. No load balancing required.",
-                energy_monitor.energy_efficiency_score
-            );
+    /// Record the current load score for a shard (0–100).
+    pub fn record_shard_load(&mut self, shard_id: u64, score: i64) {
+        let gauge = self
+            .shard_load
+            .entry(shard_id)
+            .or_insert_with(|| MetricGauge::new(&format!("bleep_shard_{}_load", shard_id)));
+        gauge.set(score);
+    }
+
+    /// Returns `true` and logs a warning if any shard is below threshold.
+    pub fn check_balance(&self) -> bool {
+        let mut needs_rebalance = false;
+        for (shard_id, gauge) in &self.shard_load {
+            let score = gauge.get() as f64;
+            if score < self.load_threshold {
+                log::warn!(
+                    "LoadBalancer: shard {} load score {:.1} below threshold {:.1} — rebalance advised",
+                    shard_id, score, self.load_threshold
+                );
+                needs_rebalance = true;
+            }
         }
+        needs_rebalance
+    }
+
+    /// Return the average load across all tracked shards, or 100.0 if none.
+    pub fn average_load(&self) -> f64 {
+        if self.shard_load.is_empty() {
+            return 100.0;
+        }
+        let total: i64 = self.shard_load.values().map(|g| g.get()).sum();
+        total as f64 / self.shard_load.len() as f64
     }
 }
