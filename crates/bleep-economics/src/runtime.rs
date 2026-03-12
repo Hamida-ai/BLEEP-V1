@@ -1,4 +1,4 @@
-//! # BleepEconomicsRuntime — Sprint 7
+//! # BleepEconomicsRuntime
 //!
 //! Wires all four economic engines into a single coordinated runtime that is
 //! called at each epoch boundary by the Scheduler task `token_burn_execution`.

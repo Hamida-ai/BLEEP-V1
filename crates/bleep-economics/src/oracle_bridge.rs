@@ -107,7 +107,7 @@ pub struct OracleOperator {
     pub updates_submitted: u64,
     /// Accepted updates (not disputed)
     pub accepted_updates: u64,
-    /// Updates rejected due to invalid signature (Sprint 7)
+    /// Updates rejected due to invalid signature
     pub rejected_updates: u64,
     /// Disputed updates (flagged as false)
     pub disputed_updates: u64,
@@ -271,17 +271,17 @@ impl OracleBridgeEngine {
             return Err(OracleError::InsufficientConfidence);
         }
 
-        // ── Sprint 7: Cryptographic signature verification ─────────────────
+        // ── Cryptographic signature verification ──────────────────────────
         // Signature is SHA-256(operator_id || asset || price_bytes || timestamp_bytes).
-        // A non-empty signature that doesn't match is rejected.
-        // An empty signature is accepted in devnet mode (signature added in Sprint 9 audit).
+        // Only a valid signature (matching the hash) or an empty signature (genesis
+        // bootstrap with no signing key available) is accepted.
+        // All-zero placeholder signatures are explicitly REJECTED (SA-M1 closure).
         if !update.signature.is_empty() {
             let expected = update.compute_hash();
-            // Accept if the signature equals the hash of the price data
-            // OR if the signature is a 64-byte all-zero placeholder (devnet/RPC oracle/update)
-            let is_placeholder = update.signature.len() == 64
+            // Reject all-zero placeholder signatures that were used as a devnet bypass
+            let is_zero_placeholder = update.signature.len() == 64
                 && update.signature.iter().all(|&b| b == 0);
-            if !is_placeholder && update.signature != expected {
+            if is_zero_placeholder || update.signature != expected {
                 if let Some(op) = self.operators.get_mut(&update.operator_id) {
                     op.updates_submitted += 1;
                     op.rejected_updates += 1;
