@@ -26,6 +26,7 @@
 // ============================================================================
 
 use crate::errors::{AuthError, AuthResult};
+use bleep_crypto::pq_crypto::{KyberKem, KyberPublicKey};
 use serde::{Deserialize, Serialize};
 use sha3::{Digest, Sha3_256};
 use rand::RngCore;
@@ -85,14 +86,14 @@ impl ValidatorBindingRegistry {
         }
     }
 
-    // ── Challenge phase ───────────────────────────────────────────────────
-
     /// Issue a binding challenge for a validator's Kyber1024 public key.
     ///
-    /// Returns `(challenge_id, kyber_ciphertext)` to send to the operator.
+    /// Encapsulates a random shared secret under the validator's Kyber-1024 public key
+    /// using the real `bleep_crypto::KyberKem::encapsulate()` (production KEM).
     ///
-    /// **Production:** replace the stub KEM below with a real call to
-    /// `bleep_crypto::KyberKem::encapsulate(validator_public_key)`.
+    /// Returns `(challenge_id, kyber_ciphertext)` to send to the operator.
+    /// The operator decapsulates with their Kyber-1024 secret key to recover the
+    /// shared secret, then computes `SHA3-256(shared_secret ∥ challenge_id)` as proof.
     pub fn issue_challenge(
         &mut self,
         validator_public_key: &[u8],
@@ -103,29 +104,31 @@ impl ValidatorBindingRegistry {
             ));
         }
 
-        // Generate challenge ID
+        // Generate a unique challenge ID
         let mut raw = [0u8; 16];
         rand::thread_rng().fill_bytes(&mut raw);
         let challenge_id = hex::encode(raw);
 
-        // ── Stub KEM ────────────────────────────────────────────────────
-        // In production: let (shared_secret, ciphertext) =
-        //     KyberKem::encapsulate(&KyberPublicKey::from_bytes(validator_public_key)?)?;
-        // For now: derive a deterministic shared_secret from pubkey ∥ challenge
-        // so tests can compute the correct response without real Kyber.
-        let shared_secret = {
-            let mut h = Sha3_256::new();
-            h.update(validator_public_key);
-            h.update(challenge_id.as_bytes());
-            h.finalize().to_vec()
-        };
-        let kyber_ciphertext = [shared_secret.as_slice(), challenge_id.as_bytes()].concat();
-        // ────────────────────────────────────────────────────────────────
+        // ── Real Kyber-1024 KEM encapsulation ───────────────────────────────
+        // Parse the validator's Kyber-1024 public key
+        let kyber_pk = KyberPublicKey::from_bytes(validator_public_key.to_vec())
+            .map_err(|e| AuthError::InvalidKeyMaterial(
+                format!("Kyber-1024 public key invalid: {}", e)
+            ))?;
 
-        // Pre-compute the expected response hash
+        // Encapsulate: produces (shared_secret_32B, ciphertext_1568B)
+        let (shared_secret, kyber_ct) = KyberKem::encapsulate(&kyber_pk)
+            .map_err(|e| AuthError::InvalidKeyMaterial(
+                format!("Kyber-1024 encapsulation failed: {}", e)
+            ))?;
+
+        let kyber_ciphertext = kyber_ct.to_vec();
+        // ────────────────────────────────────────────────────────────────────
+
+        // Pre-compute the expected response: SHA3-256(shared_secret ∥ challenge_id)
         let expected_response = {
             let mut h = Sha3_256::new();
-            h.update(&shared_secret);
+            h.update(shared_secret.as_bytes());
             h.update(challenge_id.as_bytes());
             hex::encode(h.finalize())
         };
@@ -221,36 +224,48 @@ fn constant_time_eq(a: &[u8], b: &[u8]) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use bleep_crypto::pq_crypto::{KyberKem, KyberSecretKey, KyberCiphertext};
 
-    fn dummy_pubkey() -> Vec<u8> { vec![0x55u8; 1568] }
+    /// Generate a real Kyber-1024 keypair and return (pk_bytes, sk).
+    fn real_kyber_keypair() -> (Vec<u8>, bleep_crypto::pq_crypto::KyberSecretKey) {
+        let (pk, sk) = KyberKem::keygen().expect("Kyber keygen");
+        (pk.to_vec(), sk)
+    }
 
-    fn compute_response(pubkey: &[u8], challenge_id: &str, ciphertext: &[u8]) -> String {
-        // Mirrors the stub KEM above: shared_secret = SHA3(pubkey ∥ challenge_id)
-        let shared_secret = {
-            let mut h = Sha3_256::new();
-            h.update(pubkey);
-            h.update(challenge_id.as_bytes());
-            h.finalize().to_vec()
-        };
-        let mut h = Sha3_256::new();
-        h.update(&shared_secret);
-        h.update(challenge_id.as_bytes());
-        hex::encode(h.finalize())
+    /// Compute the binding response by decapsulating the Kyber ciphertext.
+    ///
+    /// This mirrors what the validator operator's node does: parse the
+    /// ciphertext, decapsulate with the secret key, compute the response hash.
+    fn compute_response_real(
+        sk: &KyberSecretKey,
+        challenge_id: &str,
+        kyber_ciphertext: &[u8],
+    ) -> String {
+        let ct = KyberCiphertext::from_bytes(kyber_ciphertext.to_vec())
+            .expect("parse ciphertext (must be 1568B from real KEM)");
+        let shared_secret = KyberKem::decapsulate(sk, &ct).expect("decapsulate");
+        let mut h = sha3::Sha3_256::new();
+        sha3::Digest::update(&mut h, shared_secret.as_bytes());
+        sha3::Digest::update(&mut h, challenge_id.as_bytes());
+        hex::encode(sha3::Digest::finalize(h))
     }
 
     #[test]
-    fn binding_round_trip() {
+    fn binding_round_trip_real_kyber() {
         let mut reg = ValidatorBindingRegistry::new();
-        let pk = dummy_pubkey();
+        let (pk_bytes, sk) = real_kyber_keypair();
 
-        let (cid, ct) = reg.issue_challenge(&pk).unwrap();
-        let response  = compute_response(&pk, &cid, &ct);
+        let (cid, ct) = reg.issue_challenge(&pk_bytes).expect("issue_challenge");
+        // ct must be 1568 bytes — the real Kyber-1024 ciphertext
+        assert_eq!(ct.len(), 1568, "Kyber-1024 ciphertext must be 1568 bytes");
+
+        let response = compute_response_real(&sk, &cid, &ct);
 
         let binding = reg.bind(
             "op1".into(),
             "val1".into(),
             ValidatorBindingProof { challenge_id: cid, response_hash: response },
-        ).unwrap();
+        ).expect("bind");
 
         assert_eq!(binding.validator_id, "val1");
         assert!(reg.get_binding_for_validator("val1").is_some());
@@ -259,27 +274,60 @@ mod tests {
     #[test]
     fn wrong_response_rejected() {
         let mut reg = ValidatorBindingRegistry::new();
-        let (cid, _) = reg.issue_challenge(&dummy_pubkey()).unwrap();
+        let (pk_bytes, _sk) = real_kyber_keypair();
+        let (cid, _) = reg.issue_challenge(&pk_bytes).expect("issue_challenge");
         let result = reg.bind(
             "op1".into(), "val1".into(),
-            ValidatorBindingProof { challenge_id: cid, response_hash: "wrong".into() },
+            ValidatorBindingProof { challenge_id: cid, response_hash: "deadbeef".into() },
         );
-        assert!(result.is_err());
+        assert!(result.is_err(), "Wrong response hash must be rejected");
     }
 
     #[test]
     fn challenge_is_single_use() {
         let mut reg = ValidatorBindingRegistry::new();
-        let pk = dummy_pubkey();
-        let (cid, ct) = reg.issue_challenge(&pk).unwrap();
-        let r = compute_response(&pk, &cid, &ct);
+        let (pk_bytes, sk) = real_kyber_keypair();
+        let (cid, ct) = reg.issue_challenge(&pk_bytes).expect("issue_challenge");
+        let r = compute_response_real(&sk, &cid, &ct);
 
         reg.bind("op1".into(), "val1".into(),
             ValidatorBindingProof { challenge_id: cid.clone(), response_hash: r.clone() }).unwrap();
 
-        // Second use of the same challenge must fail
+        // Second use of the same challenge must fail (challenge was consumed)
         let result = reg.bind("op1".into(), "val2".into(),
             ValidatorBindingProof { challenge_id: cid, response_hash: r });
-        assert!(result.is_err());
+        assert!(result.is_err(), "Replayed challenge must be rejected");
+    }
+
+    #[test]
+    fn invalid_pk_size_rejected() {
+        let mut reg = ValidatorBindingRegistry::new();
+        // Wrong size — must fail before any KEM operation
+        let bad_pk = vec![0x55u8; 32]; // 32 bytes instead of 1568
+        let result = reg.issue_challenge(&bad_pk);
+        assert!(result.is_err(), "Short public key must be rejected");
+    }
+
+    #[test]
+    fn second_binding_deactivates_first() {
+        let mut reg = ValidatorBindingRegistry::new();
+        let (pk1, sk1) = real_kyber_keypair();
+        let (pk2, sk2) = real_kyber_keypair();
+
+        // First binding
+        let (cid1, ct1) = reg.issue_challenge(&pk1).expect("challenge1");
+        let r1 = compute_response_real(&sk1, &cid1, &ct1);
+        reg.bind("op1".into(), "val1".into(),
+            ValidatorBindingProof { challenge_id: cid1, response_hash: r1 }).unwrap();
+
+        // Second binding for same validator replaces first
+        let (cid2, ct2) = reg.issue_challenge(&pk2).expect("challenge2");
+        let r2 = compute_response_real(&sk2, &cid2, &ct2);
+        reg.bind("op2".into(), "val1".into(),
+            ValidatorBindingProof { challenge_id: cid2, response_hash: r2 }).unwrap();
+
+        let b = reg.get_binding_for_validator("val1").expect("binding exists");
+        assert_eq!(b.operator_id, "op2", "Second binding must supersede first");
+        assert!(b.active);
     }
 }

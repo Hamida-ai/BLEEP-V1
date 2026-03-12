@@ -344,6 +344,6 @@ mod tests {
     }
 }
 
-// ── Sprint 9 modules ──────────────────────────────────────────────────────────
+// ── Hardening-phase modules ────────────────────────────────────────────────────
 pub mod audit_store;
 pub use audit_store::{AuditLogStore, StoredAuditEntry, AUDIT_CACHE_SIZE};

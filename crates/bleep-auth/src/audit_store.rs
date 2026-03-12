@@ -1,5 +1,5 @@
 //! bleep-auth/src/audit_store.rs
-//! Sprint 9 — SA-L1 fix: RocksDB-backed persistent audit log
+//! SA-L1 fix: RocksDB-backed persistent audit log
 //!
 //! AuditLogStore backs every audit entry to the `audit_log` RocksDB column family
 //! so that audit history survives node restarts.

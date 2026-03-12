@@ -176,7 +176,7 @@ impl AuditLog {
         self.entries.iter().rev().take(n).collect()
     }
 
-    // ── Sprint 8: Export ──────────────────────────────────────────────────
+    // ── Export ───────────────────────────────────────────────────────────
 
     /// Export the full audit log as a newline-delimited JSON string.
     ///
