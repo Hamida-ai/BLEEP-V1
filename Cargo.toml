@@ -126,6 +126,45 @@ members = [
     "crates/bleep-governance",
     "crates/bleep-indexer",
     "crates/bleep-interop",
+    "crates/bleep-p2p",
+    "crates/bleep-pat",
+    "crates/bleep-rpc",
+    "crates/bleep-scheduler",
+    "crates/bleep-state",
+    "crates/bleep-telemetry",
+    "crates/bleep-vm",
+    "crates/bleep-wallet-core",
+    "crates/bleep-zkp",
+]name = "bleep_admin"
+path = "src/bin/bleep_admin.rs"
+
+[[bin]]
+name = "bleep"
+path = "src/bin/main.rs"
+
+[[bin]]
+name = "bleep-executor"
+path = "src/bin/executor.rs"
+
+[features]
+default  = ["mainnet", "quantum"]
+mainnet  = []
+testnet  = []
+quantum  = ["pqcrypto", "pqcrypto-kyber"]
+
+[workspace]
+resolver = "2"
+members = [
+    "crates/bleep-ai",
+    "crates/bleep-auth",
+    "crates/bleep-cli",
+    "crates/bleep-consensus",
+    "crates/bleep-core",
+    "crates/bleep-crypto",
+    "crates/bleep-economics",
+    "crates/bleep-governance",
+    "crates/bleep-indexer",
+    "crates/bleep-interop",
     "crates/bleep-interop/src/bleep-connect-types",
     "crates/bleep-interop/src/bleep-connect-crypto",
     "crates/bleep-interop/src/bleep-connect-adapters",
