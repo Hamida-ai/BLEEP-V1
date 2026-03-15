@@ -19,6 +19,7 @@
 
 use std::collections::HashMap;
 use blake3;
+use hex;
 use serde::{Deserialize, Serialize};
 
 // ── Primitive types ───────────────────────────────────────────────────────────
@@ -81,6 +82,22 @@ pub struct SparseMerkleTrie {
     ///
     /// Depth 256 = leaf level. Depth 0 = root.
     interior_cache: HashMap<(usize, [u8; 32]), NodeHash>,
+}
+
+/// Simple alias for compatibility with legacy naming.
+pub type MerkleTree = SparseMerkleTrie;
+
+/// Calculate a Merkle root over a set of state entries.
+///
+/// This is intentionally lightweight and deterministic for compilation; in a
+/// production system this should be a secure sparse Merkle trie.
+pub fn calculate_merkle_root(entries: &[String]) -> String {
+    let mut trie = SparseMerkleTrie::new();
+    for (i, entry) in entries.iter().enumerate() {
+        // Interpret the entry string as an address; use index as a pseudo-balance.
+        trie.insert(entry, 0, i as u64);
+    }
+    hex::encode(trie.root())
 }
 
 impl SparseMerkleTrie {

@@ -189,8 +189,8 @@ impl EvmEngine {
                 };
                 let engine_logs: Vec<ExecutionLog> = logs.iter().map(|l| ExecutionLog {
                     level:   LogLevel::Info,
-                    message: format!("LOG{} addr={:x}", l.topics().len(), l.address),
-                    data:    l.data.data.to_vec(),
+                    message: format!("LOG{} addr={:x}", l.topics.len(), l.address),
+                    data:    l.data.to_vec(),
                 }).collect();
                 EngineResult {
                     success:       true,
@@ -246,9 +246,9 @@ impl EvmEngine {
                 };
                 let topics: Vec<[u8; 32]> = log.topics()
                     .iter()
-                    .map(|t| *t.as_ref())
+                    .map(|t| **t)
                     .collect();
-                diff.emit_event(contract_bytes, topics, log.data.data.to_vec());
+                diff.emit_event(contract_bytes, topics, log.data.to_vec());
             }
 
             // For CREATE: record code deployment

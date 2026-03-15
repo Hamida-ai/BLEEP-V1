@@ -409,7 +409,7 @@ impl SignatureScheme {
 
         // Expand the seed to 32 bytes for the StdRng seed using PBKDF2.
         let mut rng_seed = [0u8; 32];
-        pbkdf2::pbkdf2_hmac::<hmac::Hmac<sha2::Sha512>>(
+        pbkdf2::pbkdf2_hmac::<sha2::Sha512>(
             seed,
             b"BLEEP-SPHINCS+-KEYGEN-v1",
             2_048,
@@ -643,7 +643,7 @@ mod tests {
     #[test]
     fn test_sphincs_sign_verify_roundtrip() {
         let (pk, sk) = SignatureScheme::keygen().expect("keygen");
-        let message = b"test message for signing — BLEEP Protocol v3";
+        let message = b"test message for signing - BLEEP Protocol v3";
         let sig = SignatureScheme::sign(message, &sk).expect("sign");
 
         // Signature size must be 7856 bytes (SPHINCS+-SHAKE-256f-simple)

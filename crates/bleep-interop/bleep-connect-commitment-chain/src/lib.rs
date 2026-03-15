@@ -12,7 +12,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use dashmap::DashMap;
 use rocksdb::{DB, Options, ColumnFamilyDescriptor};
 use serde::{Deserialize, Serialize};
-use sha2::{Sha256, Digest};
+use sha2::Sha256;
 use tokio::sync::{RwLock, Mutex};
 use tracing::{info, warn, error};
 
@@ -56,12 +56,12 @@ impl ChainStorage {
         let key = block.block_number.to_be_bytes();
         let value = bincode::serialize(block)
             .map_err(|e| BleepConnectError::SerializationError(e.to_string()))?;
-        self.db.put_cf(cf, key, value)
+        self.db.put_cf(&cf, key, value)
             .map_err(|e| BleepConnectError::DatabaseError(e.to_string()))?;
         // Update chain tip
         let meta_cf = self.db.cf_handle(CF_META)
             .ok_or_else(|| BleepConnectError::DatabaseError("meta CF missing".into()))?;
-        self.db.put_cf(meta_cf, b"tip", block.block_number.to_be_bytes())
+        self.db.put_cf(&meta_cf, b"tip", block.block_number.to_be_bytes())
             .map_err(|e| BleepConnectError::DatabaseError(e.to_string()))?;
         Ok(())
     }
@@ -69,7 +69,7 @@ impl ChainStorage {
     pub fn get_block(&self, number: u64) -> BleepConnectResult<Option<CommitmentBlock>> {
         let cf = self.db.cf_handle(CF_BLOCKS)
             .ok_or_else(|| BleepConnectError::DatabaseError("blocks CF missing".into()))?;
-        match self.db.get_cf(cf, number.to_be_bytes())
+        match self.db.get_cf(&cf, number.to_be_bytes())
             .map_err(|e| BleepConnectError::DatabaseError(e.to_string()))? {
             Some(bytes) => {
                 let block = bincode::deserialize(&bytes)
@@ -83,7 +83,7 @@ impl ChainStorage {
     pub fn get_tip(&self) -> BleepConnectResult<u64> {
         let cf = self.db.cf_handle(CF_META)
             .ok_or_else(|| BleepConnectError::DatabaseError("meta CF missing".into()))?;
-        match self.db.get_cf(cf, b"tip")
+        match self.db.get_cf(&cf, b"tip")
             .map_err(|e| BleepConnectError::DatabaseError(e.to_string()))? {
             Some(bytes) if bytes.len() == 8 => {
                 let arr: [u8; 8] = bytes.try_into().map_err(|_| BleepConnectError::DatabaseError("invalid tip bytes".into()))?;
@@ -98,14 +98,14 @@ impl ChainStorage {
             .ok_or_else(|| BleepConnectError::DatabaseError("commitments CF missing".into()))?;
         let value = bincode::serialize(c)
             .map_err(|e| BleepConnectError::SerializationError(e.to_string()))?;
-        self.db.put_cf(cf, c.commitment_id, value)
+        self.db.put_cf(&cf, c.commitment_id, value)
             .map_err(|e| BleepConnectError::DatabaseError(e.to_string()))
     }
 
     pub fn get_commitment(&self, id: &[u8; 32]) -> BleepConnectResult<Option<StateCommitment>> {
         let cf = self.db.cf_handle(CF_COMMITMENTS)
             .ok_or_else(|| BleepConnectError::DatabaseError("commitments CF missing".into()))?;
-        match self.db.get_cf(cf, id)
+        match self.db.get_cf(&cf, id)
             .map_err(|e| BleepConnectError::DatabaseError(e.to_string()))? {
             Some(bytes) => Ok(Some(bincode::deserialize(&bytes)
                 .map_err(|e| BleepConnectError::SerializationError(e.to_string()))?)),

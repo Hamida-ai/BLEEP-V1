@@ -1,4 +1,75 @@
+use crate::consensus::BLEEPAdaptiveConsensus;
+use crate::p2p::P2PNode;
+use crate::p2p::P2PMessage;
 use crate::state_storage::BlockchainState;
+use crate::transaction::Transaction;
+use log::{error, info, warn};
+use std::collections::{HashMap, VecDeque};
+use std::sync::{Arc, Mutex};
+
+#[derive(Debug)]
+pub enum BLEEPError {
+    MutexPoisoned,
+    InvalidShard,
+    BroadcastFailed,
+    Other(String),
+}
+
+pub struct Shard {
+    pub transactions: VecDeque<Transaction>,
+    pub load: usize,
+}
+
+pub struct BLEEPShardingModule {
+    pub shards: HashMap<u64, Arc<Mutex<Shard>>>,
+    pub p2p_node: Arc<P2PNode>,
+}
+
+impl BLEEPShardingModule {
+    pub fn new(
+        num_shards: u64,
+        _consensus: Arc<Mutex<BLEEPAdaptiveConsensus>>,
+        p2p_node: Arc<P2PNode>,
+    ) -> Result<Self, BLEEPError> {
+        let mut shards = HashMap::new();
+        for shard_id in 0..num_shards {
+            shards.insert(
+                shard_id,
+                Arc::new(Mutex::new(Shard {
+                    transactions: VecDeque::new(),
+                    load: 0,
+                })),
+            );
+        }
+        Ok(Self { shards, p2p_node })
+    }
+
+    pub fn get_shard_state(&self, _shard_id: u64) -> Option<BlockchainState> {
+        None
+    }
+
+    pub fn assign_transaction(&mut self, _transaction: Transaction) -> Result<(), BLEEPError> {
+        Ok(())
+    }
+
+    pub fn persist_shard_state(&self, _shard_id: u64) {}
+
+    pub fn monitor_and_auto_rebalance(&self) {}
+
+    pub fn get_shard_summary(&self) -> HashMap<u64, usize> {
+        self.shards
+            .iter()
+            .map(|(id, shard)| {
+                let load = shard.lock().map(|s| s.load).unwrap_or_default();
+                (*id, load)
+            })
+            .collect()
+    }
+}
+
+pub struct ShardManager {
+    pub sharding_module: Arc<Mutex<BLEEPShardingModule>>,
+}
 
 impl ShardManager {
     /// Retrieve the current state for a specific shard
@@ -9,37 +80,7 @@ impl ShardManager {
         let sharding = self.sharding_module.lock().ok()?;
         sharding.get_shard_state(shard_id)
     }
-}
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
-use log::{info, warn, error};
-use crate::sharding::{BLEEPShardingModule, BLEEPError};
-use crate::p2p::P2PNode;
-use crate::transaction::Transaction;
-use crate::consensus::BLEEPAdaptiveConsensus;
-use crate::p2p::P2PMessage;
 
-// Use Transaction from crate::transaction
-// Use BLEEPAdaptiveConsensus from crate::consensus
-// Use P2PNode from sharding.rs
-// Use P2PMessage from bleep-p2p
-
-// Use BLEEPError from crate::sharding
-
-pub struct Shard {
-    pub transactions: std::collections::VecDeque<Transaction>,
-    pub load: usize,
-}
-
-// Use BLEEPShardingModule from crate::sharding
-
-// Use BLEEPShardingModule implementation from sharding.rs
-
-pub struct ShardManager {
-    pub sharding_module: Arc<Mutex<BLEEPShardingModule>>,
-}
-
-impl ShardManager {
     /// Initializes the ShardManager with a given number of shards
     pub fn new(
         num_shards: u64,
@@ -54,8 +95,8 @@ impl ShardManager {
 
     /// Adds a transaction to the appropriate shard
     pub fn add_transaction(&self, transaction: Transaction) -> Result<(), BLEEPError> {
-    let mut sharding_module = self.sharding_module.lock()
-        .map_err(|_| BLEEPError::MutexPoisoned)?;
+        let mut sharding_module = self.sharding_module.lock()
+            .map_err(|_| BLEEPError::MutexPoisoned)?;
         info!(
             "[ShardManager] Adding transaction ID {} from {} to {} with amount {}",
             transaction.id, transaction.from, transaction.to, transaction.amount
@@ -74,7 +115,7 @@ impl ShardManager {
     pub fn assign_transaction_to_shard(&self, transaction: Transaction, shard_id: u64) -> Result<(), BLEEPError> {
         let mut sharding_module = self.sharding_module.lock()
             .map_err(|_| BLEEPError::MutexPoisoned)?;
-        
+
         if let Some(shard) = sharding_module.shards.get(&shard_id) {
             let mut shard_guard = shard.lock()
                 .map_err(|_| BLEEPError::MutexPoisoned)?;
@@ -118,6 +159,11 @@ impl ShardManager {
     /// Returns the current state of all shards
     pub fn get_shard_states(&self) -> Result<HashMap<u64, usize>, BLEEPError> {
         let sharding_module = self.sharding_module.lock()
+            .map_err(|_| BLEEPError::MutexPoisoned)?;
+        Ok(sharding_module.get_shard_summary())
+    }
+}
+
             .map_err(|_| BLEEPError::MutexPoisoned)?;
         let mut states = HashMap::new();
         for (&id, shard) in sharding_module.shards.iter() {

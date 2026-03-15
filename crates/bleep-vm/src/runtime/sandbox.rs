@@ -165,7 +165,7 @@ impl SecurityPolicy {
                     for imp in reader {
                         let imp = imp.map_err(|e| VmError::WasmCompile(e.to_string()))?;
                         report.import_count += 1;
-                        if report.import_count > MAX_IMPORTS {
+                        if report.import_count > MAX_IMPORTS as usize {
                             return Err(VmError::SecurityViolation(format!(
                                 "Too many imports: max {MAX_IMPORTS}"
                             )));
@@ -190,7 +190,7 @@ impl SecurityPolicy {
                     for exp in reader {
                         let exp = exp.map_err(|e| VmError::WasmCompile(e.to_string()))?;
                         report.export_count += 1;
-                        if report.export_count > MAX_EXPORTS {
+                        if report.export_count > MAX_EXPORTS as usize {
                             return Err(VmError::SecurityViolation(format!(
                                 "Too many exports: max {MAX_EXPORTS}"
                             )));
@@ -255,9 +255,9 @@ impl SecurityPolicy {
         match op {
             // Float ops
             F32Add | F32Sub | F32Mul | F32Div | F32Sqrt | F32Ceil | F32Floor
-            | F32Trunc | F32Nearest | F32Abs | F32Neg | F32CopySign | F32Min | F32Max
+            | F32Trunc | F32Nearest | F32Abs | F32Neg | F32Copysign | F32Min | F32Max
             | F64Add | F64Sub | F64Mul | F64Div | F64Sqrt | F64Ceil | F64Floor
-            | F64Trunc | F64Nearest | F64Abs | F64Neg | F64CopySign | F64Min | F64Max
+            | F64Trunc | F64Nearest | F64Abs | F64Neg | F64Copysign | F64Min | F64Max
             | F32Const { .. } | F64Const { .. }
             | F32Load { .. } | F64Load { .. } | F32Store { .. } | F64Store { .. }
             | F32ConvertI32U | F32ConvertI32S | F32ConvertI64U | F32ConvertI64S

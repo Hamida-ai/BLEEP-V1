@@ -671,6 +671,8 @@ mod tests {
         assert!(matches!(relay.relay_status("0xabcdef01"), RelayStatus::Confirming { .. }));
     }
 
+    #[test]
+    fn test_adapter_registry() {
         let registry = AdapterRegistry::new();
         for chain in [ChainId::Ethereum, ChainId::Bitcoin, ChainId::Solana,
                       ChainId::Cosmos, ChainId::BLEEP, ChainId::Arbitrum] {

@@ -30,7 +30,6 @@ bleep-telemetry   = { path = "../bleep-telemetry" }
 bleep-governance  = { path = "../bleep-governance" }
 bleep-consensus   = { path = "../bleep-consensus" }
 bleep-p2p         = { path = "../bleep-p2p" }
-bleep-cli         = { path = "." }
 
 [[bin]]
 name = "bleep-cli"

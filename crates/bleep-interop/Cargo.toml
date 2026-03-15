@@ -6,17 +6,20 @@ authors     = ["BLEEP Core Team <bleepecosystem@gmail.com>"]
 license     = "MIT OR Apache-2.0"
 description = "BLEEP Connect — quantum-secure cross-chain interoperability protocol"
 
+[lib]
+path = "lib.rs"
+
 [dependencies]
-bleep-connect-types            = { path = "src/bleep-connect-types" }
-bleep-connect-crypto           = { path = "src/bleep-connect-crypto" }
-bleep-connect-commitment-chain = { path = "src/bleep-connect-commitment-chain" }
-bleep-connect-adapters         = { path = "src/bleep-connect-adapters" }
-bleep-connect-executor         = { path = "src/bleep-connect-executor" }
-bleep-connect-layer1-social    = { path = "src/bleep-connect-layer1-social" }
-bleep-connect-layer2-fullnode  = { path = "src/bleep-connect-layer2-fullnode" }
-bleep-connect-layer3-zkproof   = { path = "src/bleep-connect-layer3-zkproof" }
-bleep-connect-layer4-instant   = { path = "src/bleep-connect-layer4-instant" }
-bleep-connect-core             = { path = "src/bleep-connect-core" }
+bleep-connect-types            = { path = "bleep-connect-types" }
+bleep-connect-crypto           = { path = "bleep-connect-crypto" }
+bleep-connect-commitment-chain = { path = "bleep-connect-commitment-chain" }
+bleep-connect-adapters         = { path = "bleep-connect-adapters" }
+bleep-connect-executor         = { path = "bleep-connect-executor" }
+bleep-connect-layer1-social    = { path = "bleep-connect-layer1-social" }
+bleep-connect-layer2-fullnode  = { path = "bleep-connect-layer2-fullnode" }
+bleep-connect-layer3-zkproof   = { path = "bleep-connect-layer3-zkproof" }
+bleep-connect-layer4-instant   = { path = "bleep-connect-layer4-instant" }
+bleep-connect-core             = { path = "bleep-connect-core" }
 
 tokio       = { version = "1.36", features = ["full"] }
 async-trait = "0.1.77"

@@ -85,6 +85,18 @@ pub enum VmError {
     UnsupportedChain(String),
 
     // ── Internal ─────────────────────────────────────────────────────────────
+    #[error("Execution failed: {0}")]
+    ExecutionFailed(String),
+
+    #[error("Validation failed: {0}")]
+    ValidationError(String),
+
+    #[error("Gas limit exceeded: requested {requested}, limit {limit}")]
+    GasLimitExceeded { requested: u64, limit: u64 },
+
+    #[error("Unsupported VM type: {0}")]
+    UnsupportedVmType(String),
+
     #[error("Internal VM error: {0}")]
     Internal(String),
 

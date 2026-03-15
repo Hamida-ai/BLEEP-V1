@@ -87,7 +87,3 @@ tokio        = { version = "1.36", features = ["full", "test-util"] }
 tracing-test = "0.2"
 criterion    = { version = "0.5", features = ["async_tokio"] }
 tempfile     = "3"
-
-[[bench]]
-name    = "vm_bench"
-harness = false

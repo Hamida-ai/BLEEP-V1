@@ -94,7 +94,6 @@ impl TransactionPool {
         let pool = self.pool.lock().await;
         pool.len()
     }
-}
 
     /// Remove a specific transaction by its canonical ID string
     /// `"sender:receiver:amount:timestamp"` after it has been included in a block.
@@ -112,3 +111,4 @@ impl TransactionPool {
         let pool = self.pool.lock().await;
         pool.iter().take(limit).cloned().collect()
     }
+}

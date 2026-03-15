@@ -11,16 +11,16 @@ members = [
     "crates/bleep-governance",
     "crates/bleep-indexer",
     "crates/bleep-interop",
-    "crates/bleep-interop/src/bleep-connect-types",
-    "crates/bleep-interop/src/bleep-connect-crypto",
-    "crates/bleep-interop/src/bleep-connect-adapters",
-    "crates/bleep-interop/src/bleep-connect-commitment-chain",
-    "crates/bleep-interop/src/bleep-connect-executor",
-    "crates/bleep-interop/src/bleep-connect-layer1-social",
-    "crates/bleep-interop/src/bleep-connect-layer2-fullnode",
-    "crates/bleep-interop/src/bleep-connect-layer3-zkproof",
-    "crates/bleep-interop/src/bleep-connect-layer4-instant",
-    "crates/bleep-interop/src/bleep-connect-core",
+    "crates/bleep-interop/bleep-connect-types",
+    "crates/bleep-interop/bleep-connect-crypto",
+    "crates/bleep-interop/bleep-connect-adapters",
+    "crates/bleep-interop/bleep-connect-commitment-chain",
+    "crates/bleep-interop/bleep-connect-executor",
+    "crates/bleep-interop/bleep-connect-layer1-social",
+    "crates/bleep-interop/bleep-connect-layer2-fullnode",
+    "crates/bleep-interop/bleep-connect-layer3-zkproof",
+    "crates/bleep-interop/bleep-connect-layer4-instant",
+    "crates/bleep-interop/bleep-connect-core",
     "crates/bleep-p2p",
     "crates/bleep-pat",
     "crates/bleep-rpc",
@@ -69,7 +69,7 @@ bleep-interop     = { path = "crates/bleep-interop" }
 bleep-p2p         = { path = "crates/bleep-p2p" }
 bleep-pat         = { path = "crates/bleep-pat" }
 bleep-rpc         = { path = "crates/bleep-rpc" }
-zksnarks          = { path = "crates/bleep-zkp" }
+bleep-zkp        = { path = "crates/bleep-zkp" }
 bleep-state       = { path = "crates/bleep-state" }
 bleep-telemetry   = { path = "crates/bleep-telemetry" }
 bleep-vm          = { path = "crates/bleep-vm" }

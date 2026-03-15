@@ -1,5 +1,5 @@
 [package]
-name    = "zksnarks"
+name    = "bleep-zkp"
 version = "0.2.0"
 edition = "2021"
 description = "BLEEP ZK proof system — Groth16/BLS12-381 block validity circuit, batch tx aggregation"
