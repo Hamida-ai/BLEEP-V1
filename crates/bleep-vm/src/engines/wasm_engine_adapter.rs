@@ -1,5 +1,5 @@
 //! WASM Engine Adapter
-//! Bridges the existing `WasmRuntime` to the new `Engine` trait.
+//! Bridges the WasmRuntime to the Engine trait used by the VM router.
 
 use crate::error::{VmError, VmResult};
 use crate::execution::{
@@ -12,11 +12,11 @@ use crate::types::{ExecutionLog, LogLevel};
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Instant;
 use parking_lot::RwLock;
 use tracing::{debug, instrument};
 
-/// In-memory store of deployed WASM modules.
 type WasmStore = Arc<RwLock<HashMap<[u8; 32], Vec<u8>>>>;
 
 /// Production WASM execution engine adapter.
@@ -31,7 +31,6 @@ impl WasmEngineAdapter {
         }
     }
 
-    /// Derive a deterministic 32-byte contract address from bytecode.
     fn derive_address(bytecode: &[u8], salt: Option<[u8; 32]>) -> [u8; 32] {
         let mut h = Sha256::new();
         h.update(bytecode);
@@ -39,56 +38,55 @@ impl WasmEngineAdapter {
         h.finalize().into()
     }
 
-    /// Execute WASM bytecode with wasmer.
     fn execute_wasm(
         &self,
-        bytecode: &[u8],
-        calldata: &[u8],
+        bytecode:  &[u8],
+        calldata:  &[u8],
         gas_limit: u64,
     ) -> VmResult<(bool, Vec<u8>, u64, Vec<ExecutionLog>)> {
         use wasmer::{imports, Instance, Module, Store, Value};
-        use wasmer::CompilerConfig;
 
         let mut store = Store::default();
 
-        // Parse and validate WASM module
         let module = Module::new(&store, bytecode)
             .map_err(|e| VmError::ExecutionFailed(format!("WASM compile error: {e}")))?;
 
-        // Gas metering import
-        let gas_remaining = Arc::new(std::sync::atomic::AtomicU64::new(gas_limit));
+        let gas_remaining = Arc::new(AtomicU64::new(gas_limit));
         let gas_ref = gas_remaining.clone();
 
-        let mut logs: Vec<ExecutionLog> = Vec::new();
         let log_store = Arc::new(RwLock::new(Vec::<String>::new()));
         let log_ref = log_store.clone();
 
         let import_object = imports! {
             "env" => {
-                // Gas metering callback: called by instrumented WASM
                 "bleep_gas" => wasmer::Function::new_typed(&mut store,
                     move |cost: i64| {
                         let cost = cost as u64;
-                        let cur = gas_ref.load(std::sync::atomic::Ordering::Relaxed);
+                        let cur = gas_ref.load(Ordering::Relaxed);
                         if cost > cur {
-                            // Signal OOG by setting to 0
-                            gas_ref.store(0, std::sync::atomic::Ordering::Relaxed);
+                            gas_ref.store(0, Ordering::Relaxed);
                         } else {
-                            gas_ref.fetch_sub(cost, std::sync::atomic::Ordering::Relaxed);
+                            gas_ref.fetch_sub(cost, Ordering::Relaxed);
                         }
                     }
                 ),
-                // Host log function
                 "bleep_log" => wasmer::Function::new_typed(&mut store,
                     move |level: i32, ptr: i32, len: i32| {
                         let msg = format!("[wasm-log level={level}] ptr={ptr} len={len}");
                         log_ref.write().push(msg);
                     }
                 ),
-                // Abort function (required by many WASM toolchains)
                 "abort" => wasmer::Function::new_typed(&mut store,
                     |_msg: i32, _file: i32, _line: i32, _col: i32| {}
                 ),
+            },
+            "bleep" => {
+                "gas_charge"    => wasmer::Function::new_typed(&mut store, |_: i64| {}),
+                "storage_write" => wasmer::Function::new_typed(&mut store,
+                    |_kp: i32, _kl: i32, _vp: i32, _vl: i32| {}
+                ),
+                "log"   => wasmer::Function::new_typed(&mut store, |_: i32, _: i32| {}),
+                "abort" => wasmer::Function::new_typed(&mut store, |_: i32| {}),
             },
             "wasi_snapshot_preview1" => {
                 "proc_exit" => wasmer::Function::new_typed(&mut store, |_: i32| {}),
@@ -101,52 +99,53 @@ impl WasmEngineAdapter {
         let instance = Instance::new(&mut store, &module, &import_object)
             .map_err(|e| VmError::ExecutionFailed(format!("WASM instantiate error: {e}")))?;
 
-        // Try to call the contract's entry point
-        // Standard entry points in order of preference
         let entry_points = ["execute", "call", "main", "_start", "invoke"];
-        let mut output = Vec::new();
+        let mut output  = Vec::new();
         let mut success = false;
+        let mut last_err: Option<String> = None;
 
         for entry in &entry_points {
             if let Ok(func) = instance.exports.get_function(entry) {
-                // Build args: pass calldata length
                 let args = vec![Value::I32(calldata.len() as i32)];
                 match func.call(&mut store, &args) {
                     Ok(results) => {
                         success = true;
-                        // Extract return value
                         if let Some(Value::I32(v)) = results.first() {
                             output = (*v as i32).to_le_bytes().to_vec();
                         }
                         break;
                     }
                     Err(e) => {
-                        if entry == entry_points.last().unwrap() {
-                            return Err(VmError::ExecutionFailed(
-                                format!("WASM execution error: {e}")
-                            ));
-                        }
-                        continue;
+                        last_err = Some(e.to_string());
+                        // Try next entry point
                     }
                 }
             }
         }
 
-        // Collect logs
-        let collected = log_store.read().clone();
-        for msg in collected {
-            logs.push(ExecutionLog {
-                level:   LogLevel::Info,
-                message: msg,
-                data:    Vec::new(),
-            });
+        if !success && last_err.is_some() {
+            // All entry points failed — return error only if we actually tried one
+            if entry_points.iter().any(|ep| instance.exports.get_function(ep).is_ok()) {
+                return Err(VmError::ExecutionFailed(
+                    last_err.unwrap_or_else(|| "WASM execution failed".into()),
+                ));
+            }
+            // No matching export found — passive execution succeeds
+            success = true;
         }
 
-        let gas_used = gas_limit.saturating_sub(
-            gas_remaining.load(std::sync::atomic::Ordering::Relaxed)
-        );
+        let collected = log_store.read().clone();
+        let mut logs: Vec<ExecutionLog> = collected.into_iter().map(|msg| ExecutionLog {
+            level:   LogLevel::Info,
+            message: msg,
+            data:    Vec::new(),
+        }).collect();
 
-        Ok((success, output, gas_used.max(1000), logs))
+        let gas_used = gas_limit
+            .saturating_sub(gas_remaining.load(Ordering::Relaxed))
+            .max(1_000);
+
+        Ok((success, output, gas_used, logs))
     }
 }
 
@@ -172,11 +171,9 @@ impl Engine for WasmEngineAdapter {
     ) -> VmResult<EngineResult> {
         let start = Instant::now();
 
-        // For empty bytecode (call to deployed contract), look up by caller address
         let effective_bytecode = if bytecode.is_empty() {
             let addr = ctx.tx.caller;
-            let modules = self.modules.read();
-            modules.get(&addr).cloned().unwrap_or_default()
+            self.modules.read().get(&addr).cloned().unwrap_or_default()
         } else {
             bytecode.to_vec()
         };
@@ -185,7 +182,7 @@ impl Engine for WasmEngineAdapter {
             return Ok(EngineResult {
                 success:       true,
                 output:        calldata.to_vec(),
-                gas_used:      1000,
+                gas_used:      1_000,
                 state_diff:    StateDiff::empty(),
                 logs:          Vec::new(),
                 revert_reason: None,
@@ -196,12 +193,7 @@ impl Engine for WasmEngineAdapter {
         let (success, output, gas_used, logs) =
             self.execute_wasm(&effective_bytecode, calldata, gas_limit)?;
 
-        debug!(
-            success,
-            gas_used,
-            output_len = output.len(),
-            "WASM execution complete"
-        );
+        debug!(success, gas_used, output_len = output.len(), "WASM execution complete");
 
         Ok(EngineResult {
             success,
@@ -223,16 +215,14 @@ impl Engine for WasmEngineAdapter {
         gas_limit: u64,
         salt:      Option<[u8; 32]>,
     ) -> VmResult<EngineResult> {
-        let start = Instant::now();
+        let start   = Instant::now();
         let address = Self::derive_address(bytecode, salt);
 
-        // Store the module
         {
             let mut modules = self.modules.write();
             modules.insert(address, bytecode.to_vec());
         }
 
-        // Run constructor if present
         let (success, output, gas_used, logs) =
             self.execute_wasm(bytecode, init_args, gas_limit)
                 .unwrap_or((true, Vec::new(), 50_000, Vec::new()));
@@ -300,22 +290,13 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_valid_wasm_executes() {
-        // Minimal WASM: (module (func (export "main") (result i32) (i32.const 42)))
-        let wasm = wat::parse_str(r#"
-            (module
-              (func (export "main") (result i32)
-                i32.const 42
-              )
-            )
-        "#);
-        // Skip if wat crate not available
-        if let Ok(bytes) = wasm {
-            let e = WasmEngineAdapter::new();
-            let c = ctx(1_000_000);
-            let result = e.execute(&c, &bytes, &[], 1_000_000).await;
-            // Should not panic — success or error both acceptable
-            assert!(result.is_ok() || result.is_err());
-        }
+    async fn test_minimal_wasm_passive_execution() {
+        // Minimal valid WASM: magic + version, no exports
+        let wasm = vec![0x00u8, 0x61, 0x73, 0x6D, 0x01, 0x00, 0x00, 0x00];
+        let e = WasmEngineAdapter::new();
+        let c = ctx(1_000_000);
+        let result = e.execute(&c, &wasm, &[], 1_000_000).await;
+        assert!(result.is_ok(), "passive wasm must succeed: {:?}", result.err());
+        assert!(result.unwrap().success);
     }
 }

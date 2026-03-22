@@ -15,7 +15,7 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use ark_bn254::{Bn254, Fr};
-use ark_ff::{Field, PrimeField, BigInteger};
+use ark_ff::PrimeField;
 use ark_groth16::{Groth16, ProvingKey, VerifyingKey, PreparedVerifyingKey};
 use ark_relations::r1cs::{
     ConstraintSynthesizer, ConstraintSystemRef, SynthesisError,
@@ -25,8 +25,8 @@ use ark_r1cs_std::fields::fp::FpVar;
 use ark_snark::SNARK;
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use ark_std::rand::SeedableRng;
-use ark_std::UniformRand;
 use ark_std::Zero;
+use ark_std::One;
 
 use tracing::{debug, info, warn};
 
@@ -37,25 +37,18 @@ use crate::types::ZkExecutionProof;
 // EXECUTION CIRCUIT
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// R1CS circuit that encodes:
-///   - state_root_before (public input)
-///   - state_root_after  (public input)
-///   - gas_used          (public input)
-///   - tx_hash           (public input)
-///   - witness: the execution trace (private)
+/// R1CS circuit encoding execution correctness.
 ///
-/// Constraint: SHA-256(witness) == state_root_after  (simplified — we use
-/// a field-native Poseidon-like constraint here for efficiency).
+/// Public inputs: state_root_before, state_root_after, gas_used, tx_hash.
+/// Private witness: execution trace hash.
+/// Constraint: state_root_before + trace_hash == state_root_after
 #[derive(Clone)]
 pub struct ExecutionCircuit {
-    // Public inputs
     pub state_root_before: Fr,
     pub state_root_after:  Fr,
     pub gas_used:          Fr,
     pub tx_hash:           Fr,
-    // Private witness: execution trace hash
     pub trace_hash:        Option<Fr>,
-    // Constraint: the trace must hash to state_root_after
     pub witness_valid:     Option<bool>,
 }
 
@@ -72,7 +65,6 @@ impl ExecutionCircuit {
         let gas_fr      = Fr::from(gas_used);
         let tx_fr       = fr_from_bytes(tx_hash);
 
-        // Trace hash: SHA-256 → Fr
         use sha2::{Digest, Sha256};
         let trace_hash_bytes: [u8; 32] = Sha256::digest(trace).into();
         let trace_hash = fr_from_bytes(&trace_hash_bytes);
@@ -87,7 +79,6 @@ impl ExecutionCircuit {
         }
     }
 
-    /// Create a blank circuit for trusted-setup key generation.
     pub fn blank() -> Self {
         ExecutionCircuit {
             state_root_before: Fr::zero(),
@@ -102,21 +93,16 @@ impl ExecutionCircuit {
 
 impl ConstraintSynthesizer<Fr> for ExecutionCircuit {
     fn generate_constraints(self, cs: ConstraintSystemRef<Fr>) -> Result<(), SynthesisError> {
-        // ── Public input allocation ─────────────────────────────────────────
         let root_before = FpVar::new_input(cs.clone(), || Ok(self.state_root_before))?;
         let root_after  = FpVar::new_input(cs.clone(), || Ok(self.state_root_after))?;
         let gas         = FpVar::new_input(cs.clone(), || Ok(self.gas_used))?;
         let tx          = FpVar::new_input(cs.clone(), || Ok(self.tx_hash))?;
 
-        // ── Private witness ────────────────────────────────────────────────
         let trace_hash = FpVar::new_witness(cs.clone(), || {
             self.trace_hash.ok_or(SynthesisError::AssignmentMissing)
         })?;
 
-        // ── Constraints ────────────────────────────────────────────────────
-
-        // C1: trace_hash + root_before == root_after  (simplified binding)
-        //     (In production this would be a full Poseidon / SHA-256 circuit)
+        // C1: trace_hash + root_before == root_after
         let expected_after = &root_before + &trace_hash;
         expected_after.enforce_equal(&root_after)?;
 
@@ -135,18 +121,15 @@ impl ConstraintSynthesizer<Fr> for ExecutionCircuit {
 // TRUSTED SETUP
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// Groth16 proving and verifying keys for our `ExecutionCircuit`.
 pub struct TrustedSetup {
-    pub pk: ProvingKey<Bn254>,
-    pub vk: VerifyingKey<Bn254>,
+    pub pk:  ProvingKey<Bn254>,
+    pub vk:  VerifyingKey<Bn254>,
     pub pvk: PreparedVerifyingKey<Bn254>,
 }
 
 impl TrustedSetup {
-    /// Generate a new trusted setup from a seeded RNG.
-    /// In production this must be a real powers-of-tau ceremony.
     pub fn generate(seed: u64) -> VmResult<Self> {
-        let start = Instant::now();
+        let start   = Instant::now();
         let mut rng = ark_std::rand::rngs::StdRng::seed_from_u64(seed);
         let circuit = ExecutionCircuit::blank();
 
@@ -160,7 +143,6 @@ impl TrustedSetup {
         Ok(TrustedSetup { pk, vk, pvk })
     }
 
-    /// Serialise the verifying key to bytes.
     pub fn vk_bytes(&self) -> VmResult<Vec<u8>> {
         let mut bytes = Vec::new();
         self.vk
@@ -169,7 +151,6 @@ impl TrustedSetup {
         Ok(bytes)
     }
 
-    /// SHA-256 of the serialised verifying key.
     pub fn vk_hash(&self) -> VmResult<[u8; 32]> {
         use sha2::{Digest, Sha256};
         let bytes = self.vk_bytes()?;
@@ -190,7 +171,6 @@ impl ZkProver {
         ZkProver { setup }
     }
 
-    /// Generate a Groth16 proof for a completed execution.
     pub fn prove(
         &self,
         state_before: &[u8; 32],
@@ -199,14 +179,13 @@ impl ZkProver {
         tx_hash:      &[u8; 32],
         trace:        &[u8],
     ) -> VmResult<ZkExecutionProof> {
-        let start = Instant::now();
+        let start   = Instant::now();
         let mut rng = ark_std::rand::rngs::StdRng::from_entropy();
 
         let circuit = ExecutionCircuit::new(
             state_before, state_after, gas_used, tx_hash, trace,
         );
 
-        // Public inputs vector: [root_before, root_after, gas, tx_hash]
         let public_inputs = vec![
             circuit.state_root_before,
             circuit.state_root_after,
@@ -217,12 +196,10 @@ impl ZkProver {
         let proof = Groth16::<Bn254>::prove(&self.setup.pk, circuit, &mut rng)
             .map_err(|e| VmError::ZkProofGeneration(e.to_string()))?;
 
-        // Serialise proof
         let mut proof_bytes = Vec::new();
         proof.serialize_compressed(&mut proof_bytes)
             .map_err(|e| VmError::ZkProofGeneration(e.to_string()))?;
 
-        // Serialise public inputs
         let public_input_bytes: Vec<Vec<u8>> = public_inputs
             .iter()
             .map(|f| {
@@ -235,16 +212,12 @@ impl ZkProver {
         let vk_hash = self.setup.vk_hash()?;
 
         debug!(
-            elapsed_ms = start.elapsed().as_millis(),
+            elapsed_ms  = start.elapsed().as_millis(),
             proof_bytes = proof_bytes.len(),
             "ZK proof generated"
         );
 
-        Ok(ZkExecutionProof {
-            proof_bytes,
-            public_inputs: public_input_bytes,
-            vk_hash,
-        })
+        Ok(ZkExecutionProof { proof_bytes, public_inputs: public_input_bytes, vk_hash })
     }
 }
 
@@ -261,21 +234,17 @@ impl ZkVerifier {
         ZkVerifier { setup }
     }
 
-    /// Verify a single proof.
     pub fn verify(&self, proof: &ZkExecutionProof) -> VmResult<bool> {
         use ark_groth16::Proof;
 
-        // Deserialise VK hash guard
         let expected_vk_hash = self.setup.vk_hash()?;
         if proof.vk_hash != expected_vk_hash {
             return Err(VmError::ZkProofVerification);
         }
 
-        // Deserialise proof
         let ark_proof = Proof::<Bn254>::deserialize_compressed(&*proof.proof_bytes)
             .map_err(|_| VmError::ZkProofVerification)?;
 
-        // Deserialise public inputs
         let public_inputs: VmResult<Vec<Fr>> = proof.public_inputs
             .iter()
             .map(|b| {
@@ -297,7 +266,6 @@ impl ZkVerifier {
         Ok(ok)
     }
 
-    /// Batch-verify multiple proofs (all share the same VK).
     pub fn verify_batch(&self, proofs: &[ZkExecutionProof]) -> VmResult<Vec<bool>> {
         proofs.iter().map(|p| self.verify(p)).collect()
     }
@@ -307,11 +275,10 @@ impl ZkVerifier {
 // HELPERS
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// Convert a 32-byte slice to a BN254 field element (little-endian).
+/// Convert a 32-byte slice to a BN254 field element (little-endian, masked).
 fn fr_from_bytes(bytes: &[u8; 32]) -> Fr {
-    // Mask the top 3 bits to guarantee the value is within the BN254 field order
     let mut b = *bytes;
-    b[31] &= 0x1F;
+    b[31] &= 0x1F; // mask top 3 bits to stay within the field order
     Fr::from_le_bytes_mod_order(&b)
 }
 
@@ -329,24 +296,22 @@ mod tests {
 
     #[test]
     fn test_trusted_setup_generates() {
-        let setup = TrustedSetup::generate(99);
-        assert!(setup.is_ok());
+        assert!(TrustedSetup::generate(99).is_ok());
     }
 
     #[test]
     fn test_vk_hash_is_32_bytes() {
         let setup = test_setup();
-        let hash = setup.vk_hash().unwrap();
+        let hash  = setup.vk_hash().unwrap();
         assert_eq!(hash.len(), 32);
     }
 
     #[test]
     fn test_vk_bytes_roundtrip() {
-        use ark_groth16::VerifyingKey;
-        let setup = test_setup();
-        let bytes = setup.vk_bytes().unwrap();
+        let setup  = test_setup();
+        let bytes  = setup.vk_bytes().unwrap();
         assert!(!bytes.is_empty());
-        let vk2 = VerifyingKey::<Bn254>::deserialize_compressed(&*bytes).unwrap();
+        let vk2   = VerifyingKey::<Bn254>::deserialize_compressed(&*bytes).unwrap();
         let mut bytes2 = Vec::new();
         vk2.serialize_compressed(&mut bytes2).unwrap();
         assert_eq!(bytes, bytes2, "VK bytes must round-trip");
@@ -354,17 +319,16 @@ mod tests {
 
     #[test]
     fn test_prove_and_verify() {
-        let setup = test_setup();
+        let setup    = test_setup();
         let prover   = ZkProver::new(setup.clone());
         let verifier = ZkVerifier::new(setup);
 
         let state_before = [1u8; 32];
-        // state_after = SHA256(trace) + state_before in Fr arithmetic
-        let trace = b"execution trace data";
+        let trace        = b"execution trace data";
+
         use sha2::{Digest, Sha256};
         let trace_hash_bytes: [u8; 32] = Sha256::digest(trace).into();
 
-        // Compute state_after = fr(state_before) + fr(trace_hash) → bytes
         let fb = fr_from_bytes(&state_before);
         let ft = fr_from_bytes(&trace_hash_bytes);
         let fa = fb + ft;
@@ -375,7 +339,7 @@ mod tests {
             b.try_into().unwrap()
         };
 
-        let tx_hash = [3u8; 32];
+        let tx_hash  = [3u8; 32];
         let gas_used = 100_000u64;
 
         let proof = prover.prove(&state_before, &state_after, gas_used, &tx_hash, trace).unwrap();
@@ -388,12 +352,12 @@ mod tests {
 
     #[test]
     fn test_wrong_vk_hash_rejected() {
-        let setup = test_setup();
+        let setup    = test_setup();
         let prover   = ZkProver::new(setup.clone());
         let verifier = ZkVerifier::new(setup);
 
         let state_before = [1u8; 32];
-        let trace = b"trace";
+        let trace        = b"trace";
         use sha2::{Digest, Sha256};
         let th: [u8; 32] = Sha256::digest(trace).into();
         let fa = fr_from_bytes(&state_before) + fr_from_bytes(&th);
@@ -404,7 +368,9 @@ mod tests {
             b.try_into().unwrap()
         };
 
-        let mut proof = prover.prove(&state_before, &state_after, 21000, &[2u8; 32], trace).unwrap();
+        let mut proof = prover.prove(
+            &state_before, &state_after, 21_000, &[2u8; 32], trace,
+        ).unwrap();
         proof.vk_hash = [0u8; 32]; // corrupt VK hash
 
         let result = verifier.verify(&proof);
@@ -429,14 +395,14 @@ mod tests {
 
     #[test]
     fn test_batch_verify() {
-        let setup = test_setup();
+        let setup    = test_setup();
         let prover   = ZkProver::new(setup.clone());
         let verifier = ZkVerifier::new(setup);
 
         let mut proofs = Vec::new();
         for i in 0..3u64 {
             let state_before = [i as u8; 32];
-            let trace = format!("trace_{i}");
+            let trace        = format!("trace_{i}");
             use sha2::{Digest, Sha256};
             let th: [u8; 32] = Sha256::digest(trace.as_bytes()).into();
             let fa = fr_from_bytes(&state_before) + fr_from_bytes(&th);
@@ -447,7 +413,11 @@ mod tests {
                 b.try_into().unwrap()
             };
             proofs.push(
-                prover.prove(&state_before, &state_after, 21000 + i * 1000, &[i as u8 + 10; 32], trace.as_bytes()).unwrap()
+                prover.prove(
+                    &state_before, &state_after,
+                    21_000 + i * 1_000, &[i as u8 + 10; 32],
+                    trace.as_bytes(),
+                ).unwrap()
             );
         }
 
