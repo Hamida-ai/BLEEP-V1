@@ -1,4 +1,4 @@
-//! # StateManager — Sprint 3
+//! # StateManager
 //!
 //! RocksDB-backed state manager with:
 //!   - Account balances, nonces, code hashes persisted to disk
@@ -177,23 +177,99 @@ impl StateManager {
     // ── Apply transactions ────────────────────────────────────────────────────
 
     /// Debit sender, credit receiver. Returns false if insufficient balance.
+    ///
+    /// ## S-06 Fix: checked arithmetic throughout
+    ///
+    /// Old code used raw `bal - amount` and `recv + amount`.  The subtraction
+    /// was guarded but the receiver-side addition was unchecked.  All
+    /// arithmetic now uses `checked_sub` / `checked_add`.  Any overflow
+    /// (impossible at realistic balances but incorrect in a state machine)
+    /// causes a logged rejection rather than silent corruption.
     pub fn apply_transfer(&mut self, sender: &str, receiver: &str, amount: u128) -> bool {
-        let bal = self.get_balance(sender);
-        if bal < amount {
-            log::warn!("[StateManager] {} has {}, needs {}", sender, bal, amount);
+        if amount == 0 {
+            log::warn!("[StateManager] apply_transfer: zero-amount rejected");
             return false;
         }
-        self.set_balance(sender, bal - amount);
+
+        let bal = self.get_balance(sender);
+
+        // Checked subtraction — rejects if sender has insufficient funds.
+        let new_sender_bal = match bal.checked_sub(amount) {
+            Some(v) => v,
+            None => {
+                log::warn!(
+                    "[StateManager] apply_transfer: {} has {}, needs {} (insufficient)",
+                    sender, bal, amount
+                );
+                return false;
+            }
+        };
+
         let recv = self.get_balance(receiver);
-        self.set_balance(receiver, recv + amount);
+
+        // Checked addition — rejects on receiver balance overflow.
+        let new_recv_bal = match recv.checked_add(amount) {
+            Some(v) => v,
+            None => {
+                log::error!(
+                    "[StateManager] apply_transfer: receiver {} balance overflow ({} + {})",
+                    receiver, recv, amount
+                );
+                return false;
+            }
+        };
+
+        self.set_balance(sender, new_sender_bal);
+        self.set_balance(receiver, new_recv_bal);
         self.increment_nonce(sender);
         true
     }
 
     /// Mint tokens (block reward / genesis allocation).
-    pub fn mint(&mut self, address: &str, amount: u128) {
+    ///
+    /// ## S-06 / S-10 Fix: checked arithmetic + constitutional supply cap
+    ///
+    /// Old code: `bal + amount` — unchecked addition, could silently overflow.
+    /// No supply cap: unlimited calls to `mint()` could inflate beyond 200M BLP.
+    ///
+    /// Fix:
+    /// 1. Rejects if `total_supply() + amount > MAX_SUPPLY` (200M × 10^8 µBLEEP).
+    /// 2. Uses `checked_add` for the per-address balance update.
+    /// 3. Returns `Ok(new_balance)` or `Err` — callers must handle the error.
+    pub fn mint(&mut self, address: &str, amount: u128) -> Result<u128, String> {
+        /// Constitutional supply cap: 200,000,000 BLEEP × 10^8 (8 decimals) = 20×10^15 µBLEEP.
+        /// This constant must match `bleep-economics::tokenomics::MAX_SUPPLY`.
+        const MAX_SUPPLY: u128 = 200_000_000 * 100_000_000u128;
+
+        let current_total = self.total_supply();
+        let new_total = current_total.checked_add(amount).ok_or_else(|| {
+            format!("[StateManager] mint: total supply arithmetic overflow ({} + {})",
+                current_total, amount)
+        })?;
+
+        if new_total > MAX_SUPPLY {
+            return Err(format!(
+                "[StateManager] mint: cap exceeded — current={} requested={} cap={}",
+                current_total, amount, MAX_SUPPLY
+            ));
+        }
+
         let bal = self.get_balance(address);
-        self.set_balance(address, bal + amount);
+        let new_bal = bal.checked_add(amount).ok_or_else(|| {
+            format!("[StateManager] mint: address {} balance overflow ({} + {})",
+                address, bal, amount)
+        })?;
+
+        self.set_balance(address, new_bal);
+        Ok(new_bal)
+    }
+
+    /// Compute total circulating supply by summing all cached account balances.
+    ///
+    /// This is O(n) in the number of cached accounts.  For production use at
+    /// scale, maintain a running total in a dedicated `sys:total_supply` key.
+    pub fn total_supply(&self) -> u128 {
+        self.cache.values().map(|e| e.state.balance).sum()
     }
 
     // ── Trie query helpers ────────────────────────────────────────────────────
@@ -318,25 +394,74 @@ mod tests {
     #[test]
     fn apply_transfer_ok() {
         let mut m = fresh();
-        m.mint("alice", 500);
+        m.mint("alice", 500).expect("mint");
         assert!(m.apply_transfer("alice", "bob", 200));
         assert_eq!(m.get_balance("alice"), 300);
         assert_eq!(m.get_balance("bob"),   200);
     }
 
     #[test]
+    fn apply_transfer_zero_rejected() {
+        let mut m = fresh();
+        m.mint("alice", 100).expect("mint");
+        // S-06: zero-amount transfers must be rejected
+        assert!(!m.apply_transfer("alice", "bob", 0),
+            "S-06: zero-amount transfer must be rejected");
+        assert_eq!(m.get_balance("alice"), 100, "balance unchanged after zero transfer");
+    }
+
+    #[test]
     fn apply_transfer_insufficient() {
         let mut m = fresh();
-        m.mint("alice", 50);
+        m.mint("alice", 50).expect("mint");
         assert!(!m.apply_transfer("alice", "bob", 200));
         assert_eq!(m.get_balance("alice"), 50);
+    }
+
+    #[test]
+    fn apply_transfer_checked_sub_cannot_underflow() {
+        let mut m = fresh();
+        // Alice has 0 — transfer must fail, not wrap around
+        let ok = m.apply_transfer("alice", "bob", 1);
+        assert!(!ok, "S-06: zero balance must not underflow");
+        assert_eq!(m.get_balance("alice"), 0);
+    }
+
+    #[test]
+    fn mint_enforces_supply_cap() {
+        let mut m = fresh();
+        const MAX: u128 = 200_000_000 * 100_000_000u128;
+        // Mint exactly at cap — should succeed
+        m.mint("whale", MAX).expect("S-10: mint at cap must succeed");
+        assert_eq!(m.total_supply(), MAX);
+        // Mint one more — must fail
+        let r = m.mint("whale", 1);
+        assert!(r.is_err(), "S-10: mint beyond cap must be rejected");
+    }
+
+    #[test]
+    fn mint_returns_new_balance() {
+        let mut m = fresh();
+        let bal = m.mint("alice", 500).expect("mint");
+        assert_eq!(bal, 500);
+        let bal2 = m.mint("alice", 300).expect("mint");
+        assert_eq!(bal2, 800);
+    }
+
+    #[test]
+    fn total_supply_tracks_mints() {
+        let mut m = fresh();
+        assert_eq!(m.total_supply(), 0);
+        m.mint("a", 1_000).expect("mint");
+        m.mint("b", 2_000).expect("mint");
+        assert_eq!(m.total_supply(), 3_000);
     }
 
     #[test]
     fn state_root_changes_on_mutation() {
         let mut m = fresh();
         let r0 = m.state_root();
-        m.mint("alice", 100);
+        m.mint("alice", 100).expect("mint");
         let r1 = m.state_root();
         assert_ne!(r0, r1);
     }
@@ -345,11 +470,11 @@ mod tests {
     fn state_root_is_deterministic() {
         let mut m1 = fresh();
         let mut m2 = fresh();
-        m1.mint("alice", 100);
-        m1.mint("bob",   200);
-        m2.mint("bob",   200);
-        m2.mint("alice", 100);
-        // Insert order should not affect the trie root
+        m1.mint("alice", 100).expect("mint");
+        m1.mint("bob",   200).expect("mint");
+        m2.mint("bob",   200).expect("mint");
+        m2.mint("alice", 100).expect("mint");
+        // Insert order must not affect the trie root
         assert_eq!(m1.state_root(), m2.state_root());
     }
 
@@ -364,7 +489,7 @@ mod tests {
     #[test]
     fn snapshot_ok() {
         let mut m = fresh();
-        m.mint("carol", 9999);
+        m.mint("carol", 9999).expect("mint");
         assert!(m.create_snapshot().is_ok());
     }
 }
