@@ -1,4 +1,4 @@
-// PHASE 1: PROOF-OF-STAKE CONSENSUS ENGINE
+// PROOF-OF-STAKE CONSENSUS ENGINE
 // Validator-based block selection and finalization
 // 
 // SAFETY INVARIANTS:
@@ -133,17 +133,31 @@ impl PoSConsensusEngine {
         }
     }
 
-    /// Compute a deterministic seed from height and previous hash.
-    /// 
+    /// Compute a deterministic proposer-selection seed.
+    ///
+    /// ## S-02 Fix: SHA-256 replaces DefaultHasher
+    ///
+    /// `DefaultHasher` (SipHash-1-3) uses a **per-process random seed** since
+    /// Rust 1.7.  Two independent nodes computing `DefaultHasher(height, prev_hash)`
+    /// produce *different* values, making them select *different* proposers —
+    /// a consensus-safety violation.  It is also not collision-resistant,
+    /// enabling stake-grinding attacks.
+    ///
+    /// **Fix:** `SHA-256(height_le8 || prev_hash_utf8)`, first 8 bytes → `u64`.
+    ///
+    /// Properties:
+    /// - **Platform-deterministic** — every honest node computes the same seed.
+    /// - **Pre-image resistant** — prevents seed prediction / grinding.
+    /// - **No extra dependency** — `sha2` is already in the workspace.
+    ///
     /// PUBLIC: Called by select_proposer to generate deterministic selection.
     pub fn compute_seed(height: u64, prev_hash: &str) -> u64 {
-        use std::collections::hash_map::DefaultHasher;
-        use std::hash::{Hash, Hasher};
-
-        let mut hasher = DefaultHasher::new();
-        height.hash(&mut hasher);
-        prev_hash.hash(&mut hasher);
-        hasher.finish()
+        use sha2::{Digest, Sha256};
+        let mut h = Sha256::new();
+        h.update(&height.to_le_bytes());
+        h.update(prev_hash.as_bytes());
+        let d = h.finalize();
+        u64::from_le_bytes([d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7]])
     }
 
     /// Check if a validator is allowed to participate.
@@ -373,16 +387,31 @@ mod tests {
 
     #[test]
     fn test_compute_seed_deterministic() {
+        // SHA-256 has no per-process salt — must be identical across calls.
         let seed1 = PoSConsensusEngine::compute_seed(100, "hash1");
         let seed2 = PoSConsensusEngine::compute_seed(100, "hash1");
-        assert_eq!(seed1, seed2);
+        assert_eq!(seed1, seed2, "S-02: seed must be identical for same inputs");
     }
 
     #[test]
     fn test_compute_seed_different_inputs() {
         let seed1 = PoSConsensusEngine::compute_seed(100, "hash1");
         let seed2 = PoSConsensusEngine::compute_seed(101, "hash1");
-        // Different heights should produce different seeds (with high probability)
-        assert_ne!(seed1, seed2);
+        assert_ne!(seed1, seed2, "S-02: different heights must yield different seeds");
+    }
+
+    #[test]
+    fn test_compute_seed_matches_sha256() {
+        use sha2::{Digest, Sha256};
+        let mut h = Sha256::new();
+        h.update(&55u64.to_le_bytes());
+        h.update(b"prev_abc");
+        let d = h.finalize();
+        let expected = u64::from_le_bytes([d[0],d[1],d[2],d[3],d[4],d[5],d[6],d[7]]);
+        assert_eq!(
+            PoSConsensusEngine::compute_seed(55, "prev_abc"),
+            expected,
+            "S-02: must match SHA-256(height_le8 || prev_hash)"
+        );
     }
 }
