@@ -16,21 +16,21 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
-use tracing::{error, info, warn};
+use tracing::{info, warn};
 
 use bleep_connect_types::{
-    ChainId, CommitmentType, ExecutorProfile, ExecutorTier, BleepConnectError, BleepConnectResult,
-    InstantIntent, ProposalType, SocialProposal, StateCommitment, TransferStatus,
+    ChainId, ExecutorProfile, BleepConnectError, BleepConnectResult,
+    InstantIntent, ProposalType, StateCommitment, TransferStatus,
     UniversalAddress, Vote,
 };
 use bleep_connect_crypto::ClassicalKeyPair;
 use bleep_connect_commitment_chain::{CommitmentChain, Validator};
 use bleep_connect_layer1_social::{Layer1Social, RegisteredVoter, ProposalResult};
-use bleep_connect_layer2_fullnode::{Layer2FullNode, VerifierNode};
+use bleep_connect_layer2_fullnode::Layer2FullNode;
 use bleep_connect_layer3_zkproof::{Layer3ZKProof, ProofInput};
-use bleep_connect_layer4_instant::{Layer4Instant, ExecutionProof};
+use bleep_connect_layer4_instant::Layer4Instant;
 use bleep_connect_adapters::AdapterRegistry;
-use bleep_connect_executor::{ExecutorNode, ExecutionStrategy, RiskTolerance};
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CONFIGURATION
@@ -282,7 +282,8 @@ impl BleepConnectOrchestrator {
         relay.relay_status(tx_hash)
     }
 
-
+    /// Submit an execution proof from an executor.
+    pub async fn submit_execution_proof(&self, proof: bleep_connect_layer4_instant::ExecutionProof) -> BleepConnectResult<()> {
         let intent_id = proof.intent_id;
         self.layer4.submit_execution_proof(proof).await?;
 
@@ -296,7 +297,7 @@ impl BleepConnectOrchestrator {
 
                 let input = ProofInput {
                     intent_id,
-                    proof_type: bleep_connect_types::ProofType::TransferExecution,
+                    proof_type: bleep_connect_types::ProofType::ExecutionCompleted,
                     source_state_root: source_root,
                     dest_tx_hash: bleep_connect_crypto::sha256(b"dest-tx"),
                     min_dest_amount: 0,

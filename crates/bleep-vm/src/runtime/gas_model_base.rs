@@ -222,7 +222,7 @@ impl AdaptiveGasPricer {
 // ─────────────────────────────────────────────────────────────────────────────
 
 pub fn estimate_gas_static(bytecode: &[u8], schedule: &GasSchedule) -> VmResult<u64> {
-    use wasmparser::{Parser, Payload, Operator};
+    use wasmparser::{Parser, Payload};
 
     let mut total: u64 = 0;
 

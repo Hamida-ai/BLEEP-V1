@@ -10,7 +10,7 @@
 // 6. Byzantine fault tolerance maintained
 // 7. Fork prevention (all nodes reach identical state)
 
-use crate::shard_registry::{ShardId, EpochId};
+use crate::shard_registry::ShardId;
 use crate::shard_checkpoint::{ShardCheckpoint, CheckpointStatus};
 use crate::shard_fault_detection::{FaultEvidence, FaultSeverity};
 use crate::phase4_recovery_orchestrator::RecoveryStage;
@@ -56,7 +56,7 @@ impl SafetyInvariantChecker {
     /// 
     /// SAFETY: Ensures only shard state is rolled back, not global chain.
     pub fn verify_shard_rollback_only(
-        rolled_back_shard: ShardId,
+        _rolled_back_shard: ShardId,
         other_shards_unaffected: bool,
     ) -> Result<(), InvariantViolation> {
         if !other_shards_unaffected {

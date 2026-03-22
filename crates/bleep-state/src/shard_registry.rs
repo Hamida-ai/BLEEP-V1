@@ -13,7 +13,6 @@
 use serde::{Serialize, Deserialize};
 use std::collections::{BTreeMap, VecDeque};
 use sha2::{Digest, Sha256};
-use log::{info, warn, error};
 
 /// ShardId uniquely identifies a shard in the protocol
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, Hash)]

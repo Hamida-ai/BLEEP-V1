@@ -9,7 +9,7 @@ impl SphincsPlus {
 }
 use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
-use crate::state_merkle::{MerkleTree, calculate_merkle_root}; // Import optimized Merkle Tree
+use crate::state_merkle::calculate_merkle_root; // Import optimized Merkle Tree
 use crate::transaction::Transaction;
 use blake3::hash as blake3_hash;
 use crate::crypto::zk_snarks::verify_proof; // ZKP verification for state integrity

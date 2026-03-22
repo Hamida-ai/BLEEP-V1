@@ -13,17 +13,17 @@ use pqcrypto_kyber::kyber1024;
 use pqcrypto_sphincsplus::sphincssha2256ssimple;
 use pqcrypto_traits::kem::{PublicKey as KemPk, SecretKey as KemSk, Ciphertext, SharedSecret};
 use pqcrypto_traits::sign::{
-    PublicKey as SignPk, SecretKey as SignSk, SignedMessage, DetachedSignature,
+    PublicKey as SignPk, SecretKey as SignSk, DetachedSignature,
 };
 use ed25519_dalek::{Signer, Verifier, SigningKey, VerifyingKey};
 use aes_gcm::{Aes256Gcm, Key, Nonce, aead::{Aead, KeyInit, AeadCore}};
 use hkdf::Hkdf;
 use sha2::{Sha256, Digest as Sha2Digest};
 use sha3::Sha3_256;
-use blake2::{Blake2b512, Digest as Blake2Digest};
+use blake2::Blake2b512;
 use rand::rngs::OsRng;
 use rand::RngCore;
-use zeroize::{Zeroize, ZeroizeOnDrop};
+use zeroize::ZeroizeOnDrop;
 use thiserror::Error;
 use serde::{Serialize, Deserialize};
 

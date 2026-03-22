@@ -10,8 +10,7 @@
 // 6. Blocks with incorrect registry root for their epoch are rejected
 
 use crate::shard_registry::{ShardRegistry, ShardId, EpochId, Shard, ValidatorAssignment};
-use std::collections::BTreeMap;
-use log::{info, warn, error};
+use log::info;
 use serde::{Serialize, Deserialize};
 
 /// Shard topology snapshot for an epoch

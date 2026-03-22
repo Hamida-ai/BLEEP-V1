@@ -5,15 +5,14 @@
 
 use std::collections::HashMap;
 use std::sync::Arc;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use dashmap::DashMap;
 use tokio::sync::RwLock;
-use tokio::time::sleep;
 use tracing::{debug, info};
 
 use bleep_connect_types::{
-    InstantIntent, ExecutorProfile, ExecutorTier, ExecutorCommitment,
+    InstantIntent, ExecutorProfile, ExecutorTier,
     UniversalAddress, ChainId, BleepConnectError, BleepConnectResult,
 };
 use bleep_connect_crypto::{sha256, ClassicalKeyPair};

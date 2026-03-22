@@ -8,11 +8,12 @@
 // 4. Multiple detection mechanisms work together
 // 5. False positives trigger investigation, not automatic punishment
 
-use crate::shard_registry::{ShardId, EpochId, ShardStateRoot};
-use crate::shard_checkpoint::{CheckpointId, ShardCheckpoint};
+use crate::shard_registry::ShardId;
+use crate::shard_checkpoint::CheckpointId;
 use serde::{Serialize, Deserialize};
-use log::{warn, error, info};
+use log::{warn, error};
 use std::collections::HashMap;
+use crate::shard_registry::EpochId;
 
 /// Fault type enumeration
 /// 

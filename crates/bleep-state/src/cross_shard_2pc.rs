@@ -15,8 +15,8 @@ use crate::cross_shard_transaction::{
 };
 use crate::shard_registry::ShardId;
 use serde::{Serialize, Deserialize};
-use std::collections::{BTreeMap, BTreeSet};
-use log::{info, warn, error};
+use std::collections::BTreeMap;
+use log::{info, warn};
 
 /// Two-Phase Commit coordinator
 /// 

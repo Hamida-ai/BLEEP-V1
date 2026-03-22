@@ -12,7 +12,7 @@
 use crate::shard_registry::ShardId;
 use crate::shard_fault_detection::{FaultEvidence, FaultSeverity};
 use serde::{Serialize, Deserialize};
-use log::{info, warn, error};
+use log::info;
 use std::collections::{HashMap, HashSet};
 use std::time::{SystemTime, UNIX_EPOCH};
 

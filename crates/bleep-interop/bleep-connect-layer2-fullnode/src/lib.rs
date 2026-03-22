@@ -12,13 +12,13 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use dashmap::DashMap;
 use tokio::sync::RwLock;
-use tracing::{debug, info, warn};
+use tracing::{info, warn};
 
 use bleep_connect_types::{
     FullNodeVerification, VerifierAttestation, ClientImplementation,
     TEEAttestation, TEEType, StateCommitment, CommitmentType,
     BleepConnectError, BleepConnectResult, ChainId,
-    constants::{FULL_NODE_VERIFICATION_TIMEOUT, CONSENSUS_THRESHOLD, MIN_VERIFIER_NODES},
+    constants::{CONSENSUS_THRESHOLD, MIN_VERIFIER_NODES},
 };
 use bleep_connect_crypto::{sha256, ClassicalKeyPair};
 use bleep_connect_commitment_chain::CommitmentChain;
@@ -326,10 +326,16 @@ impl Layer2FullNode {
         };
 
         // Anchor to commitment chain
+        let mut commitment_id_data = Vec::new();
+        commitment_id_data.extend_from_slice(b"L2-VERIFY");
+        commitment_id_data.extend_from_slice(&request_id);
+        let mut data_hash_input = Vec::new();
+        data_hash_input.extend_from_slice(&consensus_root);
+        data_hash_input.extend_from_slice(&request.block_number.to_be_bytes());
         let commitment = StateCommitment {
-            commitment_id: sha256(&[b"L2-VERIFY", &request_id].concat()),
+            commitment_id: sha256(&commitment_id_data),
             commitment_type: CommitmentType::FullNodeVerification,
-            data_hash: sha256(&[&consensus_root[..], &request.block_number.to_be_bytes()].concat()),
+            data_hash: sha256(&data_hash_input),
             layer: 2,
             created_at: now(),
         };

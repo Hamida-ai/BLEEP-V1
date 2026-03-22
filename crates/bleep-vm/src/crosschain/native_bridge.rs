@@ -20,7 +20,7 @@ use crate::error::{VmError, VmResult};
 use crate::execution::state_transition::StateDiff;
 use crate::intent::CrossChainIntent;
 use crate::runtime::gas_model::GasModel;
-use crate::types::{ChainId, ExecutionLog, LogLevel};
+use crate::types::ChainId;
 use base64::Engine as _;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};

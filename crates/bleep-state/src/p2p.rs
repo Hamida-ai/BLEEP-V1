@@ -24,6 +24,11 @@ impl P2PNode {
         }
     }
     
+    /// Get the node ID
+    pub fn node_id(&self) -> &str {
+        &self.node_id
+    }
+    
     /// Broadcast a message to all connected peers
     pub fn broadcast(&mut self, msg: P2PMessage) -> Result<(), Box<dyn std::error::Error>> {
         if self.active_peers.is_empty() {

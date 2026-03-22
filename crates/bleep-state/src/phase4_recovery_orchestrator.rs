@@ -10,7 +10,7 @@
 // 6. All operations are auditable and reproducible
 
 use crate::shard_registry::{ShardId, EpochId};
-use crate::shard_checkpoint::{ShardCheckpointManager, CheckpointConfig, CheckpointId};
+use crate::shard_checkpoint::{ShardCheckpointManager, CheckpointConfig};
 use crate::shard_fault_detection::{FaultDetector, FaultDetectionConfig, FaultEvidence};
 use crate::shard_isolation::{ShardIsolationManager, IsolationStatus};
 use crate::shard_rollback::RollbackEngine;
@@ -18,7 +18,7 @@ use crate::shard_healing::ShardHealingManager;
 use crate::shard_validator_slashing::{ValidatorSlashingManager, ValidatorReassignmentManager, ReassignmentStrategy};
 
 use serde::{Serialize, Deserialize};
-use log::{info, warn, error};
+use log::{info, error};
 use std::collections::HashMap;
 
 /// Recovery state machine enumeration
@@ -461,6 +461,11 @@ impl RecoveryOrchestrator {
         
         error!("Aborted recovery for shard {:?}", shard_id);
         Ok(())
+    }
+    
+    /// Get fault detector reference
+    pub fn fault_detector(&self) -> &FaultDetector {
+        &self.fault_detector
     }
 }
 

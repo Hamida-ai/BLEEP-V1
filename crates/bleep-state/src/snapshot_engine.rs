@@ -13,8 +13,8 @@
 use crate::shard_registry::{ShardId, EpochId, ShardStateRoot};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-use log::{info, warn, error};
-use std::collections::{BTreeMap, BTreeSet, VecDeque};
+use log::{info, warn};
+use std::collections::{BTreeMap, VecDeque};
 
 /// Snapshot ID - unique identifier for a snapshot
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, Hash)]
@@ -573,7 +573,7 @@ impl SnapshotEngine {
     pub fn prune_old_snapshots(&mut self) -> Result<Vec<SnapshotId>, String> {
         let mut pruned = Vec::new();
 
-        for (shard_id, snapshot_ids) in self.snapshots_per_shard.iter_mut() {
+        for (_shard_id, snapshot_ids) in self.snapshots_per_shard.iter_mut() {
             while snapshot_ids.len() > self.config.max_retained_snapshots as usize {
                 if let Some(old_id) = snapshot_ids.first().copied() {
                     self.snapshots.remove(&old_id);

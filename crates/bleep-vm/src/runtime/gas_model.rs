@@ -61,6 +61,7 @@ pub struct GasModel {
     /// Per-VM conversion parameters.
     params: HashMap<String, VmGasParams>,
     /// Global gas price in wei (used for fee calculation).
+    #[allow(dead_code)]
     base_gas_price: u64,
 }
 

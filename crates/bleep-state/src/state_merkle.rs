@@ -87,19 +87,6 @@ pub struct SparseMerkleTrie {
 /// Simple alias for compatibility with legacy naming.
 pub type MerkleTree = SparseMerkleTrie;
 
-/// Calculate a Merkle root over a set of state entries.
-///
-/// This is intentionally lightweight and deterministic for compilation; in a
-/// production system this should be a secure sparse Merkle trie.
-pub fn calculate_merkle_root(entries: &[String]) -> String {
-    let mut trie = SparseMerkleTrie::new();
-    for (i, entry) in entries.iter().enumerate() {
-        // Interpret the entry string as an address; use index as a pseudo-balance.
-        trie.insert(entry, 0, i as u64);
-    }
-    hex::encode(trie.root())
-}
-
 impl SparseMerkleTrie {
     pub fn new() -> Self { Self::default() }
 
@@ -194,7 +181,7 @@ impl SparseMerkleTrie {
 
         // Collapse any remaining unpaired nodes to the root.
         while stack.len() > 1 {
-            let (_, p2, h2) = stack.pop().unwrap();
+            let (_, _p2, h2) = stack.pop().unwrap();
             let (d,  p1, h1) = stack.pop().unwrap();
             let merged = interior_hash(&h1, &h2);
             let rep = p1; // leftmost path wins

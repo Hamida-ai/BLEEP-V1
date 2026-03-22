@@ -17,8 +17,8 @@ use tokio::sync::RwLock;
 use tracing::{info, warn, error};
 
 use bleep_connect_types::{
-    SocialProposal, ProposalType, Evidence, EvidenceType, Vote, VoterType, VoteChoice,
-    UniversalAddress, ChainId, StateCommitment, CommitmentType,
+    SocialProposal, ProposalType, Evidence, Vote, VoterType, VoteChoice,
+    UniversalAddress, StateCommitment, CommitmentType,
     BleepConnectError, BleepConnectResult,
     constants::{
         VOTING_PERIOD_NORMAL, VOTING_PERIOD_EMERGENCY,
@@ -376,8 +376,11 @@ impl Layer1Social {
         self.proposals.store_proposal(proposal);
 
         // Anchor to commitment chain
+        let mut commitment_data = Vec::new();
+        commitment_data.extend_from_slice(b"L1-PROPOSAL");
+        commitment_data.extend_from_slice(&proposal_id);
         let commitment = StateCommitment {
-            commitment_id: sha256(&[b"L1-PROPOSAL", &proposal_id].concat()),
+            commitment_id: sha256(&commitment_data),
             commitment_type: CommitmentType::SocialDecision,
             data_hash: proposal_id,
             layer: 1,
@@ -415,13 +418,16 @@ impl Layer1Social {
         self.proposals.store_result(result.clone());
 
         // Anchor decision to commitment chain
+        let mut decision_id_data = Vec::new();
+        decision_id_data.extend_from_slice(b"L1-DECISION");
+        decision_id_data.extend_from_slice(&proposal_id);
+        let mut data_hash_input = Vec::new();
+        data_hash_input.extend_from_slice(&result.for_votes.to_be_bytes());
+        data_hash_input.extend_from_slice(&result.against_votes.to_be_bytes());
         let commitment = StateCommitment {
-            commitment_id: sha256(&[b"L1-DECISION", &proposal_id].concat()),
+            commitment_id: sha256(&decision_id_data),
             commitment_type: CommitmentType::SocialDecision,
-            data_hash: sha256(&[
-                &result.for_votes.to_be_bytes()[..],
-                &result.against_votes.to_be_bytes()[..],
-            ].concat()),
+            data_hash: sha256(&data_hash_input),
             layer: 1,
             created_at: now(),
         };
@@ -430,7 +436,7 @@ impl Layer1Social {
         Ok(result)
     }
 
-    async fn execute_proposal(&self, proposal: &SocialProposal, result: &ProposalResult) -> BleepConnectResult<()> {
+    pub async fn execute_proposal(&self, proposal: &SocialProposal, _result: &ProposalResult) -> BleepConnectResult<()> {
         match &proposal.proposal_type {
             ProposalType::EmergencyPause { reason } => {
                 self.emergency.pause(reason.clone()).await;

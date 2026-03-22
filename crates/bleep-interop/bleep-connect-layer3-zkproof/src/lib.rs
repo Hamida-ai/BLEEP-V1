@@ -11,10 +11,11 @@
 //! anchored to the Commitment Chain every `BATCH_INTERVAL` seconds.
 
 use std::sync::Arc;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{SystemTime, UNIX_EPOCH};
+use std::ops::Neg;
 
 use ark_bls12_381::{Bls12_381, Fr};
-use ark_ff::{Field, PrimeField, BigInteger};
+use ark_ff::PrimeField;
 use ark_groth16::{Groth16, PreparedVerifyingKey, ProvingKey, VerifyingKey, Proof as Groth16Proof};
 use ark_snark::SNARK;
 use ark_r1cs_std::prelude::*;
@@ -31,8 +32,8 @@ use tracing::{debug, info, warn};
 
 use bleep_connect_types::{
     ZKProof, ProofBatch, ProofType, StateCommitment, CommitmentType,
-    BleepConnectError, BleepConnectResult, TransferStatus,
-    constants::{BATCH_TARGET_SIZE, BATCH_INTERVAL, PROOF_GENERATION_TIMEOUT},
+    BleepConnectError, BleepConnectResult,
+    constants::{BATCH_TARGET_SIZE, BATCH_INTERVAL},
 };
 use bleep_connect_crypto::{sha256, merkle_root};
 use bleep_connect_commitment_chain::CommitmentChain;
@@ -337,22 +338,21 @@ impl ProofGenerator {
         public_inputs.push(Fr::from(input.min_dest_amount));
         public_inputs.extend(split128(&input.source_state_root));
 
-        let mut pub_inputs_bytes = Vec::new();
+        let mut pub_inputs_bytes: Vec<Vec<u8>> = Vec::new();
         for pi in &public_inputs {
             let mut b = Vec::new();
             pi.serialize_uncompressed(&mut b)
                 .map_err(|e| BleepConnectError::SerializationError(e.to_string()))?;
-            pub_inputs_bytes.extend(b);
+            pub_inputs_bytes.push(b);
         }
 
         let zk_proof = ZKProof {
             proof_id,
             proof_type: input.proof_type,
-            proof_bytes,
+            groth16_bytes: proof_bytes,
             public_inputs: pub_inputs_bytes,
             intent_id: input.intent_id,
             generated_at: now(),
-            verified: false,
         };
 
         self.cache.insert(zk_proof.clone());
@@ -385,24 +385,16 @@ impl ProofVerifier {
 
     /// Verify a Groth16 proof.  Returns true if valid.
     pub fn verify(&self, proof: &ZKProof) -> BleepConnectResult<bool> {
-    
-
         let groth_proof = Groth16Proof::<Bls12_381>::deserialize_uncompressed(
-            proof.proof_bytes.as_slice()
+            proof.groth16_bytes.as_slice()
         ).map_err(|e| BleepConnectError::ProofVerificationFailed(
             format!("Deserialize proof: {e:?}")
         ))?;
 
-        // Deserialize public inputs (each Fr is 48 bytes uncompressed)
-        let fr_size = 48usize;
-        if proof.public_inputs.len() % fr_size != 0 {
-            return Err(BleepConnectError::ProofVerificationFailed(
-                "Public inputs length mismatch".into()
-            ));
-        }
+        // Deserialize public inputs (each is serialized separately)
         let mut public_inputs = Vec::new();
-        for chunk in proof.public_inputs.chunks(fr_size) {
-            let fr = Fr::deserialize_uncompressed(chunk)
+        for pi_bytes in &proof.public_inputs {
+            let fr = Fr::deserialize_uncompressed(pi_bytes.as_slice())
                 .map_err(|e| BleepConnectError::ProofVerificationFailed(
                     format!("Deserialize public input: {e:?}")
                 ))?;
@@ -467,14 +459,16 @@ impl BatchAggregator {
         let leaves: Vec<[u8; 32]> = proof_ids.clone();
         let aggregated_root = merkle_root(&leaves);
 
-        let batch_id = sha256(&aggregated_root);
+        let mut batch_id_data = Vec::new();
+        batch_id_data.extend_from_slice(b"L3-BATCH");
+        batch_id_data.extend_from_slice(&aggregated_root);
+        let batch_id = sha256(&batch_id_data);
         let proof_batch = ProofBatch {
             batch_id,
             proofs: batch,
-            aggregated_root,
-            batch_size: proof_ids.len() as u32,
+            merkle_root: aggregated_root,
+            aggregated_proof: Vec::new(),
             created_at: now(),
-            verified_at: None,
         };
 
         self.completed_batches.insert(batch_id, proof_batch.clone());
@@ -518,7 +512,7 @@ impl Layer3ZKProof {
 
     /// Generate and queue a proof for a completed Layer 4 transfer.
     pub async fn prove_transfer(&self, input: ProofInput) -> BleepConnectResult<ZKProof> {
-        let mut proof = self.generator.generate_proof(&input)?;
+        let proof = self.generator.generate_proof(&input)?;
 
         // Verify immediately to catch prover bugs
         let valid = self.verifier.verify(&proof)?;
@@ -527,7 +521,6 @@ impl Layer3ZKProof {
                 "Self-verification of generated proof failed".into()
             ));
         }
-        proof.verified = true;
 
         self.aggregator.add_proof(proof.clone()).await;
         Ok(proof)
@@ -544,10 +537,13 @@ impl Layer3ZKProof {
         match self.aggregator.aggregate().await {
             None => Ok(None),
             Some(batch) => {
+                let mut commitment_id_data = Vec::new();
+                commitment_id_data.extend_from_slice(b"L3-BATCH");
+                commitment_id_data.extend_from_slice(&batch.batch_id);
                 let commitment = StateCommitment {
-                    commitment_id: sha256(&[b"L3-BATCH", &batch.batch_id].concat()),
+                    commitment_id: sha256(&commitment_id_data),
                     commitment_type: CommitmentType::ZKProofBatch,
-                    data_hash: batch.aggregated_root,
+                    data_hash: batch.merkle_root,
                     layer: 3,
                     created_at: now(),
                 };

@@ -11,7 +11,7 @@
 //! CrossChainIntent──┘
 //! ```
 
-use crate::types::{ChainId, ContractFormat};
+use crate::types::ChainId;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
@@ -144,6 +144,37 @@ pub struct ZkVerifyIntent {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// SERDE HELPERS FOR FIXED-SIZE ARRAYS
+// ─────────────────────────────────────────────────────────────────────────────
+
+mod serde_arrays {
+    use serde::{Deserializer, Serializer};
+
+    pub fn serialize<S: Serializer>(array: &[u8; 64], serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_bytes(array)
+    }
+
+    pub fn deserialize<'de, D: Deserializer<'de>>(deserializer: D) -> Result<[u8; 64], D::Error> {
+        struct Visitor;
+        impl<'de> serde::de::Visitor<'de> for Visitor {
+            type Value = [u8; 64];
+            fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+                write!(f, "a 64-byte array")
+            }
+            fn visit_bytes<E: serde::de::Error>(self, v: &[u8]) -> Result<[u8; 64], E> {
+                if v.len() != 64 {
+                    return Err(E::custom(format!("expected 64 bytes, got {}", v.len())));
+                }
+                let mut arr = [0u8; 64];
+                arr.copy_from_slice(v);
+                Ok(arr)
+            }
+        }
+        deserializer.deserialize_bytes(Visitor)
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // UNIFIED INTENT ENVELOPE
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -168,6 +199,7 @@ pub struct Intent {
     /// Ed25519 public key of the submitter (32 bytes).
     pub signer:     [u8; 32],
     /// Ed25519 signature over `canonical_bytes()`.
+    #[serde(with = "serde_arrays")]
     pub signature:  [u8; 64],
     /// Sequential nonce for replay protection.
     pub nonce:      u64,
@@ -215,7 +247,7 @@ impl Intent {
     pub fn verify_signature(&self) -> bool {
         use ed25519_dalek::{Signature, VerifyingKey};
         let Ok(vk) = VerifyingKey::from_bytes(&self.signer) else { return false };
-        let Ok(sig) = Signature::from_bytes(&self.signature) else { return false };
+        let sig = Signature::from_bytes(&self.signature);
         use ed25519_dalek::Verifier;
         vk.verify(&self.canonical_bytes(), &sig).is_ok()
     }

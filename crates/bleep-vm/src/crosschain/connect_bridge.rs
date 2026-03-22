@@ -21,7 +21,7 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 use sha3::{Digest, Keccak256};
-use tracing::debug;
+
 
 use crate::error::{VmError, VmResult};
 use crate::types::ChainId;

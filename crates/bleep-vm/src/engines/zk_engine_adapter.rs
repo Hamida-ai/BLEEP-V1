@@ -83,10 +83,10 @@ impl Engine for ZkEngineAdapter {
         matches!(vm, TargetVm::Zk)
     }
 
-    #[instrument(skip(self, ctx, bytecode, calldata), fields(engine = "zk-groth16"))]
+    #[instrument(skip(self, bytecode, calldata), fields(engine = "zk-groth16"))]
     async fn execute(
         &self,
-        ctx:       &ExecutionContext,
+        _ctx:      &ExecutionContext,
         bytecode:  &[u8],
         calldata:  &[u8],
         gas_limit: u64,

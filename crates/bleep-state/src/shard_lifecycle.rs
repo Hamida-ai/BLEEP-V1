@@ -9,9 +9,9 @@
 // 5. State migration is atomic and verifiable
 // 6. Splits/merges occur only at epoch boundaries
 
-use crate::shard_registry::{Shard, ShardId, ShardStatus, EpochId, ShardStateRoot, ValidatorAssignment, ShardRegistry};
+use crate::shard_registry::{Shard, ShardId, EpochId, ShardStateRoot, ShardRegistry};
 use sha2::{Digest, Sha256};
-use log::{info, warn, error};
+use log::info;
 use serde::{Serialize, Deserialize};
 use std::collections::BTreeMap;
 

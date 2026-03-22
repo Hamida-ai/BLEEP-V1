@@ -4,20 +4,17 @@
 //! Validators produce blocks containing StateCommitments from all protocol layers.
 //! Consensus requires 2/3+ of validators to sign each block (BFT, tolerates 1/3 Byzantine).
 
-use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use dashmap::DashMap;
 use rocksdb::{DB, Options, ColumnFamilyDescriptor};
 use serde::{Deserialize, Serialize};
-use sha2::Sha256;
 use tokio::sync::{RwLock, Mutex};
-use tracing::{info, warn, error};
+use tracing::info;
 
 use bleep_connect_types::{CommitmentBlock, StateCommitment, ValidatorSignature, BleepConnectError, BleepConnectResult};
-use bleep_connect_crypto::{ClassicalKeyPair, sha256, merkle_root};
+use bleep_connect_crypto::{ClassicalKeyPair, sha256};
 
 pub use bleep_connect_types::CommitmentType;
 

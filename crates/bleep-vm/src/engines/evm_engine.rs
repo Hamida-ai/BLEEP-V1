@@ -35,7 +35,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Instant;
 use parking_lot::RwLock;
-use tracing::{debug, instrument, warn};
+use tracing::{debug, instrument};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // IN-MEMORY CONTRACT STORAGE
@@ -71,6 +71,8 @@ impl EvmEngine {
         Address::from(evm)
     }
 
+    /// Derive an EVM contract address from sender and nonce (CREATE opcode).
+    #[allow(dead_code)]
     fn create_address(sender: Address, nonce: u64) -> Address {
         // Simplified RLP: [0xd6, 0x94, sender(20), nonce_byte]
         let mut buf = Vec::with_capacity(23);
@@ -85,6 +87,8 @@ impl EvmEngine {
         Address::from(a)
     }
 
+    /// Compute deterministic address from sender, salt, and init code hash (CREATE2 opcode).
+    #[allow(dead_code)]
     fn create2_address(sender: Address, salt: [u8; 32], init_code: &[u8]) -> Address {
         use sha3::{Digest, Keccak256};
         let init_code_hash = Keccak256::digest(init_code);
@@ -171,7 +175,7 @@ impl EvmEngine {
                 };
                 let engine_logs: Vec<ExecutionLog> = logs.iter().map(|l| ExecutionLog {
                     level:   LogLevel::Info,
-                    message: format!("LOG{} addr={:x}", l.topics().len(), l.address),
+                    message: format!("LOG{} addr={:x}", l.topics.len(), l.address),
                     data:    l.data.clone().to_vec(),
                 }).collect();
                 EngineResult {
@@ -224,7 +228,7 @@ impl EvmEngine {
                     b[12..].copy_from_slice(log.address.as_slice());
                     b
                 };
-                let topics: Vec<[u8; 32]> = log.topics()
+                let topics: Vec<[u8; 32]> = log.topics
                     .iter()
                     .map(|t| **t)
                     .collect();
