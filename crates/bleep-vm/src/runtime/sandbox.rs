@@ -12,8 +12,8 @@
 use std::collections::HashSet;
 use std::time::Duration;
 
-use tracing::{debug, warn};
-use wasmparser::{Parser, Payload, Operator, ExternalKind, TypeRef};
+use tracing::debug;
+use wasmparser::{Parser, Payload, Operator};
 
 use crate::error::{VmError, VmResult};
 
@@ -44,14 +44,13 @@ const WASM_VERSION: [u8; 4] = [0x01, 0x00, 0x00, 0x00];
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// Host modules a contract is allowed to import.
-/// Any import from a module not in this list is rejected.
 const ALLOWED_HOST_MODULES: &[&str] = &[
-    "env",       // Standard WASI-like environment
-    "bleep",     // BLEEP host functions
-    "ethereum",  // Ethereum precompiles bridge
-    "solana",    // Solana SysCall bridge
-    "cosmos",    // Cosmos IBC bridge
-    "wasi_snapshot_preview1", // WASI standard (limited subset)
+    "env",
+    "bleep",
+    "ethereum",
+    "solana",
+    "cosmos",
+    "wasi_snapshot_preview1",
 ];
 
 /// Non-deterministic / dangerous function names that must never be imported.
@@ -66,7 +65,7 @@ const FORBIDDEN_IMPORTS: &[&str] = &[
     "fd_close",
     "fd_prestat_get",
     "path_open",
-    "random_get",   // non-deterministic!
+    "random_get",
     "sock_accept",
     "sock_connect",
     "poll_oneoff",
@@ -79,19 +78,12 @@ const FORBIDDEN_IMPORTS: &[&str] = &[
 /// Configurable security policy applied before each execution.
 #[derive(Debug, Clone)]
 pub struct SecurityPolicy {
-    /// Allow floating-point instructions.
     pub allow_floats:          bool,
-    /// Allow SIMD instructions.
     pub allow_simd:            bool,
-    /// Allow bulk memory operations.
     pub allow_bulk_memory:     bool,
-    /// Maximum bytecode size in bytes.
     pub max_bytecode_bytes:    usize,
-    /// Maximum number of `memory.grow` calls.
     pub max_memory_grow_calls: u32,
-    /// Execution timeout.
     pub timeout:               Duration,
-    /// Additional forbidden import names (beyond the built-in list).
     pub extra_forbidden:       HashSet<String>,
 }
 
@@ -110,13 +102,10 @@ impl Default for SecurityPolicy {
 }
 
 impl SecurityPolicy {
-    /// Full validation of a WASM binary against this policy.
-    /// Returns `Ok(ValidationReport)` on success.
     pub fn validate(&self, bytecode: &[u8]) -> VmResult<ValidationReport> {
         self.check_magic(bytecode)?;
         self.check_size(bytecode)?;
-        let report = self.analyse_bytecode(bytecode)?;
-        Ok(report)
+        self.analyse_bytecode(bytecode)
     }
 
     fn check_magic(&self, bytecode: &[u8]) -> VmResult<()> {
@@ -127,14 +116,12 @@ impl SecurityPolicy {
         }
         if bytecode[..4] != WASM_MAGIC {
             return Err(VmError::SecurityViolation(format!(
-                "Invalid WASM magic bytes: {:02x?}",
-                &bytecode[..4]
+                "Invalid WASM magic bytes: {:02x?}", &bytecode[..4]
             )));
         }
         if bytecode[4..8] != WASM_VERSION {
             return Err(VmError::SecurityViolation(format!(
-                "Unsupported WASM version: {:02x?}",
-                &bytecode[4..8]
+                "Unsupported WASM version: {:02x?}", &bytecode[4..8]
             )));
         }
         Ok(())
@@ -144,14 +131,12 @@ impl SecurityPolicy {
         if bytecode.len() > self.max_bytecode_bytes {
             return Err(VmError::SecurityViolation(format!(
                 "Bytecode size {} exceeds limit {}",
-                bytecode.len(),
-                self.max_bytecode_bytes
+                bytecode.len(), self.max_bytecode_bytes
             )));
         }
         Ok(())
     }
 
-    /// Walk the WASM binary section-by-section and operator-by-operator.
     fn analyse_bytecode(&self, bytecode: &[u8]) -> VmResult<ValidationReport> {
         let mut report = ValidationReport::default();
         let mut memory_grow_count: u32 = 0;
@@ -165,23 +150,23 @@ impl SecurityPolicy {
                     for imp in reader {
                         let imp = imp.map_err(|e| VmError::WasmCompile(e.to_string()))?;
                         report.import_count += 1;
-                        if report.import_count > MAX_IMPORTS as usize {
+                        if report.import_count > MAX_IMPORTS as u32 {
                             return Err(VmError::SecurityViolation(format!(
                                 "Too many imports: max {MAX_IMPORTS}"
                             )));
                         }
-                        // Module whitelist
                         if !ALLOWED_HOST_MODULES.contains(&imp.module) {
                             return Err(VmError::SecurityViolation(format!(
                                 "Forbidden import module: '{}'", imp.module
                             )));
                         }
-                        // Function name blacklist
                         let name = imp.name;
                         if FORBIDDEN_IMPORTS.contains(&name)
                             || self.extra_forbidden.contains(name)
                         {
-                            return Err(VmError::ForbiddenSyscall { syscall: name.to_string() });
+                            return Err(VmError::ForbiddenSyscall {
+                                syscall: name.to_string(),
+                            });
                         }
                         report.imports.push(format!("{}::{}", imp.module, name));
                     }
@@ -190,7 +175,7 @@ impl SecurityPolicy {
                     for exp in reader {
                         let exp = exp.map_err(|e| VmError::WasmCompile(e.to_string()))?;
                         report.export_count += 1;
-                        if report.export_count > MAX_EXPORTS as usize {
+                        if report.export_count > MAX_EXPORTS as u32 {
                             return Err(VmError::SecurityViolation(format!(
                                 "Too many exports: max {MAX_EXPORTS}"
                             )));
@@ -227,7 +212,6 @@ impl SecurityPolicy {
                     {
                         let op = op.map_err(|e| VmError::WasmCompile(e.to_string()))?;
                         report.total_instructions += 1;
-
                         self.check_operator(&op, &mut memory_grow_count, &mut report)?;
                     }
                 }
@@ -236,10 +220,10 @@ impl SecurityPolicy {
         }
 
         debug!(
-            functions = report.function_count,
+            functions    = report.function_count,
             instructions = report.total_instructions,
-            imports = report.import_count,
-            exports = report.export_count,
+            imports      = report.import_count,
+            exports      = report.export_count,
             "WASM validation passed"
         );
         Ok(report)
@@ -253,7 +237,6 @@ impl SecurityPolicy {
     ) -> VmResult<()> {
         use Operator::*;
         match op {
-            // Float ops
             F32Add | F32Sub | F32Mul | F32Div | F32Sqrt | F32Ceil | F32Floor
             | F32Trunc | F32Nearest | F32Abs | F32Neg | F32Copysign | F32Min | F32Max
             | F64Add | F64Sub | F64Mul | F64Div | F64Sqrt | F64Ceil | F64Floor
@@ -272,7 +255,6 @@ impl SecurityPolicy {
                 }
                 report.float_instructions += 1;
             }
-            // memory.grow
             MemoryGrow { .. } => {
                 *memory_grow_count += 1;
                 if *memory_grow_count > self.max_memory_grow_calls {
@@ -282,7 +264,6 @@ impl SecurityPolicy {
                     )));
                 }
             }
-            // Unreachable trap
             Unreachable => {
                 report.unreachable_count += 1;
             }
@@ -293,10 +274,60 @@ impl SecurityPolicy {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// SANDBOX CONFIG  (used by VmRouter)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Configuration for the `SandboxValidator`.
+#[derive(Debug, Clone)]
+pub struct SandboxConfig {
+    pub policy: SecurityPolicy,
+    /// Whether sandbox validation is a hard requirement (vs. advisory-only).
+    pub strict: bool,
+}
+
+impl Default for SandboxConfig {
+    fn default() -> Self {
+        SandboxConfig {
+            policy: SecurityPolicy::default(),
+            strict: true,
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SANDBOX VALIDATOR  (re-exported from lib.rs runtime module)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Wraps `SecurityPolicy` with the interface expected by the VM router.
+pub struct SandboxValidator {
+    config: SandboxConfig,
+}
+
+impl SandboxValidator {
+    pub fn new(config: SandboxConfig) -> Self {
+        SandboxValidator { config }
+    }
+
+    /// Validate `bytecode` against the sandbox security policy.
+    pub fn validate(&self, bytecode: &[u8]) -> VmResult<()> {
+        self.config.policy.validate(bytecode).map(|_| ())
+    }
+
+    pub fn policy(&self) -> &SecurityPolicy {
+        &self.config.policy
+    }
+}
+
+impl Default for SandboxValidator {
+    fn default() -> Self {
+        SandboxValidator::new(SandboxConfig::default())
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // VALIDATION REPORT
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// Results of a security validation pass.
 #[derive(Debug, Default, Clone)]
 pub struct ValidationReport {
     pub function_count:      u32,
@@ -312,7 +343,6 @@ pub struct ValidationReport {
 }
 
 impl ValidationReport {
-    /// True if the contract exports a function named `name`.
     pub fn exports_fn(&self, name: &str) -> bool {
         self.exports.iter().any(|e| e == name)
     }
@@ -323,15 +353,13 @@ mod tests {
     use super::*;
 
     fn minimal_wasm() -> Vec<u8> {
-        // Minimal valid WASM: magic + version
         vec![0x00, 0x61, 0x73, 0x6D, 0x01, 0x00, 0x00, 0x00]
     }
 
     #[test]
     fn test_valid_minimal_wasm() {
         let policy = SecurityPolicy::default();
-        let result = policy.validate(&minimal_wasm());
-        assert!(result.is_ok());
+        assert!(policy.validate(&minimal_wasm()).is_ok());
     }
 
     #[test]
@@ -349,26 +377,20 @@ mod tests {
 
     #[test]
     fn test_oversized_bytecode_rejected() {
-        let policy = SecurityPolicy {
-            max_bytecode_bytes: 10,
-            ..Default::default()
-        };
+        let policy = SecurityPolicy { max_bytecode_bytes: 10, ..Default::default() };
         let large = vec![0x00, 0x61, 0x73, 0x6D, 0x01, 0x00, 0x00, 0x00,
-                         0x00, 0x00, 0x00]; // 11 bytes
+                         0x00, 0x00, 0x00];
         assert!(matches!(policy.validate(&large), Err(VmError::SecurityViolation(_))));
     }
 
     #[test]
     fn test_float_allowed_by_default() {
-        // Minimal wasm with no code section — floats in exports don't trigger the check
-        let policy = SecurityPolicy::default();
-        assert!(policy.allow_floats);
+        assert!(SecurityPolicy::default().allow_floats);
     }
 
     #[test]
     fn test_default_policy_has_timeout() {
-        let policy = SecurityPolicy::default();
-        assert_eq!(policy.timeout, DEFAULT_EXECUTION_TIMEOUT);
+        assert_eq!(SecurityPolicy::default().timeout, DEFAULT_EXECUTION_TIMEOUT);
     }
 
     #[test]
@@ -377,5 +399,17 @@ mod tests {
         report.exports.push("call_contract".to_string());
         assert!(report.exports_fn("call_contract"));
         assert!(!report.exports_fn("missing"));
+    }
+
+    #[test]
+    fn test_sandbox_validator_valid_wasm() {
+        let v = SandboxValidator::new(SandboxConfig::default());
+        assert!(v.validate(&minimal_wasm()).is_ok());
+    }
+
+    #[test]
+    fn test_sandbox_validator_invalid_wasm() {
+        let v = SandboxValidator::new(SandboxConfig::default());
+        assert!(v.validate(&[0xFF; 8]).is_err());
     }
 }
