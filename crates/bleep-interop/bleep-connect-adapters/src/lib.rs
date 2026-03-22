@@ -10,13 +10,12 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use serde::{Deserialize, Serialize};
-use sha2::{Sha256, Digest as Sha2Digest};
-use sha3::Keccak256;
-use tracing::{debug, info};
+use sha2::Sha256;
+use sha3::{Keccak256, Digest};
+use tracing::debug;
 
 use bleep_connect_types::{
-    InstantIntent, ChainId, BleepConnectError, BleepConnectResult, AssetType,
+    InstantIntent, ChainId, BleepConnectError, BleepConnectResult,
 };
 use bleep_connect_crypto::sha256;
 

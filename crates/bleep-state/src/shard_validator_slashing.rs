@@ -10,9 +10,9 @@
 // 6. No validator can appeal or dispute slashing after commitment
 
 use crate::shard_registry::ShardId;
-use crate::shard_fault_detection::{FaultEvidence, FaultType, FaultSeverity};
+use crate::shard_fault_detection::{FaultEvidence, FaultType};
 use serde::{Serialize, Deserialize};
-use log::{info, warn, error};
+use log::info;
 use std::collections::{HashMap, HashSet};
 
 /// Validator slashing reason

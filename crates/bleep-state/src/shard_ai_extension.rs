@@ -15,8 +15,7 @@
 use crate::shard_registry::{ShardId, EpochId};
 use crate::shard_lifecycle::ShardMetrics;
 use serde::{Serialize, Deserialize};
-use log::{info, warn, error};
-use std::collections::HashMap;
+use log::{info, warn};
 
 /// Bounded score type (0-100) for AI recommendations
 /// 
@@ -88,7 +87,7 @@ impl AiAdvisoryReport {
     /// Verify the signature of the advisory report
     /// 
     /// SAFETY: Ensures report hasn't been tampered with.
-    pub fn verify_signature(&self, ai_public_key: &[u8]) -> bool {
+    pub fn verify_signature(&self, _ai_public_key: &[u8]) -> bool {
         // Stub: In production, use actual cryptographic verification
         !self.signature.is_empty()
     }

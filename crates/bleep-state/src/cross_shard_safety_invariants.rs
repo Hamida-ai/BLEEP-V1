@@ -211,9 +211,8 @@
 //! 7. **Trace recovery paths**: All recovery is consensus-verifiable
 
 use crate::cross_shard_transaction::{
-    CrossShardTransaction, TransactionId, CrossShardTransactionStatus,
+    CrossShardTransactionStatus,
 };
-use crate::cross_shard_2pc::{TwoPhaseCommitCoordinator, CommitPhase};
 use crate::cross_shard_locking::ShardLockManager;
 use crate::shard_registry::ShardId;
 use std::collections::BTreeSet;

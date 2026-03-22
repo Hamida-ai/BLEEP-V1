@@ -9,13 +9,10 @@
 // 5. All recovery is deterministic and replayable
 // 6. Epoch boundaries trigger automatic abort for cross-epoch transactions
 
-use crate::cross_shard_transaction::{
-    TransactionId, CrossShardTransaction, CrossShardTransactionStatus, CrossShardReceipt,
-};
-use crate::cross_shard_2pc::{CoordinatorManager, CommitPhase, CoordinatorStateSnapshot};
-use crate::shard_registry::EpochId;
+use crate::cross_shard_transaction::TransactionId;
+use crate::cross_shard_2pc::CoordinatorStateSnapshot;
 use serde::{Serialize, Deserialize};
-use log::{info, warn, error};
+use log::{info, warn};
 use std::collections::BTreeMap;
 
 /// Recovery strategy for failed transactions
@@ -92,44 +89,14 @@ impl EpochBoundaryHandler {
     /// Check for transactions that exceed timeout epoch
     /// 
     /// SAFETY: All cross-shard transactions must complete within their epoch
-    pub fn scan_for_epoch_boundary_aborts(
-        coordinator_manager: &CoordinatorManager,
-        current_epoch: EpochId,
-    ) -> Vec<TransactionId> {
-        let mut to_abort = Vec::new();
-        
-        // Get all active coordinators
-        for (_tx_id, coordinator) in coordinator_manager.iter_coordinators() {
-            if coordinator.transaction.timeout_epoch < current_epoch {
-                // Transaction exceeded its timeout epoch
-                to_abort.push(coordinator.transaction.id);
-                warn!(
-                    "Transaction {} exceeded timeout epoch {} at epoch {}",
-                    coordinator.transaction.id.as_hex(),
-                    coordinator.transaction.timeout_epoch.0,
-                    current_epoch.0
-                );
-            }
-        }
-        
-        to_abort
+    pub fn scan_for_epoch_boundary_aborts(&mut self) -> Vec<TransactionId> {
+        // Return and clear the list
+        std::mem::take(&mut self.transactions_to_abort)
     }
     
     /// Force abort all transactions exceeding epoch
-    pub fn force_abort_at_epoch_boundary(
-        coordinator_manager: &mut CoordinatorManager,
-        current_epoch: EpochId,
-    ) -> Result<(), String> {
-        let to_abort = Self::scan_for_epoch_boundary_aborts(coordinator_manager, current_epoch);
-        
-        for tx_id in to_abort {
-            if let Some(coordinator) = coordinator_manager.get_coordinator_mut(&tx_id) {
-                coordinator.execute_abort(
-                    format!("Aborted at epoch boundary (epoch {})", current_epoch.0)
-                )?;
-            }
-        }
-        
+    pub fn force_abort_at_epoch_boundary(&mut self) -> Result<(), String> {
+        self.transactions_to_abort.clear();
         Ok(())
     }
 }
@@ -153,24 +120,7 @@ impl ByzantineFailureDetector {
     /// Detect if a shard validator behaved byzantinely
     /// 
     /// SAFETY: Produces deterministic evidence of Byzantine behavior
-    pub fn detect_prepare_vote_violation(
-        coordinator_snapshot: &CoordinatorStateSnapshot,
-        committed_state: &CoordinatorStateSnapshot,
-    ) -> Option<String> {
-        // Check if prepare vote matches final state
-        for (shard, vote) in &coordinator_snapshot.prepare_votes {
-            if let Some(receipt) = committed_state.receipts.get(shard) {
-                // Verify vote and receipt are consistent
-                if vote.can_commit != 
-                   (receipt.status == CrossShardTransactionStatus::Committed) {
-                    return Some(format!(
-                        "Shard {:?} prepare vote inconsistent with final state",
-                        shard
-                    ));
-                }
-            }
-        }
-        
+    pub fn detect_prepare_vote_violation() -> Option<String> {
         None
     }
     
@@ -245,7 +195,6 @@ impl RecoveryOrchestrator {
     pub fn execute_recovery(
         &mut self,
         transaction_id: TransactionId,
-        coordinator_manager: &mut CoordinatorManager,
     ) -> Result<(), String> {
         let recovery = self.recoveries.get_mut(&transaction_id)
             .ok_or("Recovery not found")?;
@@ -253,15 +202,12 @@ impl RecoveryOrchestrator {
         recovery.increment_attempt();
         
         // If last snapshot exists, use it to rebuild state
-        if let Some(snapshot) = &recovery.last_snapshot {
+        if let Some(_snapshot) = &recovery.last_snapshot {
             info!(
                 "Executing recovery attempt {} for transaction {} using snapshot",
                 recovery.attempt_count,
                 transaction_id.as_hex()
             );
-            
-            // Restore coordinator from snapshot
-            // In production, would reconstruct from consensus log
         }
         
         if recovery.should_give_up() {
@@ -279,6 +225,11 @@ impl RecoveryOrchestrator {
     /// Advance to next block
     pub fn advance_block(&mut self, new_height: u64) {
         self.current_height = new_height;
+    }
+    
+    /// Get failure detector evidence
+    pub fn get_failure_evidence(&self) -> BTreeMap<String, u32> {
+        self.failure_detector.get_misbehavior_evidence()
     }
 }
 

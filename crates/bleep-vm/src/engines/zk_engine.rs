@@ -26,7 +26,7 @@ use ark_snark::SNARK;
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use ark_std::rand::SeedableRng;
 use ark_std::Zero;
-use ark_std::One;
+
 
 use tracing::{debug, info, warn};
 

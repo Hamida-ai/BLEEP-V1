@@ -18,20 +18,19 @@
 
 use crate::error::{VmError, VmResult};
 use crate::execution::{
-    call_stack::CallStack,
     execution_context::ExecutionContext,
     state_transition::StateDiff,
 };
 use crate::intent::{Intent, IntentKind, TargetVm};
 use crate::runtime::gas_model::GasModel;
 use crate::runtime::sandbox::{SandboxConfig, SandboxValidator};
-use crate::types::{ChainId, ExecutionLog, LogLevel};
+use crate::types::{ExecutionLog, LogLevel};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
-use tracing::{debug, info, warn, error, instrument};
+use tracing::{debug, info, warn, instrument};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ENGINE TRAIT  (internal — engines implement this)

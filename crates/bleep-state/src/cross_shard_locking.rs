@@ -13,7 +13,7 @@ use crate::cross_shard_transaction::{TransactionId, StateLockId};
 use crate::shard_registry::ShardId;
 use serde::{Serialize, Deserialize};
 use std::collections::{BTreeMap, BTreeSet};
-use log::{info, warn, error};
+use log::{info, warn};
 
 /// Shard state lock
 /// 
@@ -141,7 +141,7 @@ impl ShardLockManager {
         }
         
         // Create the lock
-        let mut lock = StateLock::new(
+        let lock = StateLock::new(
             lock_id,
             transaction_id,
             keys.clone(),
@@ -280,7 +280,7 @@ impl CrossShardLockCoordinator {
         locks_by_shard: &BTreeMap<ShardId, (StateLockId, BTreeSet<Vec<u8>>)>,
     ) -> Result<(), String> {
         // First pass: verify all locks can be acquired
-        for (shard_id, (lock_id, keys)) in locks_by_shard {
+        for (shard_id, (_lock_id, keys)) in locks_by_shard {
             let manager = self.shard_locks.get(shard_id)
                 .ok_or(format!("Shard {:?} not registered", shard_id))?;
             

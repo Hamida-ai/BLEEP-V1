@@ -8,10 +8,10 @@
 // 4. No shortcuts or fast-forwarding allowed
 // 5. Healing progress is auditable and reproducible
 
-use crate::shard_registry::{ShardId, EpochId, ShardStateRoot};
-use crate::shard_checkpoint::{CheckpointId, ShardCheckpoint};
+use crate::shard_registry::{ShardId, EpochId};
+use crate::shard_checkpoint::CheckpointId;
 use serde::{Serialize, Deserialize};
-use log::{info, warn, error};
+use log::{info, error};
 use std::collections::HashMap;
 
 /// Healing stage enumeration

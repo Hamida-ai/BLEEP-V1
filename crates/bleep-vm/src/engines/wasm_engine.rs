@@ -25,7 +25,7 @@ use wasmer::{
 
 // Correct import paths — these live in the runtime sub-modules
 use crate::runtime::gas_model_base::GasMeter;
-use crate::runtime::memory::{MemoryLimit, WASM_PAGE_SIZE};
+use crate::runtime::memory::MemoryLimit;
 use crate::runtime::sandbox::SecurityPolicy;
 use crate::error::{VmError, VmResult};
 use crate::types::GasSchedule;
@@ -39,6 +39,7 @@ use crate::types::GasSchedule;
 struct CachedModule {
     module:     Module,
     hit_count:  u64,
+    #[allow(dead_code)]
     first_seen: Instant,
 }
 

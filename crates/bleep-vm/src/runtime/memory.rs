@@ -10,7 +10,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use parking_lot::Mutex;
-use tracing::{debug, warn};
+use tracing::debug;
 
 use crate::error::{VmError, VmResult};
 

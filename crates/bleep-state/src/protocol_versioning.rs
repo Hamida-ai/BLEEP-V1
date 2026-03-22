@@ -11,7 +11,7 @@
 
 use serde::{Serialize, Deserialize};
 use sha2::{Digest, Sha256};
-use log::{info, warn, error};
+use log::info;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -238,7 +238,7 @@ impl BlockHeader {
         
         // Verify block hash
         if !self.verify_hash()
-            .map_err(|e| ProtocolVersionError::HashVerificationFailed)? 
+            .map_err(|_e| ProtocolVersionError::HashVerificationFailed)? 
         {
             return Err(ProtocolVersionError::HashVerificationFailed);
         }

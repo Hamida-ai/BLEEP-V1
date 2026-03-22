@@ -11,7 +11,7 @@
 // 7. Detection is DETERMINISTIC and VERIFIABLE by any node
 // 8. Faults cannot be detected and then disputed without evidence
 
-use crate::shard_registry::{ShardId, EpochId, ShardStateRoot};
+use crate::shard_registry::{ShardId, EpochId};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use log::{info, warn, error};
@@ -615,6 +615,11 @@ impl AdvancedFaultDetector {
     /// Get total faults detected
     pub fn total_detected(&self) -> u64 {
         self.total_faults_detected
+    }
+    
+    /// Get shard state history for a specific shard
+    pub fn get_shard_history(&self, shard_id: &ShardId) -> Option<&VecDeque<ShardSnapshot>> {
+        self.shard_state_history.get(shard_id)
     }
 }
 

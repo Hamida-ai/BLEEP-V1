@@ -27,12 +27,11 @@ use crate::crosschain::native_bridge::ConnectBridge;
 use crate::engines::evm_engine::EvmEngine;
 use crate::engines::wasm_engine_adapter::WasmEngineAdapter;
 use crate::engines::zk_engine_adapter::ZkEngineAdapter;
-use crate::error::{VmError, VmResult};
+use crate::error::VmResult;
 use crate::execution::state_transition::{StateDiff, StateTransition};
 use crate::intent::{Intent, IntentKind};
 use crate::router::vm_router::{RouterConfig, RoutedResult, VmRouter};
 use crate::runtime::gas_model::GasModel;
-use crate::types::ExecutionResult;
 
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -96,6 +95,7 @@ impl ExecutionOutcome {
 pub struct Executor {
     router:  VmRouter,
     bridge:  Arc<ConnectBridge>,
+    #[allow(dead_code)]
     gas:     GasModel,
     config:  ExecutorConfig,
 }

@@ -135,7 +135,7 @@ impl WasmEngineAdapter {
         }
 
         let collected = log_store.read().clone();
-        let mut logs: Vec<ExecutionLog> = collected.into_iter().map(|msg| ExecutionLog {
+        let logs: Vec<ExecutionLog> = collected.into_iter().map(|msg| ExecutionLog {
             level:   LogLevel::Info,
             message: msg,
             data:    Vec::new(),
@@ -161,7 +161,7 @@ impl Engine for WasmEngineAdapter {
         matches!(vm, TargetVm::Wasm | TargetVm::Auto)
     }
 
-    #[instrument(skip(self, ctx, bytecode, calldata), fields(engine = "wasm-wasmer"))]
+    #[instrument(skip(self, bytecode, calldata), fields(engine = "wasm-wasmer"))]
     async fn execute(
         &self,
         ctx:       &ExecutionContext,
@@ -206,10 +206,10 @@ impl Engine for WasmEngineAdapter {
         })
     }
 
-    #[instrument(skip(self, ctx, bytecode, init_args), fields(engine = "wasm-wasmer"))]
+    #[instrument(skip(self, bytecode, init_args), fields(engine = "wasm-wasmer"))]
     async fn deploy(
         &self,
-        ctx:       &ExecutionContext,
+        _ctx:      &ExecutionContext,
         bytecode:  &[u8],
         init_args: &[u8],
         gas_limit: u64,

@@ -15,10 +15,9 @@
 
 use crate::shard_registry::{ShardId, EpochId, ShardStateRoot};
 use crate::snapshot_engine::{SnapshotEngine, SnapshotId, StateSnapshot, SnapshotStatus};
-use crate::shard_fault_detection::FaultEvidence;
 use serde::{Serialize, Deserialize};
 use sha2::{Digest, Sha256};
-use log::{info, warn, error};
+use log::{info, error};
 use std::collections::{HashMap, VecDeque};
 
 /// Rollback operation phase state machine

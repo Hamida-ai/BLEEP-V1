@@ -8,12 +8,11 @@ use std::sync::Arc;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use dashmap::DashMap;
-use tokio::sync::Mutex;
 use tokio::time::sleep;
 use tracing::{info, warn};
 
 use bleep_connect_types::{
-    InstantIntent, ExecutorCommitment, ExecutorProfile, ExecutorTier,
+    InstantIntent, ExecutorProfile, ExecutorTier,
     TransferStatus, FailureReason, BleepConnectError, BleepConnectResult,
     StateCommitment, CommitmentType, UniversalAddress,
     constants::{
@@ -75,7 +74,7 @@ impl IntentPool {
         self.intents
             .iter()
             .filter(|e| {
-                let intent = e.value();
+                let _intent = e.value();
                 matches!(
                     self.statuses.get(e.key()).map(|s| s.value().clone()),
                     Some(TransferStatus::AuctionOpen { opened_at, .. })
@@ -413,9 +412,9 @@ impl Layer4Instant {
         }
 
         // Compute protocol fee and executor reward (reward is taken from source escrow by protocol)
-        let protocol_fee = (intent.source_amount * PROTOCOL_FEE_BPS as u128) / 10_000;
+        let _protocol_fee = (intent.source_amount * PROTOCOL_FEE_BPS as u128) / 10_000;
         // Executor reward: half of user's max solver reward (competitive bids drive this lower)
-        let executor_reward = (intent.source_amount * (intent.max_solver_reward_bps as u128 / 2)) / 10_000;
+        let _executor_reward = (intent.source_amount * (intent.max_solver_reward_bps as u128 / 2)) / 10_000;
 
         // Release bond and record success
         let bond = intent.calculate_min_executor_bond(
@@ -505,7 +504,7 @@ impl Layer4Instant {
                 .map(|e| *e.key())
                 .collect();
             for id in timed_out {
-                if let Some(intent) = self.intent_pool.get(&id) {
+                if let Some(_intent) = self.intent_pool.get(&id) {
                     warn!("Execution timeout for {}", hex::encode(id));
                     self.intent_pool.update_status(id, TransferStatus::Failed {
                         reason: FailureReason::ExecutorTimeout,

@@ -12,9 +12,9 @@
 // 8. Healing cannot FORK the chain (deterministic across network)
 
 use crate::snapshot_engine::{SnapshotEngine, SnapshotId, SnapshotConfig};
-use crate::rollback_engine::{RollbackEngine, RollbackRecord, RollbackPhase, RollbackEvidence};
+use crate::rollback_engine::{RollbackEngine, RollbackEvidence};
 use crate::advanced_fault_detector::{AdvancedFaultDetector, FaultEvidence, FaultSeverity, FaultDetectionConfig, RecoveryAction};
-use crate::shard_registry::{ShardId, EpochId, ShardStateRoot};
+use crate::shard_registry::{ShardId, EpochId};
 use serde::{Serialize, Deserialize};
 use log::{info, warn, error};
 use std::collections::HashMap;
@@ -113,9 +113,9 @@ impl HealingOperation {
                 let mut h = Sha3_256::new();
                 h.update(b"bleep-healing-op-v1");
                 h.update(shard_id.as_u64().to_le_bytes());
-                h.update(fault_evidence.detected_at.to_le_bytes());
+                h.update(fault_evidence.block_height.to_le_bytes());
                 h.update(format!("{:?}", fault_evidence.severity).as_bytes());
-                h.update(fault_evidence.description.as_bytes());
+                h.update(fault_evidence.detection_rule.as_bytes());
                 // Truncate to 16 hex chars (64-bit) for readability
                 format!("healing-{}", &hex::encode(h.finalize())[..16])
             },

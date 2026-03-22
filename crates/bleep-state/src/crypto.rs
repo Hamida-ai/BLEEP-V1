@@ -1,5 +1,4 @@
 // Cryptographic utilities for BLEEP consensus and validation
-use sha2::{Sha256, Digest};
 
 pub mod blake3 {
     use sha2::{Sha256, Digest};

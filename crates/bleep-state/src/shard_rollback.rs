@@ -10,10 +10,10 @@
 // 6. Rollback is bounded: cannot go back beyond max window
 
 use crate::shard_registry::{ShardId, EpochId, ShardStateRoot};
-use crate::shard_checkpoint::{CheckpointId, ShardCheckpoint, ShardCheckpointManager};
+use crate::shard_checkpoint::{CheckpointId, ShardCheckpointManager};
 use crate::shard_fault_detection::FaultEvidence;
 use serde::{Serialize, Deserialize};
-use log::{info, warn, error};
+use log::{info, error};
 use std::collections::{HashMap, VecDeque};
 
 /// Rollback operation state machine
@@ -157,7 +157,7 @@ impl RollbackEngine {
             .ok_or("No valid checkpoint for rollback")?;
         
         let checkpoint_id = target_checkpoint.id;
-        let target_state_root = target_checkpoint.state_root.clone();
+        let _target_state_root = target_checkpoint.state_root.clone();
         
         let mut record = RollbackRecord::new(shard_id, checkpoint_id, fault_evidence, epoch);
         record.phase = RollbackPhase::Initiated;

@@ -11,9 +11,9 @@
 
 use crate::shard_registry::{ShardId, EpochId, ValidatorAssignment};
 use sha2::{Digest, Sha256};
-use log::{info, warn, error};
+use log::info;
 use serde::{Serialize, Deserialize};
-use std::collections::{BTreeMap, HashSet};
+use std::collections::BTreeMap;
 
 /// Global validator set for consensus
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -115,6 +115,11 @@ impl ShardValidatorAssigner {
             strategy,
             protocol_version,
         }
+    }
+    
+    /// Get the protocol version
+    pub fn protocol_version(&self) -> u32 {
+        self.protocol_version
     }
     
     /// Assign validators to shards deterministically
@@ -332,7 +337,7 @@ impl ShardValidatorAssigner {
     fn verify_assignments(
         &self,
         assignments: &BTreeMap<ShardId, ValidatorAssignment>,
-        validator_set: &ValidatorSet,
+        _validator_set: &ValidatorSet,
         num_shards: u64,
     ) -> Result<(), String> {
         if assignments.len() as u64 != num_shards {
