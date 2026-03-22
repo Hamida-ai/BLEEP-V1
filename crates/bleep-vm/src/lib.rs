@@ -22,7 +22,7 @@
 //! │  StateDiff → bleep-state (never direct writes)                  │
 //! ├─────────────────────────────────────────────────────────────────┤
 //! │  Layer 6 — Unified Gas Model                                    │
-//! │  EVM ·WASM · SBF · Move · ZK — all normalised to BLEEP gas     │
+//! │  EVM · WASM · SBF · Move · ZK — all normalised to BLEEP gas    │
 //! ├─────────────────────────────────────────────────────────────────┤
 //! │  Layer 7 — Cross-Chain Native Execution                         │
 //! │  bleep_call(chain, contract, data) → BLEEP Connect              │
@@ -76,7 +76,7 @@ pub mod runtime {
     pub mod memory;
 
     pub use gas_model::GasModel;
-    pub use sandbox::SandboxValidator;
+    pub use sandbox::{SandboxValidator, SandboxConfig, SecurityPolicy};
 }
 
 pub mod execution {
@@ -136,7 +136,7 @@ mod integration_tests {
 
     #[tokio::test]
     async fn test_full_transfer_pipeline() {
-        let exec = executor();
+        let exec   = executor();
         let intent = Intent::new_unsigned(
             IntentKind::Transfer(TransferIntent {
                 from: [1u8; 32], to: [2u8; 32], amount: 500, memo: Some("test".into()),
@@ -151,7 +151,7 @@ mod integration_tests {
 
     #[tokio::test]
     async fn test_full_wasm_call_pipeline() {
-        let exec = executor();
+        let exec   = executor();
         let intent = Intent::new_unsigned(
             IntentKind::ContractCall(ContractCallIntent {
                 target_vm: TargetVm::Wasm,
@@ -169,7 +169,7 @@ mod integration_tests {
 
     #[tokio::test]
     async fn test_cross_chain_intent_routes_to_bridge() {
-        let exec = executor();
+        let exec   = executor();
         let intent = Intent::new_unsigned(
             IntentKind::CrossChain(CrossChainIntent {
                 destination_chain: ChainId::Ethereum,
@@ -191,7 +191,7 @@ mod integration_tests {
 
     #[tokio::test]
     async fn test_zk_intent_routes_to_zk_engine() {
-        let exec = executor();
+        let exec   = executor();
         let intent = Intent::new_unsigned(
             IntentKind::ZkVerify(ZkVerifyIntent {
                 proof_bytes:      vec![0u8; 10],
@@ -201,24 +201,21 @@ mod integration_tests {
             }),
             ChainId::Bleep,
         );
-        // ZK engine accepts >= 4 bytes, this should succeed
         let outcome = exec.execute(&intent).await.unwrap();
-        // success or gas error — both are valid (depends on gas limit for ZK)
         let _ = outcome;
     }
 
     #[tokio::test]
     async fn test_auto_vm_detection_wasm() {
-        let exec = executor();
+        let exec       = executor();
         let wasm_magic = b"\x00asm\x01\x00\x00\x00".to_vec();
-        let intent = Intent::new_unsigned(
+        let intent     = Intent::new_unsigned(
             DeployBuilder::new(wasm_magic)
                 .vm(TargetVm::Auto)
                 .gas(1_000_000)
                 .build(),
             ChainId::Bleep,
         );
-        // Auto-detected as WASM, deployment goes to WASM engine
         let outcome = exec.execute(&intent).await;
         assert!(outcome.is_ok());
     }
@@ -233,9 +230,9 @@ mod integration_tests {
 
     #[tokio::test]
     async fn test_state_diff_has_balance_changes_for_transfer() {
-        let exec = executor();
-        let from = [0x01u8; 32];
-        let to   = [0x02u8; 32];
+        let exec  = executor();
+        let from  = [0x01u8; 32];
+        let to    = [0x02u8; 32];
         let intent = Intent::new_unsigned(
             IntentKind::Transfer(TransferIntent { from, to, amount: 1000, memo: None }),
             ChainId::Bleep,
@@ -243,12 +240,12 @@ mod integration_tests {
         let outcome = exec.execute(&intent).await.unwrap();
         let diff = outcome.state_diff();
         assert_eq!(diff.balances[&from].delta, -1000);
-        assert_eq!(diff.balances[&to].delta,   1000);
+        assert_eq!(diff.balances[&to].delta,    1000);
     }
 
     #[tokio::test]
     async fn test_simulate_does_not_apply() {
-        let exec = executor();
+        let exec   = executor();
         let intent = Intent::new_unsigned(
             IntentKind::Transfer(TransferIntent {
                 from: [0u8; 32], to: [1u8; 32], amount: 99, memo: None,
