@@ -11,7 +11,7 @@
     "tokenomics": {
         "token_name": "BLEEP Token",
         "token_symbol": "BLP",
-        "decimals": 18,
+        "decimals": 8,
         "total_supply": 200000000,
         "initial_distribution": {
             "foundation": 50000000,
