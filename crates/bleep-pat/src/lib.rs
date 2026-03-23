@@ -23,8 +23,6 @@
 //! │  Layer 6 — Engine + Registry                                  │
 //! │  PATEngine (pure, produces diff) · PATRegistry (apply diff)   │
 //! └───────────────────────────────────────────────────────────────┘
-//! ```
-                               |
 
 pub mod intent;
 pub mod error;
