@@ -60,5 +60,4 @@ reqwest      = { version = "0.12", features = ["json", "stream", "gzip", "rustls
 default = []
 std     = ["serde/std", "tokio/full"]
 ml      = []
-pbkdf2       = { version = "0.12", features = ["hmac"] }
 log          = "0.4"
