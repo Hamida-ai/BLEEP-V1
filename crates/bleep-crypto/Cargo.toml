@@ -66,3 +66,4 @@ hmac   = "0.12"
 
 [dev-dependencies]
 proptest = "1.4"
+tracing      = "0.1"
