@@ -224,58 +224,112 @@ pub enum PatCommand {
         /// Deflationary burn rate on transfers (basis points, max 1000)
         #[arg(long, default_value = "50")]
         burn_rate_bps: u16,
+        /// Allow token transfers to be frozen by the owner
+        #[arg(long, default_value = "false")]
+        freezable: bool,
     },
     /// Mint new PAT tokens (owner only)
     Mint {
         /// Token symbol
         #[arg(long)]
         symbol: String,
-        /// Caller / owner address
+        /// Caller / owner address (hex)
         #[arg(long)]
         from: String,
-        /// Recipient address
+        /// Recipient address (hex)
         #[arg(long)]
         to: String,
-        /// Amount to mint (8 decimal places)
+        /// Amount to mint (base units, 8 decimal places)
         #[arg(long)]
         amount: u64,
     },
-    /// Burn PAT tokens
+    /// Burn PAT tokens (holder burns their own tokens)
     Burn {
         /// Token symbol
         #[arg(long)]
         symbol: String,
-        /// Address burning tokens
+        /// Address burning tokens (hex)
         #[arg(long)]
         from: String,
-        /// Amount to burn (8 decimal places)
+        /// Amount to burn (base units)
         #[arg(long)]
         amount: u64,
     },
-    /// Transfer PAT tokens
+    /// Transfer PAT tokens (burn_rate_bps applied automatically)
     Transfer {
         /// Token symbol
         #[arg(long)]
         symbol: String,
-        /// Sender address
+        /// Sender address (hex)
         #[arg(long)]
         from: String,
-        /// Recipient address
+        /// Recipient address (hex)
         #[arg(long)]
         to: String,
-        /// Amount to transfer (8 decimal places; burn_rate applied automatically)
+        /// Amount to transfer (base units)
         #[arg(long)]
         amount: u64,
+    },
+    /// Approve a spender to transfer up to `amount` from caller's balance
+    Approve {
+        /// Token symbol
+        #[arg(long)]
+        symbol: String,
+        /// Owner / caller address (hex)
+        #[arg(long)]
+        owner: String,
+        /// Spender address (hex)
+        #[arg(long)]
+        spender: String,
+        /// Approved amount (base units)
+        #[arg(long)]
+        amount: u64,
+    },
+    /// Freeze or unfreeze all transfers for a token (owner only, token must be freezable)
+    Freeze {
+        /// Token symbol
+        #[arg(long)]
+        symbol: String,
+        /// Owner address (hex)
+        #[arg(long)]
+        owner: String,
+        /// true = freeze, false = unfreeze
+        #[arg(long)]
+        frozen: bool,
+    },
+    /// Update the deflationary burn rate (owner only)
+    SetBurnRate {
+        /// Token symbol
+        #[arg(long)]
+        symbol: String,
+        /// Owner address (hex)
+        #[arg(long)]
+        owner: String,
+        /// New burn rate in basis points (0–1000)
+        #[arg(long)]
+        rate_bps: u16,
+    },
+    /// Transfer token ownership to a new address (owner only)
+    SetOwner {
+        /// Token symbol
+        #[arg(long)]
+        symbol: String,
+        /// Current owner address (hex)
+        #[arg(long)]
+        owner: String,
+        /// New owner address (hex)
+        #[arg(long)]
+        new_owner: String,
     },
     /// Query PAT balance for an address
     Balance {
         /// Token symbol
         #[arg(long)]
         symbol: String,
-        /// Address to query
+        /// Address to query (hex)
         address: String,
     },
-    /// Show PAT token info (supply, burn rate, owner)
+    /// Show PAT token info (supply, burn rate, owner, frozen state)
     Info {
         /// Token symbol
         symbol: String,
