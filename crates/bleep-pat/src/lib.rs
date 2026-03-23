@@ -24,23 +24,7 @@
 //! │  PATEngine (pure, produces diff) · PATRegistry (apply diff)   │
 //! └───────────────────────────────────────────────────────────────┘
 //! ```
-//!
-//! ## What was removed (old Substrate/Polkadot approach)
-//!
-//! | Removed                         | Replaced with                      |
-//! |---------------------------------|------------------------------------|
-//! | `decl_module!` macro dispatch   | `PATIntentKind` enum               |
-//! | `decl_storage!` macro           | Plain `BTreeMap` fields            |
-//! | `decl_event!` macro             | `PATEvent` enum                    |
-//! | `decl_error!` macro             | `PATError` via `thiserror`         |
-//! | `#[weight = N]` attributes      | `PATGasModel::cost(kind)`          |
-//! | `ensure_signed(origin)?`        | `PATIntent.caller: [u8;32]`        |
-//! | `T::AccountId` generic param    | `Address = [u8; 32]`               |
-//! | `<Balances<T>>::insert(...)`    | `TokenLedger::credit(addr, amt)`   |
-//! | `ink!(storage)` / `#[ink(msg)]` | `PATEngine::execute(intent, view)` |
-//! | `DispatchResult`                | `PATResult<PATOutcome>`            |
-//! | `frame_support`, `sp_runtime`   | Zero external runtime deps         |
-//! | `ink` crate                     | Gone                               |
+                               |
 
 pub mod intent;
 pub mod error;
