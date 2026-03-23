@@ -150,12 +150,16 @@ async fn run() -> Result<(), Box<dyn Error>> {
         }
     };
 
-    // Mint genesis allocations only at height 0 (first start)
+    // Mint genesis allocations only at height 0 (first start).
+    // mint() now returns Result — cap violations are logged and abort startup.
     if state.block_height() == 0 {
-        state.mint("bleep:genesis:foundation", 500_000_000_000_000u128);
-        state.mint("bleep:genesis:rewards",    100_000_000_000_000u128);
-        state.mint("bleep:genesis:validators",  50_000_000_000_000u128);
-        info!("  ✅ Genesis allocations minted (650T BLEEP).");
+        state.mint("bleep:genesis:foundation", 500_000_000_000_000u128)
+            .unwrap_or_else(|e| { error!("Genesis mint foundation failed: {}", e); std::process::exit(1); });
+        state.mint("bleep:genesis:rewards",    100_000_000_000_000u128)
+            .unwrap_or_else(|e| { error!("Genesis mint rewards failed: {}", e); std::process::exit(1); });
+        state.mint("bleep:genesis:validators",  50_000_000_000_000u128)
+            .unwrap_or_else(|e| { error!("Genesis mint validators failed: {}", e); std::process::exit(1); });
+        info!("  ✅ Genesis allocations minted (650T µBLEEP).");
     }
 
     // Rebuild the Sparse Merkle Trie from the persisted DB state
@@ -214,9 +218,13 @@ async fn run() -> Result<(), Box<dyn Error>> {
         // Real Kyber-1024 PK bytes (1568 bytes) — wired from Step 1 keygen
         let real_kyber_pk  = kyber_pk.as_bytes().to_vec();
         let signing_key_id = hex::encode(&sphincs_pk);
+        // S-06: pass the real SPHINCS+ public key bytes so SlashingEngine can
+        // cryptographically verify evidence before slashing this validator.
+        let real_sphincs_pk = sphincs_pk.clone();
         let genesis_validator = ValidatorIdentity::new(
             validator_id.clone(),
             real_kyber_pk,
+            real_sphincs_pk,  // S-06: SPHINCS+ pk for evidence verification
             signing_key_id,
             1_000_000u128, // initial stake (matches BlockProducer config)
             0,             // genesis epoch
@@ -225,7 +233,7 @@ async fn run() -> Result<(), Box<dyn Error>> {
             Ok(mut v) => {
                 let _ = v.activate();
                 let _ = reg.register_validator(v);
-                info!("  ✅ Genesis validator registered: id={} (Kyber-1024 PK wired)", validator_id);
+                info!("  ✅ Genesis validator registered: id={} (Kyber-1024 + SPHINCS+ PKs wired)", validator_id);
             }
             Err(e) => warn!("  ⚠️  Genesis validator registration skipped: {}", e),
         }
