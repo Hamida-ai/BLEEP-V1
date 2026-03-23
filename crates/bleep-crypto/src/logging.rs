@@ -110,4 +110,19 @@ mod tests {
         let b = BLEEPLogger::default();
         assert_eq!(a.module, b.module);
     }
+    }    #[test]
+    fn log_methods_do_not_panic() {
+        let log = BLEEPLogger::new();
+        log.info("info message");
+        log.warning("warning message");
+        log.debug("debug message");
+        log.error("error message");
+    }
+
+    #[test]
+    fn default_equals_new() {
+        let a = BLEEPLogger::new();
+        let b = BLEEPLogger::default();
+        assert_eq!(a.module, b.module);
+    }
 }
