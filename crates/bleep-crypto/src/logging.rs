@@ -125,4 +125,4 @@ mod tests {
         let b = BLEEPLogger::default();
         assert_eq!(a.module, b.module);
     }
-}
+                  
