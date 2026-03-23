@@ -1,37 +1,53 @@
-// src/bin/bleep_pat.rs
+//! # bleep-pat binary
+//!
+//! Standalone PAT engine entry point.  Rewired to use the v2
+//! intent-driven PATRegistry — no more AssetTokenEngine stubs.
 
-use bleep_pat::asset_token::{AssetTokenEngine, TokenError};
-use bleep_core::transaction_pool::TransactionPool;
+use bleep_pat::{PATRegistry, PATIntent};
 use std::error::Error;
 use log::{info, error};
 
 fn main() {
     env_logger::init();
-    info!("🪙 BLEEP Programmable Asset Token (PAT) Engine Launching...");
+    info!("🪙 BLEEP PAT Engine v2 — intent-driven, BLEEP-native");
 
-    if let Err(e) = run_pat_engine() {
+    if let Err(e) = run() {
         error!("❌ PAT engine failed: {}", e);
         std::process::exit(1);
     }
 }
 
-fn run_pat_engine() -> Result<(), Box<dyn Error>> {
-    // Step 1: Initialize the token engine
-    let mut token_engine = AssetTokenEngine::new();
-    info!("✅ PAT engine initialized.");
+fn run() -> Result<(), Box<dyn Error>> {
+    let mut registry = PATRegistry::new();
 
-    // Step 2: Load pending asset-related transactions
-    let tx_pool = TransactionPool::load()?;
-    let asset_txs = tx_pool.pending_asset_token_transactions();
-    info!("📄 Loaded {} programmable asset token transactions.", asset_txs.len());
+    // Genesis demonstration token — proves engine is live.
+    // In production this is driven by RPC / governance intents.
+    let owner   = [0x01u8; 32];
+    let genesis = [0x00u8; 32];
 
-    // Step 3: Process and execute token smart contracts
-    token_engine.process_transactions(asset_txs)?;
-    info!("🔁 Asset token transactions processed.");
+    registry.execute(&PATIntent::create_token(
+        owner,
+        "BLP",
+        "BLEEP Native Token",
+        8,
+        200_000_000 * 100_000_000u128,  // 200M cap, 8 decimals
+        0,                               // no burn on transfers
+        false,                           // not freezable
+    ))?;
 
-    // Step 4: Persist updated state
-    token_engine.save_state()?;
-    info!("💾 PAT engine state persisted.");
+    registry.execute(&PATIntent::mint(
+        owner,
+        "BLP",
+        genesis,
+        25_000_000 * 100_000_000u128,   // 25M initial circulating
+    ))?;
+
+    info!("✅ PAT Registry online — {} token(s) registered", registry.token_count());
+    info!(
+        "   BLP supply: {}  burned: {}",
+        registry.get_token("BLP").map(|t| t.current_supply).unwrap_or(0),
+        registry.get_token("BLP").map(|t| t.total_burned).unwrap_or(0),
+    );
 
     Ok(())
-}
+                     }
