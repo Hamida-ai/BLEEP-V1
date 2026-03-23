@@ -657,6 +657,10 @@ pub fn rpc_routes_with_state(
         .or(pat_mint(Arc::clone(&state_inner)))
         .or(pat_burn(Arc::clone(&state_inner)))
         .or(pat_transfer(Arc::clone(&state_inner)))
+        .or(pat_approve(Arc::clone(&state_inner)))
+        .or(pat_freeze(Arc::clone(&state_inner)))
+        .or(pat_set_burn_rate(Arc::clone(&state_inner)))
+        .or(pat_set_owner(Arc::clone(&state_inner)))
         .or(pat_balance(Arc::clone(&state_inner)))
         .or(pat_info(Arc::clone(&state_inner)))
         .or(pat_list(Arc::clone(&state_inner)))
@@ -1220,8 +1224,32 @@ fn connect_relay_tx(
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// SPRINT 7 — PAT (PROGRAMMABLE ASSET TOKEN) ROUTES
+// SPRINT 7 — PAT (PROGRAMMABLE ASSET TOKEN) ROUTES  [v2 — intent-based]
 // ═══════════════════════════════════════════════════════════════════════════
+//
+// All PAT operations now go through PATIntent → PATRegistry::execute().
+// The old direct-method API (create_token, mint, burn, transfer with string
+// addresses) is gone.  Addresses are hex strings in JSON and decoded to
+// [u8; 32] before constructing intents.
+
+// ── Address helpers ───────────────────────────────────────────────────────────
+
+/// Parse a hex string (with or without 0x prefix) into a 32-byte address.
+/// Pads or truncates to exactly 32 bytes (left-aligned, right zero-padded).
+fn hex_to_address(s: &str) -> Result<bleep_pat::Address, String> {
+    let s = s.trim_start_matches("0x");
+    let bytes = hex::decode(s).map_err(|e| format!("Invalid address hex '{}': {}", s, e))?;
+    let mut addr = [0u8; 32];
+    let len = bytes.len().min(32);
+    addr[..len].copy_from_slice(&bytes[..len]);
+    Ok(addr)
+}
+
+fn address_to_hex(addr: &bleep_pat::Address) -> String {
+    hex::encode(addr)
+}
+
+// ── Request / response types ──────────────────────────────────────────────────
 
 #[derive(Deserialize)]
 struct PatCreateReq {
@@ -1229,21 +1257,24 @@ struct PatCreateReq {
     name:           String,
     #[serde(default = "default_decimals")]
     decimals:       u8,
+    /// Caller/owner address — hex string (with or without 0x prefix).
     owner:          String,
     #[serde(default)]
-    supply_cap:     String,   // u128 as decimal string
+    supply_cap:     String,   // u128 as decimal string; "" = unlimited
     #[serde(default = "default_burn_rate")]
     burn_rate_bps:  u16,
+    #[serde(default)]
+    freezable:      bool,
 }
-fn default_decimals() -> u8 { 8 }
+fn default_decimals() -> u8  { 8  }
 fn default_burn_rate() -> u16 { 50 }
 
 #[derive(Deserialize)]
 struct PatMintReq {
     symbol: String,
-    caller: String,
+    caller: String,   // must be token owner
     to:     String,
-    amount: String,   // u128 decimal
+    amount: String,   // u128 decimal string
 }
 
 #[derive(Deserialize)]
@@ -1269,7 +1300,7 @@ struct PatBalanceResp { symbol: String, address: String, balance: String }
 struct PatTokenInfoResp {
     symbol: String, name: String, decimals: u8, owner: String,
     current_supply: String, total_burned: String, supply_cap: String,
-    burn_rate_bps: u16, created_at: u64,
+    burn_rate_bps: u16, created_at: u64, frozen: bool,
 }
 #[derive(Serialize)]
 struct PatTransferResp { received: String, burn_deducted: String }
@@ -1291,21 +1322,38 @@ fn pat_create(
         .and(with_arc_state(state))
         .map(|req: PatCreateReq, st: Arc<RpcState>| {
             match &st.pat_registry {
+                None => return pat_not_initialised(),
                 Some(reg) => {
+                    let owner = match hex_to_address(&req.owner) {
+                        Ok(a) => a,
+                        Err(e) => return warp::reply::with_status(
+                            warp::reply::json(&ErrResp { error: e }),
+                            warp::http::StatusCode::BAD_REQUEST,
+                        ),
+                    };
                     let cap: u128 = req.supply_cap.parse().unwrap_or(0);
+
+                    let intent = bleep_pat::PATIntent::create_token(
+                        owner,
+                        req.symbol.clone(),
+                        req.name.clone(),
+                        req.decimals,
+                        cap,
+                        req.burn_rate_bps,
+                        req.freezable,
+                    );
+
                     let mut r = reg.lock();
-                    match r.create_token(
-                        req.symbol.clone(), req.name, req.decimals,
-                        req.owner.clone(), cap, req.burn_rate_bps,
-                    ) {
+                    match r.execute(&intent) {
                         Ok(_) => warp::reply::with_status(
                             warp::reply::json(&PatOkResp {
                                 ok: true,
                                 detail: serde_json::json!({
-                                    "symbol": req.symbol,
-                                    "owner": req.owner,
-                                    "supply_cap": cap.to_string(),
+                                    "symbol":        req.symbol,
+                                    "owner":         req.owner,
+                                    "supply_cap":    cap.to_string(),
                                     "burn_rate_bps": req.burn_rate_bps,
+                                    "freezable":     req.freezable,
                                 }),
                             }),
                             warp::http::StatusCode::CREATED,
@@ -1316,7 +1364,6 @@ fn pat_create(
                         ),
                     }
                 }
-                None => pat_not_initialised(),
             }
         })
 }
@@ -1331,17 +1378,29 @@ fn pat_mint(
         .and(with_arc_state(state))
         .map(|req: PatMintReq, st: Arc<RpcState>| {
             match &st.pat_registry {
+                None => return pat_not_initialised(),
                 Some(reg) => {
+                    let caller = match hex_to_address(&req.caller) {
+                        Ok(a) => a, Err(e) => return warp::reply::with_status(
+                            warp::reply::json(&ErrResp { error: e }),
+                            warp::http::StatusCode::BAD_REQUEST),
+                    };
+                    let to = match hex_to_address(&req.to) {
+                        Ok(a) => a, Err(e) => return warp::reply::with_status(
+                            warp::reply::json(&ErrResp { error: e }),
+                            warp::http::StatusCode::BAD_REQUEST),
+                    };
                     let amount: u128 = req.amount.parse().unwrap_or(0);
+                    let intent = bleep_pat::PATIntent::mint(caller, req.symbol.clone(), to, amount);
                     let mut r = reg.lock();
-                    match r.mint(&req.symbol, &req.caller, &req.to, amount) {
+                    match r.execute(&intent) {
                         Ok(_) => warp::reply::with_status(
                             warp::reply::json(&PatOkResp {
                                 ok: true,
                                 detail: serde_json::json!({
-                                    "symbol": req.symbol,
-                                    "to": req.to,
-                                    "amount": amount.to_string(),
+                                    "symbol":     req.symbol,
+                                    "to":         req.to,
+                                    "amount":     amount.to_string(),
                                     "new_supply": r.get_token(&req.symbol)
                                         .map(|t| t.current_supply.to_string())
                                         .unwrap_or_default(),
@@ -1355,7 +1414,6 @@ fn pat_mint(
                         ),
                     }
                 }
-                None => pat_not_initialised(),
             }
         })
 }
@@ -1370,17 +1428,24 @@ fn pat_burn(
         .and(with_arc_state(state))
         .map(|req: PatBurnReq, st: Arc<RpcState>| {
             match &st.pat_registry {
+                None => return pat_not_initialised(),
                 Some(reg) => {
+                    let from = match hex_to_address(&req.from) {
+                        Ok(a) => a, Err(e) => return warp::reply::with_status(
+                            warp::reply::json(&ErrResp { error: e }),
+                            warp::http::StatusCode::BAD_REQUEST),
+                    };
                     let amount: u128 = req.amount.parse().unwrap_or(0);
+                    let intent = bleep_pat::PATIntent::burn(from, req.symbol.clone(), amount);
                     let mut r = reg.lock();
-                    match r.burn(&req.symbol, &req.from, amount) {
+                    match r.execute(&intent) {
                         Ok(_) => warp::reply::with_status(
                             warp::reply::json(&PatOkResp {
                                 ok: true,
                                 detail: serde_json::json!({
-                                    "symbol": req.symbol,
-                                    "from": req.from,
-                                    "burned": amount.to_string(),
+                                    "symbol":      req.symbol,
+                                    "from":        req.from,
+                                    "burned":      amount.to_string(),
                                     "total_burned": r.get_token(&req.symbol)
                                         .map(|t| t.total_burned.to_string())
                                         .unwrap_or_default(),
@@ -1394,7 +1459,6 @@ fn pat_burn(
                         ),
                     }
                 }
-                None => pat_not_initialised(),
             }
         })
 }
@@ -1409,27 +1473,42 @@ fn pat_transfer(
         .and(with_arc_state(state))
         .map(|req: PatTransferReq, st: Arc<RpcState>| {
             match &st.pat_registry {
+                None => return pat_not_initialised(),
                 Some(reg) => {
+                    let from = match hex_to_address(&req.from) {
+                        Ok(a) => a, Err(e) => return warp::reply::with_status(
+                            warp::reply::json(&ErrResp { error: e }),
+                            warp::http::StatusCode::BAD_REQUEST),
+                    };
+                    let to = match hex_to_address(&req.to) {
+                        Ok(a) => a, Err(e) => return warp::reply::with_status(
+                            warp::reply::json(&ErrResp { error: e }),
+                            warp::http::StatusCode::BAD_REQUEST),
+                    };
                     let amount: u128 = req.amount.parse().unwrap_or(0);
-                    let mut r = reg.lock();
-                    let burn_deducted = r.get_token(&req.symbol)
+                    // Pre-calculate burn for the response body
+                    let burn_deducted = reg.lock().get_token(&req.symbol)
                         .map(|t| t.transfer_burn_amount(amount))
                         .unwrap_or(0);
-                    match r.transfer(&req.symbol, &req.from, &req.to, amount) {
-                        Ok(received) => warp::reply::with_status(
-                            warp::reply::json(&PatTransferResp {
-                                received: received.to_string(),
-                                burn_deducted: burn_deducted.to_string(),
-                            }),
-                            warp::http::StatusCode::OK,
-                        ),
+                    let intent = bleep_pat::PATIntent::transfer(from, req.symbol.clone(), to, amount);
+                    let mut r = reg.lock();
+                    match r.execute(&intent) {
+                        Ok(outcome) => {
+                            let received = outcome.return_value.unwrap_or(0);
+                            warp::reply::with_status(
+                                warp::reply::json(&PatTransferResp {
+                                    received:      received.to_string(),
+                                    burn_deducted: burn_deducted.to_string(),
+                                }),
+                                warp::http::StatusCode::OK,
+                            )
+                        }
                         Err(e) => warp::reply::with_status(
                             warp::reply::json(&ErrResp { error: e.to_string() }),
                             warp::http::StatusCode::BAD_REQUEST,
                         ),
                     }
                 }
-                None => pat_not_initialised(),
             }
         })
 }
@@ -1443,9 +1522,15 @@ fn pat_balance(
         .and(with_arc_state(state))
         .map(|symbol: String, address: String, st: Arc<RpcState>| {
             match &st.pat_registry {
+                None => return pat_not_initialised(),
                 Some(reg) => {
+                    let addr = match hex_to_address(&address) {
+                        Ok(a) => a, Err(e) => return warp::reply::with_status(
+                            warp::reply::json(&ErrResp { error: e }),
+                            warp::http::StatusCode::BAD_REQUEST),
+                    };
                     let r = reg.lock();
-                    let balance = r.balance_of(&symbol, &address);
+                    let balance = r.balance_of(&symbol, &addr);
                     warp::reply::with_status(
                         warp::reply::json(&PatBalanceResp {
                             symbol, address, balance: balance.to_string(),
@@ -1453,7 +1538,6 @@ fn pat_balance(
                         warp::http::StatusCode::OK,
                     )
                 }
-                None => pat_not_initialised(),
             }
         })
 }
@@ -1467,20 +1551,22 @@ fn pat_info(
         .and(with_arc_state(state))
         .map(|symbol: String, st: Arc<RpcState>| {
             match &st.pat_registry {
+                None => return pat_not_initialised(),
                 Some(reg) => {
                     let r = reg.lock();
                     match r.get_token(&symbol) {
                         Some(t) => warp::reply::with_status(
                             warp::reply::json(&PatTokenInfoResp {
-                                symbol: t.symbol.clone(),
-                                name: t.name.clone(),
-                                decimals: t.decimals,
-                                owner: t.owner.clone(),
+                                symbol:         t.symbol.clone(),
+                                name:           t.name.clone(),
+                                decimals:       t.decimals,
+                                owner:          address_to_hex(&t.owner),
                                 current_supply: t.current_supply.to_string(),
-                                total_burned: t.total_burned.to_string(),
-                                supply_cap: t.total_supply_cap.to_string(),
-                                burn_rate_bps: t.burn_rate_bps,
-                                created_at: t.created_at,
+                                total_burned:   t.total_burned.to_string(),
+                                supply_cap:     t.total_supply_cap.to_string(),
+                                burn_rate_bps:  t.burn_rate_bps,
+                                created_at:     t.created_at,
+                                frozen:         t.frozen,
                             }),
                             warp::http::StatusCode::OK,
                         ),
@@ -1490,7 +1576,6 @@ fn pat_info(
                         ),
                     }
                 }
-                None => pat_not_initialised(),
             }
         })
 }
@@ -1504,29 +1589,265 @@ fn pat_list(
         .and(with_arc_state(state))
         .map(|st: Arc<RpcState>| {
             match &st.pat_registry {
+                None => return pat_not_initialised(),
                 Some(reg) => {
                     let r = reg.lock();
                     let tokens: Vec<serde_json::Value> = r.list_tokens()
                         .iter()
                         .map(|t| serde_json::json!({
-                            "symbol": t.symbol,
-                            "name": t.name,
-                            "decimals": t.decimals,
-                            "owner": t.owner,
+                            "symbol":         t.symbol,
+                            "name":           t.name,
+                            "decimals":       t.decimals,
+                            "owner":          address_to_hex(&t.owner),
                             "current_supply": t.current_supply.to_string(),
-                            "total_burned": t.total_burned.to_string(),
-                            "burn_rate_bps": t.burn_rate_bps,
+                            "total_burned":   t.total_burned.to_string(),
+                            "supply_cap":     t.total_supply_cap.to_string(),
+                            "burn_rate_bps":  t.burn_rate_bps,
+                            "frozen":         t.frozen,
                         }))
                         .collect();
+                    let count = tokens.len();
                     warp::reply::with_status(
-                        warp::reply::json(&serde_json::json!({ "tokens": tokens, "count": tokens.len() })),
+                        warp::reply::json(&serde_json::json!({ "tokens": tokens, "count": count })),
                         warp::http::StatusCode::OK,
                     )
                 }
-                None => pat_not_initialised(),
             }
         })
 }
+
+// ── POST /rpc/pat/approve ─────────────────────────────────────────────────────
+
+#[derive(Deserialize)]
+struct PatApproveReq {
+    symbol:  String,
+    owner:   String,
+    spender: String,
+    amount:  String,
+}
+
+fn pat_approve(
+    state: Arc<RpcState>,
+) -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
+    warp::path!("rpc" / "pat" / "approve")
+        .and(warp::post())
+        .and(warp::body::json::<PatApproveReq>())
+        .and(with_arc_state(state))
+        .map(|req: PatApproveReq, st: Arc<RpcState>| {
+            match &st.pat_registry {
+                None => return pat_not_initialised(),
+                Some(reg) => {
+                    let owner = match hex_to_address(&req.owner) {
+                        Ok(a) => a, Err(e) => return warp::reply::with_status(
+                            warp::reply::json(&ErrResp { error: e }),
+                            warp::http::StatusCode::BAD_REQUEST),
+                    };
+                    let spender = match hex_to_address(&req.spender) {
+                        Ok(a) => a, Err(e) => return warp::reply::with_status(
+                            warp::reply::json(&ErrResp { error: e }),
+                            warp::http::StatusCode::BAD_REQUEST),
+                    };
+                    let amount: u128 = req.amount.parse().unwrap_or(0);
+                    let intent = bleep_pat::PATIntent::new(
+                        owner,
+                        bleep_pat::PATIntentKind::Approve(bleep_pat::ApproveIntent {
+                            symbol: req.symbol.clone(), spender, amount,
+                        }),
+                        15_000, 0, 0,
+                    );
+                    let mut r = reg.lock();
+                    match r.execute(&intent) {
+                        Ok(_) => warp::reply::with_status(
+                            warp::reply::json(&PatOkResp {
+                                ok: true,
+                                detail: serde_json::json!({
+                                    "symbol": req.symbol,
+                                    "owner": req.owner,
+                                    "spender": req.spender,
+                                    "approved": amount.to_string(),
+                                }),
+                            }),
+                            warp::http::StatusCode::OK,
+                        ),
+                        Err(e) => warp::reply::with_status(
+                            warp::reply::json(&ErrResp { error: e.to_string() }),
+                            warp::http::StatusCode::BAD_REQUEST,
+                        ),
+                    }
+                }
+            }
+        })
+}
+
+// ── POST /rpc/pat/freeze ──────────────────────────────────────────────────────
+
+#[derive(Deserialize)]
+struct PatFreezeReq {
+    symbol: String,
+    owner:  String,
+    frozen: bool,
+}
+
+fn pat_freeze(
+    state: Arc<RpcState>,
+) -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
+    warp::path!("rpc" / "pat" / "freeze")
+        .and(warp::post())
+        .and(warp::body::json::<PatFreezeReq>())
+        .and(with_arc_state(state))
+        .map(|req: PatFreezeReq, st: Arc<RpcState>| {
+            match &st.pat_registry {
+                None => return pat_not_initialised(),
+                Some(reg) => {
+                    let owner = match hex_to_address(&req.owner) {
+                        Ok(a) => a, Err(e) => return warp::reply::with_status(
+                            warp::reply::json(&ErrResp { error: e }),
+                            warp::http::StatusCode::BAD_REQUEST),
+                    };
+                    let intent = bleep_pat::PATIntent::new(
+                        owner,
+                        bleep_pat::PATIntentKind::Freeze(bleep_pat::FreezeIntent {
+                            symbol: req.symbol.clone(), frozen: req.frozen,
+                        }),
+                        10_000, 0, 0,
+                    );
+                    let mut r = reg.lock();
+                    match r.execute(&intent) {
+                        Ok(_) => warp::reply::with_status(
+                            warp::reply::json(&PatOkResp {
+                                ok: true,
+                                detail: serde_json::json!({
+                                    "symbol": req.symbol,
+                                    "frozen": req.frozen,
+                                }),
+                            }),
+                            warp::http::StatusCode::OK,
+                        ),
+                        Err(e) => warp::reply::with_status(
+                            warp::reply::json(&ErrResp { error: e.to_string() }),
+                            warp::http::StatusCode::BAD_REQUEST,
+                        ),
+                    }
+                }
+            }
+        })
+}
+
+// ── POST /rpc/pat/set-burn-rate ───────────────────────────────────────────────
+
+#[derive(Deserialize)]
+struct PatSetBurnRateReq {
+    symbol:       String,
+    owner:        String,
+    new_rate_bps: u16,
+}
+
+fn pat_set_burn_rate(
+    state: Arc<RpcState>,
+) -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
+    warp::path!("rpc" / "pat" / "set-burn-rate")
+        .and(warp::post())
+        .and(warp::body::json::<PatSetBurnRateReq>())
+        .and(with_arc_state(state))
+        .map(|req: PatSetBurnRateReq, st: Arc<RpcState>| {
+            match &st.pat_registry {
+                None => return pat_not_initialised(),
+                Some(reg) => {
+                    let owner = match hex_to_address(&req.owner) {
+                        Ok(a) => a, Err(e) => return warp::reply::with_status(
+                            warp::reply::json(&ErrResp { error: e }),
+                            warp::http::StatusCode::BAD_REQUEST),
+                    };
+                    let intent = bleep_pat::PATIntent::new(
+                        owner,
+                        bleep_pat::PATIntentKind::UpdateBurnRate(bleep_pat::UpdateBurnRateIntent {
+                            symbol: req.symbol.clone(), new_rate_bps: req.new_rate_bps,
+                        }),
+                        10_000, 0, 0,
+                    );
+                    let mut r = reg.lock();
+                    match r.execute(&intent) {
+                        Ok(_) => warp::reply::with_status(
+                            warp::reply::json(&PatOkResp {
+                                ok: true,
+                                detail: serde_json::json!({
+                                    "symbol":       req.symbol,
+                                    "new_rate_bps": req.new_rate_bps,
+                                }),
+                            }),
+                            warp::http::StatusCode::OK,
+                        ),
+                        Err(e) => warp::reply::with_status(
+                            warp::reply::json(&ErrResp { error: e.to_string() }),
+                            warp::http::StatusCode::BAD_REQUEST,
+                        ),
+                    }
+                }
+            }
+        })
+}
+
+// ── POST /rpc/pat/set-owner ───────────────────────────────────────────────────
+
+#[derive(Deserialize)]
+struct PatSetOwnerReq {
+    symbol:    String,
+    owner:     String,
+    new_owner: String,
+}
+
+fn pat_set_owner(
+    state: Arc<RpcState>,
+) -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
+    warp::path!("rpc" / "pat" / "set-owner")
+        .and(warp::post())
+        .and(warp::body::json::<PatSetOwnerReq>())
+        .and(with_arc_state(state))
+        .map(|req: PatSetOwnerReq, st: Arc<RpcState>| {
+            match &st.pat_registry {
+                None => return pat_not_initialised(),
+                Some(reg) => {
+                    let owner = match hex_to_address(&req.owner) {
+                        Ok(a) => a, Err(e) => return warp::reply::with_status(
+                            warp::reply::json(&ErrResp { error: e }),
+                            warp::http::StatusCode::BAD_REQUEST),
+                    };
+                    let new_owner = match hex_to_address(&req.new_owner) {
+                        Ok(a) => a, Err(e) => return warp::reply::with_status(
+                            warp::reply::json(&ErrResp { error: e }),
+                            warp::http::StatusCode::BAD_REQUEST),
+                    };
+                    let intent = bleep_pat::PATIntent::new(
+                        owner,
+                        bleep_pat::PATIntentKind::TransferOwnership(
+                            bleep_pat::TransferOwnershipIntent {
+                                symbol: req.symbol.clone(), new_owner,
+                            }
+                        ),
+                        20_000, 0, 0,
+                    );
+                    let mut r = reg.lock();
+                    match r.execute(&intent) {
+                        Ok(_) => warp::reply::with_status(
+                            warp::reply::json(&PatOkResp {
+                                ok: true,
+                                detail: serde_json::json!({
+                                    "symbol":    req.symbol,
+                                    "new_owner": req.new_owner,
+                                }),
+                            }),
+                            warp::http::StatusCode::OK,
+                        ),
+                        Err(e) => warp::reply::with_status(
+                            warp::reply::json(&ErrResp { error: e.to_string() }),
+                            warp::http::StatusCode::BAD_REQUEST,
+                        ),
+                    }
+                }
+            }
+        })
+}
+
 
 // ═══════════════════════════════════════════════════════════════════════════
 // SPRINT 8 — FAUCET, AUTH HARDENING, EXPLORER, PROMETHEUS METRICS
