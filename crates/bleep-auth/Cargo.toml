@@ -3,7 +3,7 @@ name = "bleep-auth"
 version = "0.1.0"
 edition = "2021"
 authors = ["Muhammad Attahir <bleepecosystem@gmail.com>"]
-description = "Production-grade authentication and identity layer for BLEEP node operators and dApp developers. Post-quantum credential issuance, JWT session management, role-based access control, validator identity binding, Merkle-chained audit log, and brute-force rate limiting."
+description = " authentication and identity layer for BLEEP node operators and dApp developers. Post-quantum credential issuance, JWT session management, role-based access control, validator identity binding, Merkle-chained audit log, and brute-force rate limiting."
 license = "MIT OR Apache-2.0"
 
 [dependencies]
@@ -50,3 +50,4 @@ bleep-crypto = { path = "../bleep-crypto" }
 [dev-dependencies]
 tokio-test  = "0.4"
 proptest    = "1.4"
+rocksdb      = "0.21.0"
