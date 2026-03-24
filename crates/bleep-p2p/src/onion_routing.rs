@@ -7,14 +7,14 @@
 use std::sync::Arc;
 
 use rand::seq::SliceRandom;
-use tracing::{debug, info, warn};
+use tracing::info;
 
 use crate::ai_security::PeerScoring;
 use crate::error::{P2PError, P2PResult};
 use crate::message_protocol::MessageProtocol;
 use crate::peer_manager::PeerManager;
 use crate::quantum_crypto::{aes_gcm_decrypt, aes_gcm_encrypt, derive_key};
-use crate::types::{MessageType, NodeId, RoutePath, SecureMessage, unix_now};
+use crate::types::{MessageType, NodeId, RoutePath};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CONSTANTS
@@ -70,6 +70,7 @@ pub struct OnionCircuit {
 pub struct OnionRouter {
     peer_manager: Arc<PeerManager>,
     message_protocol: Arc<MessageProtocol>,
+    #[allow(dead_code)]
     scoring: Arc<PeerScoring>,
 }
 
@@ -193,7 +194,7 @@ impl OnionRouter {
         &self,
         sender_id: &NodeId,
         plaintext: &[u8],
-        message_type: MessageType,
+        _message_type: MessageType,
         hop_shared_secrets: &[Vec<u8>],
     ) -> P2PResult<()> {
         let route = self.select_route(sender_id, MAX_HOPS)?;

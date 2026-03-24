@@ -46,6 +46,9 @@ impl fmt::Display for IntegrationError {
 
 impl std::error::Error for IntegrationError {}
 
+/// Result type for consensus integration operations
+pub type IntegrationResult<T> = Result<T, IntegrationError>;
+
 // ==================== PROPOSAL LIFECYCLE ====================
 
 /// Track proposal through consensus and execution

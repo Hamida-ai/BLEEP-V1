@@ -10,19 +10,19 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
 
-use bytes::{Buf, BufMut, Bytes, BytesMut};
+use bytes::{BufMut, Bytes, BytesMut};
 use dashmap::DashMap;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
-use tokio::sync::{mpsc, Mutex, RwLock};
+use tokio::sync::{mpsc, Mutex};
 use tokio::time::timeout;
 use tracing::{debug, error, info, warn};
 
 use crate::error::{P2PError, P2PResult};
 use crate::peer_manager::PeerManager;
 use crate::quantum_crypto::{
-    aes_gcm_decrypt, aes_gcm_encrypt, derive_key, ed25519_verify,
-    kyber_decapsulate, kyber_encapsulate, Ed25519Keypair, KyberKeypair, SessionKey,
+    kyber_decapsulate, kyber_encapsulate, ed25519_verify,
+    Ed25519Keypair, KyberKeypair, SessionKey,
 };
 use crate::types::{NodeId, SecureMessage, MessageType, unix_now};
 
@@ -47,6 +47,7 @@ const READ_TIMEOUT: Duration = Duration::from_secs(30);
 #[derive(Clone)]
 struct Session {
     key: SessionKey,
+    #[allow(dead_code)]
     established_at: u64,
 }
 
@@ -307,7 +308,7 @@ impl MessageProtocol {
         }
     }
 
-    async fn handle_incoming(&self, mut stream: TcpStream, peer_addr: SocketAddr) -> P2PResult<()> {
+    async fn handle_incoming(&self, mut stream: TcpStream, _peer_addr: SocketAddr) -> P2PResult<()> {
         let msg = Self::decode_frame(&mut stream).await?;
         let sender_id = msg.sender_id.clone();
 

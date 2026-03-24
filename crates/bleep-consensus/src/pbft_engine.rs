@@ -134,7 +134,7 @@ impl PbftConsensusEngine {
     /// Process a pre-prepare message (block proposal from the leader).
     ///
     /// SAFETY: Block must already be produced by PoS. PBFT only finalizes.
-    fn pre_prepare(&mut self, block_height: u64, block: &Block) -> Result<(), ConsensusError> {
+    fn pre_prepare(&mut self, block_height: u64, _block: &Block) -> Result<(), ConsensusError> {
         if self.finalized_blocks.contains_key(&block_height) {
             return Err(ConsensusError::ProposalRejected {
                 reason: format!("Block {} already in finalization pipeline", block_height),

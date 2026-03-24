@@ -218,4 +218,11 @@ impl BLEEPZKPModule {
     pub fn load_revocation_tree(_path: &str) -> Result<MerkleTree, BLEEPError> {
         Ok(MerkleTree::new())
     }
+
+    /// Generate a zero-knowledge proof for the given data
+    pub fn generate_proof(&self, data: &[u8]) -> Result<Vec<u8>, BLEEPError> {
+        // For now, use batch proof generation with single item
+        let proofs = self.generate_batch_proofs(vec![data.to_vec()])?;
+        Ok(proofs.into_iter().next().unwrap())
+    }
 }

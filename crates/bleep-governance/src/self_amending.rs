@@ -8,7 +8,7 @@ use sha2::{Digest, Sha256};
 use tch::{CModule, Tensor};
 use crate::{
     quantum_secure::QuantumSecure,
-    zkp_verification::{BLEEPZKPModule, TransactionCircuit},
+    zkp_verification::BLEEPZKPModule,
     interoperability::BLEEPInteroperabilityModule,
 };
 

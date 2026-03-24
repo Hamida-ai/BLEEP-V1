@@ -5,9 +5,7 @@
 //! long-range reorg attempts, and Byzantine double-sign attacks under load.
 //! All scenarios run in-process against a live ConsensusOrchestrator instance.
 
-use std::collections::{HashMap, HashSet};
-use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 // ── Scenario definitions ─────────────────────────────────────────────────────
 
@@ -166,20 +164,20 @@ impl ChaosEngine {
 
     fn run_scenario(&mut self, scenario: ChaosScenario, height: u64) -> ChaosOutcome {
         let start = Instant::now();
-        match &scenario {
+        match scenario {
             ChaosScenario::ValidatorCrash { count } => {
                 let max_safe = (self.validator_count as f64 * self.config.max_crash_fraction) as usize;
-                if *count > max_safe {
-                    ChaosOutcome::fail(scenario, start, height, "crash count exceeds BFT safety bound (f < n/3)")
+                if count > max_safe {
+                    ChaosOutcome::fail(ChaosScenario::ValidatorCrash { count }, start, height, "crash count exceeds BFT safety bound (f < n/3)")
                 } else {
                     // Simulate: crash `count` validators, wait recovery_window, verify consensus resumes.
                     let remaining = self.validator_count - count;
                     let quorum = (self.validator_count * 2 / 3) + 1;
                     if remaining >= quorum {
-                        ChaosOutcome::pass(scenario, start, height, height + 5,
+                        ChaosOutcome::pass(ChaosScenario::ValidatorCrash { count }, start, height, height + 5,
                             &format!("{} validators crashed; {} remaining ≥ quorum {}; consensus resumed in recovery window", count, remaining, quorum))
                     } else {
-                        ChaosOutcome::fail(scenario, start, height, "remaining validators below 2/3 quorum")
+                        ChaosOutcome::fail(ChaosScenario::ValidatorCrash { count }, start, height, "remaining validators below 2/3 quorum")
                     }
                 }
             }
@@ -187,61 +185,61 @@ impl ChaosEngine {
                 let minority = group_a.min(group_b);
                 let majority = group_a.max(group_b);
                 let quorum = (self.validator_count * 2 / 3) + 1;
-                if *majority >= quorum {
+                if majority >= quorum {
                     // Majority partition continues producing blocks; minority stalls.
                     // On heal, minority reorgs to canonical chain.
-                    ChaosOutcome::pass(scenario, start, height, height + self.config.min_blocks_under_partition + 2,
+                    ChaosOutcome::pass(ChaosScenario::NetworkPartition { group_a, group_b }, start, height, height + self.config.min_blocks_under_partition + 2,
                         &format!("partition {}/{} — majority partition ({}) met quorum ({}); {} stalled; healed cleanly", group_a, group_b, majority, quorum, minority))
                 } else {
-                    ChaosOutcome::fail(scenario, start, height, "neither partition reaches 2/3 quorum — liveness halted (expected under symmetric partition)")
+                    ChaosOutcome::fail(ChaosScenario::NetworkPartition { group_a, group_b }, start, height, "neither partition reaches 2/3 quorum — liveness halted (expected under symmetric partition)")
                 }
             }
             ChaosScenario::LongRangeReorg { fork_depth } => {
                 // A finalised block at height (current - fork_depth) cannot be reorganised.
                 // The attacker would need >2/3 stake retrospectively — impossible without breaking safety.
-                if *fork_depth > 6 {
-                    ChaosOutcome::pass(scenario, start, height, height,
+                if fork_depth > 6 {
+                    ChaosOutcome::pass(ChaosScenario::LongRangeReorg { fork_depth }, start, height, height,
                         &format!("long-range reorg from -{} rejected: finalised blocks are irreversible (FinalityManager invariant I-CON3)", fork_depth))
                 } else {
                     // Within the unfinalized window — reorg possible if attacker has >2/3 stake.
-                    ChaosOutcome::pass(scenario, start, height, height,
+                    ChaosOutcome::pass(ChaosScenario::LongRangeReorg { fork_depth }, start, height, height,
                         &format!("short reorg from -{} blocks: within unfinalized window, canonical chain selection by cumulative stake", fork_depth))
                 }
             }
             ChaosScenario::DoubleSign { validator_id } => {
                 // SlashingEngine detects equivocation; 33% stake burned; evidence committed on-chain.
-                ChaosOutcome::pass(scenario, start, height, height + 1,
-                    &format!("double-sign by {} detected: SlashingEngine applied 33% penalty, evidence committed on-chain, validator tombstoned (idempotent, invariant I-C3)", validator_id))
+                let msg = format!("double-sign by {} detected: SlashingEngine applied 33% penalty, evidence committed on-chain, validator tombstoned (idempotent, invariant I-C3)", validator_id);
+                ChaosOutcome::pass(ChaosScenario::DoubleSign { validator_id }, start, height, height + 1, &msg)
             }
             ChaosScenario::TxReplay { tx_id } => {
                 // Nonce monotonicity invariant (I-S5) rejects replayed transactions.
-                ChaosOutcome::pass(scenario, start, height, height,
-                    &format!("tx {} replay rejected by nonce check (I-S5: nonce must be current_nonce + 1); mempool dedup also blocks broadcast", tx_id))
+                let msg = format!("tx {} replay rejected by nonce check (I-S5: nonce must be current_nonce + 1); mempool dedup also blocks broadcast", tx_id);
+                ChaosOutcome::pass(ChaosScenario::TxReplay { tx_id }, start, height, height, &msg)
             }
             ChaosScenario::EclipseAttack { target_validator } => {
                 // Kademlia k=20 prevents full eclipse; validator maintains ≥1 honest peer from seed list.
-                ChaosOutcome::pass(scenario, start, height, height,
-                    &format!("eclipse of {} mitigated: Kademlia k=20 routing diversity; DNS seeds provide re-entry; onion routing prevents IP mapping", target_validator))
+                let msg = format!("eclipse of {} mitigated: Kademlia k=20 routing diversity; DNS seeds provide re-entry; onion routing prevents IP mapping", target_validator);
+                ChaosOutcome::pass(ChaosScenario::EclipseAttack { target_validator }, start, height, height, &msg)
             }
             ChaosScenario::InvalidBlockFlood { count } => {
                 // SPHINCS+ signature validation rejects all unsigned/malformed blocks in O(1) per block.
-                ChaosOutcome::pass(scenario, start, height, height,
+                ChaosOutcome::pass(ChaosScenario::InvalidBlockFlood { count }, start, height, height,
                     &format!("{} invalid blocks: all rejected at SPHINCS+ signature gate before state application; no chain disruption; rate-limit triggered after 100 rejected blocks from same peer", count))
             }
             ChaosScenario::LoadStress { tps, duration_secs } => {
-                let target_tps = *tps as u64;
+                let target_tps = tps as u64;
                 let expected_blocks = duration_secs / 3; // 3s block time
                 let txs_per_block = (target_tps * 3).min(4096);
                 let effective_tps = txs_per_block / 3;
                 let met = effective_tps >= target_tps || txs_per_block == 4096;
                 if met {
-                    ChaosOutcome::pass(scenario, start, height, height + expected_blocks,
+                    ChaosOutcome::pass(ChaosScenario::LoadStress { tps, duration_secs }, start, height, height + expected_blocks,
                         &format!("{} TPS for {}s: {} tx/block × {} blocks = {} total txs; block utilisation {}%; all invariants held",
                             tps, duration_secs, txs_per_block, expected_blocks,
                             txs_per_block * expected_blocks,
                             (txs_per_block * 100) / 4096))
                 } else {
-                    ChaosOutcome::fail(scenario, start, height, &format!("TPS target {} not reached (effective: {})", tps, effective_tps))
+                    ChaosOutcome::fail(ChaosScenario::LoadStress { tps, duration_secs }, start, height, &format!("TPS target {} not reached (effective: {})", tps, effective_tps))
                 }
             }
         }

@@ -19,7 +19,6 @@
 
 use crate::ai_proposal_types::AIProposal;
 use crate::deterministic_inference::InferenceRecord;
-use bleep_crypto::pq_crypto::{DigitalSignature, PublicKey};
 use serde::{Deserialize, Serialize};
 use sha3::{Digest, Sha3_256};
 use std::collections::BTreeMap;
@@ -57,6 +56,9 @@ impl fmt::Display for AttestationError {
 }
 
 impl std::error::Error for AttestationError {}
+
+/// Result type for attestation operations
+pub type AttestationResult<T> = Result<T, AttestationError>;
 
 // ==================== PROOF OF INFERENCE ====================
 

@@ -18,9 +18,7 @@
 
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
-use sha3::Sha3_256;
 use bincode;
-use sha3::Digest;
 use std::fmt;
 
 // ==================== ERROR TYPES ====================

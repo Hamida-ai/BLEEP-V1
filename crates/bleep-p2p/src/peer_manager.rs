@@ -13,14 +13,14 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use dashmap::DashMap;
-use tokio::sync::{broadcast, RwLock};
+use tokio::sync::broadcast;
 use tokio::time::interval;
-use tracing::{debug, info, warn};
+use tracing::{info, warn};
 
 use crate::ai_security::{AnomalyDetector, PeerScoring, SybilDetector, TRUST_HEALTHY_THRESHOLD, TRUST_SUSPICIOUS_THRESHOLD};
 use crate::error::{P2PError, P2PResult};
 use crate::kademlia_dht::KademliaDht;
-use crate::quantum_crypto::{ProofOfIdentity, NodeIdentity, sphincs_verify};
+use crate::quantum_crypto::sphincs_verify;
 use crate::types::{NodeId, PeerInfo, PeerStatus, unix_now};
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -207,7 +207,7 @@ impl PeerManager {
         self.scoring.record_latency(id, latency_ms);
     }
 
-    pub fn check_message_anomaly(&self, id: &NodeId, payload: &[u8], hop_count: u8) -> Option<String> {
+    pub fn check_message_anomaly(&self, _id: &NodeId, payload: &[u8], hop_count: u8) -> Option<String> {
         self.anomaly.check_message(payload, hop_count)
     }
 

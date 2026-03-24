@@ -42,6 +42,9 @@ impl fmt::Display for FeedbackError {
 
 impl std::error::Error for FeedbackError {}
 
+/// Result type for feedback loop operations
+pub type FeedbackResult<T> = Result<T, FeedbackError>;
+
 // ==================== ACCURACY METRICS ====================
 
 /// Track accuracy of AI predictions

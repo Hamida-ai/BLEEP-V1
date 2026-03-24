@@ -304,7 +304,7 @@ impl AIDecisionModule {
             self.anomalous_threshold,
         ];
         
-        let mut min_distance = 100.0;
+        let mut min_distance: f64 = 100.0;
         for threshold in thresholds {
             let distance = (anomaly_score - threshold).abs();
             min_distance = min_distance.min(distance);

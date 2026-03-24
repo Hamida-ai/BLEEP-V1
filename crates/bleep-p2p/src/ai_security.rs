@@ -15,16 +15,12 @@
 //! peers share the same /24 IPv4 prefix (or /48 IPv6 prefix), new peers from
 //! that subnet are marked as Sybil candidates.
 
-use std::collections::HashMap;
 use std::net::{IpAddr, SocketAddr};
-use std::sync::Arc;
-use std::time::{Duration, Instant};
 
 use dashmap::DashMap;
-use parking_lot::RwLock;
-use tracing::{debug, info, warn};
+use tracing::warn;
 
-use crate::types::{NodeId, PeerInfo, PeerStatus, unix_now};
+use crate::types::{NodeId, PeerStatus, unix_now};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CONSTANTS
@@ -136,7 +132,7 @@ impl PeerScoring {
         }
     }
 
-    fn record_mut(&self, id: &NodeId) -> dashmap::mapref::one::RefMut<NodeId, InteractionRecord> {
+    fn record_mut(&self, id: &NodeId) -> dashmap::mapref::one::RefMut<'_, NodeId, InteractionRecord> {
         self.records
             .entry(id.clone())
             .or_insert_with(|| InteractionRecord::new(unix_now()))
