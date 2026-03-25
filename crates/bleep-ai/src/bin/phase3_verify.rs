@@ -7,15 +7,14 @@
 ///
 /// This will execute all Phase 3 AI tests in complete isolation.
 
-use std::collections::{HashMap, VecDeque};
 
 /// Test: Deterministic rounding consistency
 fn test_output_rounding() -> Result<(), String> {
     // Simulate deterministic output rounding
-    let output = vec![1.23456, 2.98765, 3.00001];
-    let scale = 100.0; // 2 decimal places
+    let output: Vec<f64> = vec![1.23456, 2.98765, 3.00001];
+    let scale: f64 = 100.0; // 2 decimal places
     
-    let rounded: Vec<f32> = output
+    let rounded: Vec<f64> = output
         .iter()
         .map(|v| (v * scale).round() / scale)
         .collect();
@@ -212,10 +211,10 @@ fn test_confidence_calibration() -> Result<(), String> {
     // Simulate 10 confidence buckets [0.0-0.1, 0.1-0.2, ..., 0.9-1.0]
     let mut buckets = vec![0u32; 10];
     
-    let confidences = vec![0.05, 0.15, 0.25, 0.95, 0.05, 0.85];
+    let confidences: Vec<f64> = vec![0.05, 0.15, 0.25, 0.95, 0.05, 0.85];
     
     for conf in confidences {
-        let bucket_idx = (conf * 10.0).floor() as usize;
+        let bucket_idx = (conf * 10.0_f64).floor() as usize;
         let bucket_idx = bucket_idx.min(9);
         buckets[bucket_idx] += 1;
     }
@@ -261,6 +260,7 @@ fn test_protocol_invariants() -> Result<(), String> {
     struct ProtocolInvariants {
         min_validators: u32,
         min_participation_rate: f64,
+        #[allow(dead_code)]
         mode_switch_cooldown: u64,
     }
     
@@ -292,6 +292,7 @@ fn test_protocol_invariants() -> Result<(), String> {
 
 /// Test: Proposal state machine
 fn test_proposal_state_machine() -> Result<(), String> {
+    #[allow(dead_code)]
     #[derive(Debug, Clone, PartialEq)]
     enum ProposalState {
         Proposed,
@@ -303,10 +304,8 @@ fn test_proposal_state_machine() -> Result<(), String> {
         ExecutionFailed,
     }
     
-    let mut state = ProposalState::Proposed;
-    
     // Valid transitions
-    state = ProposalState::InConsensus;
+    let mut state = ProposalState::InConsensus;
     assert_eq!(state, ProposalState::InConsensus);
     
     state = ProposalState::Approved;
@@ -341,6 +340,7 @@ fn test_performance_scoring() -> Result<(), String> {
 
 /// Test: Healing action types
 fn test_healing_actions() -> Result<(), String> {
+    #[allow(dead_code)]
     #[derive(Debug)]
     enum HealingAction {
         ShardRollback,

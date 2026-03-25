@@ -12,7 +12,7 @@
 
 use serde::{Serialize, Deserialize};
 use sha2::{Digest, Sha256};
-use log::{info, warn, error};
+use log::{info};
 use thiserror::Error;
 use std::collections::BTreeMap;
 use super::constitution::{
@@ -451,6 +451,7 @@ pub struct ProposalLifecycleManager {
     voting_duration: u64,
     
     /// Voting threshold (basis points)
+    #[allow(dead_code)]
     voting_threshold: u64,
 }
 

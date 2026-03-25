@@ -13,7 +13,7 @@
 
 use serde::{Serialize, Deserialize};
 use sha2::{Digest, Sha256};
-use log::{info, warn, error};
+use log::{info, warn};
 use thiserror::Error;
 use std::collections::BTreeMap;
 

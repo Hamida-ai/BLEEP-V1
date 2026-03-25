@@ -12,7 +12,7 @@
 
 use serde::{Serialize, Deserialize};
 use sha2::{Digest, Sha256};
-use log::{info, warn, error};
+use log::{info, warn};
 use thiserror::Error;
 use std::collections::BTreeMap;
 
@@ -517,7 +517,7 @@ impl BLEEPConstitution {
     pub fn add_constraint(
         &mut self,
         constraint: ConstitutionalConstraint,
-        current_epoch: u64,
+        _current_epoch: u64,
     ) -> Result<(), ConstitutionError> {
         if constraint.is_immutable {
             // Immutable constraints cannot be added via amendment

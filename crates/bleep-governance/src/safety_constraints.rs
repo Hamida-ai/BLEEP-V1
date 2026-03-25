@@ -9,11 +9,10 @@
 // 5. Constraint failures are logged and auditable
 // 6. Worst-case scenarios are simulated deterministically
 
-use crate::apip::{APIP, RuleChange, SafetyBounds, RiskLevel};
-use crate::protocol_rules::{ProtocolRule, ProtocolRuleSet, RuleValue};
-use log::{info, warn, error};
+use crate::apip::APIP;
+use crate::protocol_rules::ProtocolRuleSet;
+use log::{info};
 use thiserror::Error;
-use std::collections::HashMap;
 
 #[derive(Debug, Error)]
 pub enum SafetyConstraintError {

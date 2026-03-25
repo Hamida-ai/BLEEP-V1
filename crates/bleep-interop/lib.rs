@@ -168,6 +168,15 @@ pub mod interoperability {
         pub fn deploy_to_solana(&self, _code: &str) -> Result<String, String> {
             Ok("0xSOLANAADDRESS".to_string())
         }
+
+        /// Adapt logging data for a specific blockchain (stub for governance logging)
+        pub async fn adapt(&self, _chain: &str, data: &[u8]) -> Result<Vec<u8>, String> {
+            // Stub: returns the hashed data for logging purposes
+            use sha2::{Sha256, Digest};
+            let mut hasher = Sha256::new();
+            hasher.update(data);
+            Ok(hasher.finalize().to_vec())
+        }
     }
 
     impl Default for BLEEPInteroperabilityModule {

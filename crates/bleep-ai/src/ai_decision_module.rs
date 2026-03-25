@@ -176,6 +176,7 @@ pub struct AIDecisionModule {
                                 // >= this: critical
     
     /// Minimum confidence for output
+    #[allow(dead_code)]
     min_confidence: f64,
 }
 

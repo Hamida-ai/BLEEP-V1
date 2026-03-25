@@ -27,15 +27,16 @@ pub struct AIResponse {
 }
 
 pub struct BLEEPAIAssistant {
-    wallet: Arc<BLEEPWallet>,
-    governance: Arc<BLEEPGovernance>,
-    security: Arc<QuantumSecure>,
-    optimizer: Arc<SmartContractOptimizer>,
-    interoperability: Arc<InteroperabilityModule>,
+    pub wallet: Arc<BLEEPWallet>,
+    pub governance: Arc<BLEEPGovernance>,
+    pub security: Arc<QuantumSecure>,
+    pub optimizer: Arc<SmartContractOptimizer>,
+    pub interoperability: Arc<InteroperabilityModule>,
+    #[allow(dead_code)]
     analytics: Arc<BLEEPAnalytics>,
-    compliance: Arc<ComplianceModule>,
-    sharding: Arc<AdaptiveSharding>,
-    energy_monitor: Arc<EnergyMonitor>,
+    pub compliance: Arc<ComplianceModule>,
+    pub sharding: Arc<AdaptiveSharding>,
+    pub energy_monitor: Arc<EnergyMonitor>,
 }
 
 impl BLEEPAIAssistant {

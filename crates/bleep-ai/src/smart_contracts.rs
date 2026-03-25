@@ -29,6 +29,7 @@ impl SmartContractOptimizer {
 }
 
 // 🚀 **Governance & AI-Powered Decision Making**
+#[allow(dead_code)]
 #[derive(Deserialize, Serialize, Clone)]
 pub struct ContractProposal {
     pub contract_name: String,
@@ -40,6 +41,7 @@ pub struct ContractProposal {
     pub executed: bool,
 }
 
+#[allow(dead_code)]
 #[derive(Serialize)]
 pub struct ApiResponse {
     pub status: String,
@@ -48,6 +50,7 @@ pub struct ApiResponse {
 }
 
 // **Smart Contract Execution Module**
+#[allow(dead_code)]
 pub struct SmartContractAutomation {
     governance: Arc<RwLock<SelfAmendingGovernance>>,
     ai_decision: Arc<BLEEPAIDecisionModule>,
@@ -189,6 +192,7 @@ impl SmartContractAutomation {
 }
 
 // 🌐 **REST API Routes**
+#[allow(dead_code)]
 async fn deploy_contract(input: web::Json<ContractProposal>, engine: web::Data<SmartContractAutomation>) -> impl Responder {
     match engine.deploy_cross_chain_contract(input.0).await {
         Ok(res) => HttpResponse::Ok().json(res),
@@ -196,6 +200,7 @@ async fn deploy_contract(input: web::Json<ContractProposal>, engine: web::Data<S
     }
 }
 
+#[allow(dead_code)]
 async fn vote(input: web::Json<(u64, bool)>, engine: web::Data<SmartContractAutomation>) -> impl Responder {
     match engine.vote_on_proposal(input.0 .0, input.0 .1).await {
         Ok(res) => HttpResponse::Ok().json(res),
@@ -203,6 +208,7 @@ async fn vote(input: web::Json<(u64, bool)>, engine: web::Data<SmartContractAuto
     }
 }
 
+#[allow(dead_code)]
 async fn audit_contract(input: web::Json<String>, engine: web::Data<SmartContractAutomation>) -> impl Responder {
     match engine.audit_smart_contract(input.0).await {
         Ok(res) => HttpResponse::Ok().json(res),
