@@ -176,7 +176,7 @@ async fn run(cmd: Commands) -> Result<()> {
 
                     match wallet_opt {
                         Some(w) if w.can_sign() => {
-                            let payload = tx_payload(&sender, &to, amount_u64, ts);
+                            let amount_u64: u64 = amount.parse()?; // if it's a string
                             // Decrypt SK (empty password = default; users who locked
                             // with a custom password set BLEEP_WALLET_PASSWORD env var)
                             let password = std::env::var("BLEEP_WALLET_PASSWORD")
@@ -241,24 +241,39 @@ async fn run(cmd: Commands) -> Result<()> {
         },
 
         // ── AI ────────────────────────────────────────────────────────────
-        Commands::Ai { task } => match task {
-            AiCommand::Ask { prompt } => {
-                let mut ai = BLEEPAIAssistant::new(Arc<bleep_ai::wallet::BLEEPWallet>, /Arc<bleep_ai::governance::BLEEPGovernance>, Arc<bleep_ai::security::QuantumSecure>, Arc<bleep_ai::smart_contracts::SmartContractOptimizer>, Arc<bleep_ai::interoperability::InteroperabilityModule>, Arc<bleep_ai::analytics::BLEEPAnalytics>, Arc<bleep_ai::compliance::ComplianceModule>, Arc<bleep_ai::sharding::AdaptiveSharding>, Arc<bleep_ai::energy_monitor::EnergyMonitor> );
-                let req = AIRequest {
-                    user_id: "cli-user".to_string(),
-                    query:   prompt.clone(),
-                };
+        use std::sync::Arc;
+
+Commands::Ai { task } => match task {
+    AiCommand::Ask { prompt } => {
+        let mut ai = BLEEPAIAssistant::new(
+            Arc::new(bleep_ai::wallet::BLEEPWallet::new()),
+            Arc::new(bleep_ai::governance::BLEEPGovernance::new()),
+            Arc::new(bleep_ai::security::QuantumSecure::new()),
+            Arc::new(bleep_ai::smart_contracts::SmartContractOptimizer::new()),
+            Arc::new(bleep_ai::interoperability::InteroperabilityModule::new()),
+            Arc::new(bleep_ai::analytics::BLEEPAnalytics::new()),
+            Arc::new(bleep_ai::compliance::ComplianceModule::new()),
+            Arc::new(bleep_ai::sharding::AdaptiveSharding::new()),
+            Arc::new(bleep_ai::energy_monitor::EnergyMonitor::new()),
+        );
+
+        let req = AIRequest {
+            user_id: "cli-user".to_string(),
+            query: prompt.clone(),
+        };
+    }
+}
                 let resp = ai.process_request(req).await;
                 println!("🧠 AI Response:\n{}", resp.response);
                 if let Some(insights) = resp.insights {
                     println!("💡 Insights: {}", insights);
                 }
             }
-            AiCommand::Status => {
+            AiCommand::Status >= {
                 println!("AI advisory engine: ✅ ready (deterministic consensus mode)");
                 println!("Inference engine: pure Rust (no external runtime required)");
             }
-        },
+        }
 
         // ── Governance ────────────────────────────────────────────────────
         Commands::Governance { task } => {
@@ -362,7 +377,7 @@ async fn run(cmd: Commands) -> Result<()> {
                     .map_err(|e| anyhow!("Restore failed: {}", e))?;
                 println!("✅ State restored from {}", snapshot_path);
             }
-        },
+        }
 
         // ── Telemetry ─────────────────────────────────────────────────────
         Commands::Telemetry => {
@@ -689,10 +704,10 @@ async fn run(cmd: Commands) -> Result<()> {
                 }
             }
         },
-    }
+    
 
     Ok(())
-}
+
 
 // ── RPC HTTP helpers ─────────────────────────────────────────────────────────
 
