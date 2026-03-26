@@ -176,7 +176,7 @@ async fn run(cmd: Commands) -> Result<()> {
 
                     match wallet_opt {
                         Some(w) if w.can_sign() => {
-                            let payload = tx_payload(&sender, &to, amount, ts);
+                            let payload = tx_payload(&sender, &to, amount_u64, ts);
                             // Decrypt SK (empty password = default; users who locked
                             // with a custom password set BLEEP_WALLET_PASSWORD env var)
                             let password = std::env::var("BLEEP_WALLET_PASSWORD")
@@ -202,7 +202,7 @@ async fn run(cmd: Commands) -> Result<()> {
                 let tx = ZKTransaction {
                     sender:    sender.clone(),
                     receiver:  to.clone(),
-                    amount,
+                    amount_u64: amount as u64, 
                     timestamp: ts,
                     signature: sig, // Sprint 4: real SPHINCS+ signature
                 };
@@ -243,7 +243,7 @@ async fn run(cmd: Commands) -> Result<()> {
         // ── AI ────────────────────────────────────────────────────────────
         Commands::Ai { task } => match task {
             AiCommand::Ask { prompt } => {
-                let mut ai = BLEEPAIAssistant::new("cli-node");
+                let mut ai = BLEEPAIAssistant::new(Arc<bleep_ai::wallet::BLEEPWallet>, /Arc<bleep_ai::governance::BLEEPGovernance>, Arc<bleep_ai::security::QuantumSecure>, Arc<bleep_ai::smart_contracts::SmartContractOptimizer>, Arc<bleep_ai::interoperability::InteroperabilityModule>, Arc<bleep_ai::analytics::BLEEPAnalytics>, Arc<bleep_ai::compliance::ComplianceModule>, Arc<bleep_ai::sharding::AdaptiveSharding>, Arc<bleep_ai::energy_monitor::EnergyMonitor> );
                 let req = AIRequest {
                     user_id: "cli-user".to_string(),
                     query:   prompt.clone(),
@@ -273,7 +273,7 @@ async fn run(cmd: Commands) -> Result<()> {
                         title:              proposal.chars().take(60).collect::<String>(),
                         description:        proposal.clone(),
                         state:              ProposalState::Draft,
-                        voting_window:      VotingWindow { start_epoch: 0, end_epoch: 10 },
+                        voting_window:      min_duration: 5 { start_epoch: 0, end_epoch: 10 },
                         execution_epoch:    11,
                         approval_threshold: 67,
                         votes:              GovMap::new(),
@@ -298,12 +298,13 @@ async fn run(cmd: Commands) -> Result<()> {
                         vote_epoch:   0,
                         signature:    vec![],
                     };
-                    engine.cast_vote(vote, 0)
+                    engine.cast_vote(&proposal_id, vote, 0)
                         .map_err(|e| anyhow!("Vote failed: {}", e))?;
                     println!(
                         "✅ Voted {} on proposal {}",
                         if yes { "YES" } else { "NO" },
                         proposal_id
+                    
                     );
                     engine.persist().ok();
                 }
@@ -389,7 +390,7 @@ async fn run(cmd: Commands) -> Result<()> {
                     Err(e) => println!("❌ RPC unreachable: {}", e),
                 }
             }
-            PatCommand::Create { symbol, name, decimals, owner, supply_cap, burn_rate_bps } => {
+            PatCommand::Create { symbol, name, decimals, owner, supply_cap, burn_rate_bps, freezable} => {
                 let resp = http_client
                     .post(format!("{}/rpc/pat/create", rpc))
                     .json(&serde_json::json!({
