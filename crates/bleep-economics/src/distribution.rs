@@ -254,7 +254,7 @@ impl ValidatorEmissionSchedule {
 
     /// Annual emission amount for a given year (1-indexed).
     /// Year 5+ uses the 4% steady-state rate.
-    pub fn annual_emission_for_year(year: u64) -> u128 {
+    pub fn annual_emission_for_year(year: u128) -> u128 {
         let pct = if year == 0 {
             VALIDATOR_EMISSION_YEAR[0] // treat year 0 as year 1
         } else {
@@ -266,7 +266,7 @@ impl ValidatorEmissionSchedule {
 
     /// Epoch-level emission for a given year (assuming `epochs_per_year` epochs).
     /// Capped at the remaining pool balance.
-    pub fn epoch_emission(&self, year: u64, epochs_per_year: u64) -> u128 {
+    pub fn epoch_emission(&self, year: u128, epochs_per_year: u128) -> u128 {
         if self.remaining == 0 || epochs_per_year == 0 {
             return 0;
         }
@@ -478,7 +478,7 @@ impl GenesisAllocation {
         bucket: AllocationBucket,
         amount: u128,
         current_epoch: u64,
-        year: u64,
+        _year: u64,
         governance_approved: bool,
     ) -> Result<u128, DistributionError> {
         // ── Governance gate ──────────────────────────────────────────────────
@@ -604,8 +604,9 @@ pub struct BucketSnapshot {
     pub launch_unlock_micro:   u128,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct DistributionSnapshot {
+    
     pub buckets:                  Vec<BucketSnapshot>,
     pub total_allocated_micro:    u128,
     pub total_drawn_micro:        u128,

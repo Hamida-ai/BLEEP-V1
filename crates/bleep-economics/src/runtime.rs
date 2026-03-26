@@ -26,12 +26,12 @@ use serde::{Deserialize, Serialize};
 use tracing::{info, warn};
 
 use crate::{
-    CanonicalTokenomicsEngine, EmissionType, BurnType, TokenomicsError,
-    FeeMarket, ShardCongestion, TransactionType, ResourceUsage, FeeMarketError,
-    ValidatorIncentivesEngine, ValidatorMetrics, ValidatorError, RewardRecord,
-    OracleBridgeEngine, PriceUpdate, OracleSource, OracleError,
-    integration::{BleepEconomics, EconomicError},
-    distribution::FeeDistribution,
+    EmissionType, BurnType, TokenomicsError,
+    ShardCongestion, FeeMarketError,
+    ValidatorError, RewardRecord,
+    PriceUpdate, OracleError,
+    integration::{BleepEconomics,},
+    distribution::FeeDistribution, validator_incentives::ValidatorMetrics,
 };
 
 // ── Public re-exports for convenience ────────────────────────────────────────
@@ -111,11 +111,11 @@ impl BleepEconomicsRuntime {
             epoch_history: std::collections::VecDeque::with_capacity(100),
         };
         // Register the default BLEEP/USD shard on the fee market
-        runtime.state.fee_market.record_shard_congestion(0, ShardCongestion {
+        runtime.state.fee_market.record_shard_congestion(ShardCongestion {
             shard_id: 0,
-            pending_txs: 0,
-            utilisation_bps: 5000,
-            gas_price_multiplier: 1000,
+            pending_txns: 0,
+            utilization_bps: 5000,
+    
         });
         runtime
     }
@@ -153,11 +153,11 @@ impl BleepEconomicsRuntime {
         info!("  💹 New base fee: {} µBLEEP", new_base_fee);
 
         // ── 2. Record shard utilisation ───────────────────────────────────────
-        self.state.fee_market.record_shard_congestion(0, ShardCongestion {
+        self.state.fee_market.record_shard_congestion(ShardCongestion {
             shard_id: 0,
-            pending_txs: (input.block_count * 100) as u32,
-            utilisation_bps: input.avg_utilisation_bps,
-            gas_price_multiplier: (new_base_fee / 1000).max(1000) as u64,
+            pending_txns: (input.block_count * 100) as u32,
+            utilization_bps: input.avg_utilisation_bps,
+            
         });
 
         // ── 3. Oracle price aggregation ───────────────────────────────────────
