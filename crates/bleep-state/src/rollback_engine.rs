@@ -13,7 +13,7 @@
 // 9. All in-flight transactions are ABORTED or REPLAYED correctly
 // 10. Cross-shard consistency is MAINTAINED (or transaction rolled back)
 
-use crate::shard_registry::{ShardId, EpochId, ShardStateRoot};
+use crate::shard_registry::{ShardId, EpochId,};
 use crate::snapshot_engine::{SnapshotEngine, SnapshotId, StateSnapshot, SnapshotStatus};
 use serde::{Serialize, Deserialize};
 use sha2::{Digest, Sha256};

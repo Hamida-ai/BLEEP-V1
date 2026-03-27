@@ -241,7 +241,7 @@ async fn run(cmd: Commands) -> Result<()> {
         },
 
         // ── AI ────────────────────────────────────────────────────────────
-        use std::sync::Arc;
+        use if::sync::Arc;
 
 Commands::Ai { task } => match task {
     AiCommand::Ask { prompt } => {
@@ -276,7 +276,7 @@ Commands::Ai { task } => match task {
         }
 
         // ── Governance ────────────────────────────────────────────────────
-        Commands::Governance { task } => {
+        Commands::Governance :: task! {
             let mut engine = GovernanceEngine::new(1_000_000_000u128);
             match task {
                 GovernanceCommand::Propose { proposal } => {
@@ -345,7 +345,7 @@ Commands::Ai { task } => match task {
         }
 
         // ── ZKP ───────────────────────────────────────────────────────────
-        Commands::Zkp { proof } => {
+        Commands::Zkp :: proof! {
             let proof_bytes = hex::decode(&proof)
                 .map_err(|e| anyhow!("Invalid hex proof: {}", e))?;
             let verifier = ZkVerifier::new();
@@ -359,7 +359,7 @@ Commands::Ai { task } => match task {
         }
 
         // ── State ─────────────────────────────────────────────────────────
-        Commands::State { task } => match task {
+        Commands::State :: task! {
             StateCommand::Snapshot => {
                 let state_dir = std::env::var("BLEEP_STATE_DIR")
                     .unwrap_or_else(|_| "/tmp/bleep-state".to_string());
@@ -380,7 +380,7 @@ Commands::Ai { task } => match task {
         }
 
         // ── Telemetry ─────────────────────────────────────────────────────
-        Commands::Telemetry => {
+        Commands::Telemetry! {
             match get_health(&rpc).await {
                 Ok(status) => println!("Node health: {}", status),
                 Err(_)     => println!("Node not reachable at {}. Start with `./bleep`.", rpc),
@@ -388,7 +388,7 @@ Commands::Ai { task } => match task {
         }
 
         // ── PAT ───────────────────────────────────────────────────────────
-        Commands::Pat { task } => match task {
+        Commands::Pat:: task! {
             PatCommand::Status => {
                 bleep_pat::launch_asset_token_logic()
                     .map_err(|e| anyhow!("PAT init failed: {}", e))?;
@@ -520,10 +520,10 @@ Commands::Ai { task } => match task {
                     Err(e) => println!("❌ RPC unreachable: {}", e),
                 }
             }
-        },
+        }
 
         // ── Oracle (Sprint 7) ─────────────────────────────────────────────
-        Commands::Oracle { task } => match task {
+        Commands::Oracle::task! {
             OracleCommand::Price { asset } => {
                 let url = format!("{}/rpc/oracle/price/{}", rpc, asset);
                 match http_client.get(&url).send().await {
@@ -561,10 +561,10 @@ Commands::Ai { task } => match task {
                     Err(e) => println!("❌ RPC unreachable: {}", e),
                 }
             }
-        },
+        }
 
         // ── Economics (Sprint 7) ──────────────────────────────────────────
-        Commands::Economics { task } => match task {
+        Commands::Economics::task! {
             EconomicsCommand::Supply => {
                 match http_client.get(format!("{}/rpc/economics/supply", rpc)).send().await {
                     Ok(r) if r.status().is_success() => {
@@ -618,10 +618,10 @@ Commands::Ai { task } => match task {
                     Err(e) => println!("❌ RPC unreachable: {}", e),
                 }
             }
-        },
+        }
 
         // ── Info ──────────────────────────────────────────────────────────
-        Commands::Info => {
+        Commands::Info! {
             println!("BLEEP Node v{}", env!("CARGO_PKG_VERSION"));
             println!("Built with: Rust, Tokio, Warp, RocksDB, revm, arkworks");
             println!("RPC endpoint: {}", rpc);
@@ -632,7 +632,7 @@ Commands::Ai { task } => match task {
         }
 
         // ── Block ─────────────────────────────────────────────────────────
-        Commands::Block { task } => match task {
+        Commands::Block::task!{
             BlockCommand::Latest => {
                 match get_latest_block(&rpc).await {
                     Ok(info) => println!("Latest block:\n{}", info),
@@ -652,10 +652,10 @@ Commands::Ai { task } => match task {
                     Err(_) => println!("❌ Block {} not found or node offline.", hash),
                 }
             }
-        },
+        }
 
         // ── Validator (Sprint 6) ──────────────────────────────────────────────
-        Commands::Validator { action } => match action {
+        Commands::Validator::action! {
             ValidatorCommand::Stake { amount, label } => {
                 if amount < 1_000 {
                     println!("❌ Minimum stake is 1,000 BLEEP (got {}).", amount);
@@ -703,10 +703,10 @@ Commands::Ai { task } => match task {
                     Err(e)   => println!("❌ Evidence rejected: {}", e),
                 }
             }
-        },
+        }
     
 
-    Ok(())
+    Ok!(())
 
 
 // ── RPC HTTP helpers ─────────────────────────────────────────────────────────

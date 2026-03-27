@@ -19,7 +19,6 @@ use crate::state_diff::{
     AllowanceUpdate, BalanceDelta, PATEvent, PATOutcome, PATStateDiff, SupplyDelta, TokenMutation,
 };
 use crate::token::{AllowanceTable, PATToken, TokenLedger};
-use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
 // ─────────────────────────────────────────────────────────────────────────────

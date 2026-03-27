@@ -24,10 +24,10 @@ use crate::engine::{PATEngine, RegistryView};
 use crate::error::{PATError, PATResult};
 use crate::gas_model::PATGasModel;
 use crate::intent::{PATIntent, PATIntentKind};
-use crate::state_diff::{AllowanceUpdate, BalanceDelta, PATEvent, PATOutcome, PATStateDiff, SupplyDelta, TokenMutation};
+use crate::state_diff::{PATEvent, PATOutcome, PATStateDiff, TokenMutation};
 use crate::token::{AllowanceTable, PATToken, TokenLedger};
 use std::collections::{BTreeMap, HashSet};
-use tracing::{debug, info, warn};
+use tracing::{info,};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PAT REGISTRY
