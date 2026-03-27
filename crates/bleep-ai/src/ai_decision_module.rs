@@ -176,6 +176,7 @@ pub struct AIDecisionModule {
                                 // >= this: critical
     
     /// Minimum confidence for output
+    #[allow(dead_code)]
     min_confidence: f64,
 }
 
@@ -304,7 +305,7 @@ impl AIDecisionModule {
             self.anomalous_threshold,
         ];
         
-        let mut min_distance = 100.0;
+        let mut min_distance: f64 = 100.0;
         for threshold in thresholds {
             let distance = (anomaly_score - threshold).abs();
             min_distance = min_distance.min(distance);
