@@ -213,4 +213,8 @@ impl BleepEconomicsRuntime {
     pub fn total_minted(&self) -> u128 {
         self.state.tokenomics.supply_state.total_minted
     }
+
+    pub fn get_epoch_output(&self, epoch: u64) -> Option<EpochOutput> {
+        self.epoch_history.iter().find(|entry| entry.epoch == epoch).cloned()
+    }
 }

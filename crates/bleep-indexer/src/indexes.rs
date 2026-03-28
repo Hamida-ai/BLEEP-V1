@@ -9,7 +9,7 @@
 // All records carry the originating `block_height` for rollback purposes.
 // ============================================================================
 
-use crate::errors::{IndexerError, IndexerResult};
+use crate::errors::{IndexerResult};
 use crate::events::*;
 use dashmap::DashMap;
 use serde::{Deserialize, Serialize};

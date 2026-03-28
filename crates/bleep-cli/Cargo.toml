@@ -33,4 +33,4 @@ bleep-p2p         = { path = "../bleep-p2p" }
 
 [[bin]]
 name = "bleep-cli"
-path = "src/bin/cli.rs"
+path = "src/cli.rs"

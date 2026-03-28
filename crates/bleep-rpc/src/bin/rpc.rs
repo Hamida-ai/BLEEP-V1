@@ -10,11 +10,11 @@
 //!   POST /tx/send  { to, amount }    → { tx_id }
 //!   GET  /telemetry                  → { blocks, txs, uptime_secs }
 
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc,};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde::{Deserialize, Serialize};
-use tracing::{error, info};
+use tracing::{info};
 use warp::{Filter, Rejection, Reply};
 
 // ─── Shared state the RPC server reads ───────────────────────────────────────

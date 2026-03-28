@@ -58,11 +58,8 @@ pub struct ValidatorBinding {
 
 // Internal challenge record
 struct PendingChallenge {
-    challenge_id:        String,
     /// SHA3-256(shared_secret ∥ challenge_id) — what we expect from the operator
     expected_response:   String,
-    /// Kyber ciphertext sent to the operator (for reference / audit)
-    kyber_ciphertext:    Vec<u8>,
     issued_at:           chrono::DateTime<chrono::Utc>,
 }
 
@@ -134,9 +131,7 @@ impl ValidatorBindingRegistry {
         };
 
         self.pending.insert(challenge_id.clone(), PendingChallenge {
-            challenge_id: challenge_id.clone(),
             expected_response,
-            kyber_ciphertext: kyber_ciphertext.clone(),
             issued_at: chrono::Utc::now(),
         });
 

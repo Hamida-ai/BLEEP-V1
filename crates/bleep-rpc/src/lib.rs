@@ -2156,8 +2156,8 @@ fn explorer_api_blocks(
         .map(|st: Arc<RpcState>| {
             let height = st.chain_height.load(std::sync::atomic::Ordering::Relaxed);
             let blocks: Vec<serde_json::Value> = (0..10u64)
-                .filter_map(|i| height.checked_sub(i))
-                .map(|h| serde_json::json!({
+                .filter_map(|i| height.checked_sub(i).map(|h| (i, h)))
+                .map(|(i, h)| serde_json::json!({
                     "height":    h,
                     "hash":      format!("{:064x}", h ^ 0xb1ee_b1ee_b1ee_b1ee),
                     "tx_count":  (h % 64) as u32,
@@ -2181,15 +2181,28 @@ fn explorer_api_validators(
         .map(|st: Arc<RpcState>| {
             let height = st.chain_height.load(std::sync::atomic::Ordering::Relaxed);
             // Return the 7-validator testnet set
-            let validators: Vec<serde_json::Value> = (0..7usize).map(|i| serde_json::json!({
-                "id":            format!("validator-{}", i),
-                "stake":         10_000_000u64,
-                "status":        "active",
-                "blocks_signed": height.saturating_sub((i as u64) * 3),
-                "uptime_pct":    99.5 - (i as f64) * 0.1,
-                "region":        ["us-east-1","eu-west-1","ap-southeast-1",
-                                  "us-west-2","sa-east-1","af-south-1","ap-northeast-1"][i],
-            })).collect();
+            let regions = [
+                "us-east-1",
+                "eu-west-1",
+                "ap-southeast-1",
+                "us-west-2",
+                "sa-east-1",
+                "af-south-1",
+                "ap-northeast-1",
+            ];
+            let validators: Vec<serde_json::Value> = (0..7usize)
+                .map(|i| {
+                    let region = regions[i];
+                    serde_json::json!({
+                        "id":            format!("validator-{}", i),
+                        "stake":         10_000_000u64,
+                        "status":        "active",
+                        "blocks_signed": height.saturating_sub((i as u64) * 3),
+                        "uptime_pct":    99.5 - (i as f64) * 0.1,
+                        "region":        region,
+                    })
+                })
+                .collect();
             warp::reply::json(&serde_json::json!({ "validators": validators, "count": 7 }))
         })
 }

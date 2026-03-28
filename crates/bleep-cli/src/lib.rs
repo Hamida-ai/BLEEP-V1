@@ -115,8 +115,8 @@ pub enum TxCommand {
     Send {
         /// Recipient BLEEP1 address
         to: String,
-        /// Amount in BLEEP (8 decimal places)
-        amount: f64,
+        /// Amount in BLEEP base units
+        amount: u64,
     },
     /// Retrieve transaction history
     History,
