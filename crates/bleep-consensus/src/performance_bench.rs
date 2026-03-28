@@ -4,7 +4,6 @@
 //! Measures end-to-end transaction throughput including state application,
 //! Merkle root computation, block signature, and Groth16 proof generation.
 
-use std::time::{Duration, Instant};
 use std::collections::VecDeque;
 
 pub const BENCHMARK_DURATION_SECS: u64   = 3_600; // 1 hour
@@ -125,6 +124,17 @@ impl PerformanceBenchmark {
             tps_samples:    Vec::new(),
             peak_tps:       0,
             min_tps:        u64::MAX,
+        }
+    }
+
+    /// Record a block's timing metrics for benchmark analysis.
+    pub fn record_block(&mut self, tx_count: usize, proof_time_ms: u64, block_time_ms: u64) {
+        self.total_blocks += 1;
+        self.total_block_ms += block_time_ms;
+        self.total_proof_ms += proof_time_ms;
+        self.total_txs += tx_count as u64;
+        if tx_count >= MAX_TXS_PER_BLOCK {
+            self.full_blocks += 1;
         }
     }
 

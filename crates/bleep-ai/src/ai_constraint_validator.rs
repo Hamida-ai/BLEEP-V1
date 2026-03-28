@@ -29,7 +29,6 @@ use crate::ai_proposal_types::{
     ValidatorSecurityProposal,
 };
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
 use std::fmt;
 
 // ==================== ERROR TYPES ====================
@@ -64,6 +63,9 @@ impl fmt::Display for ConstraintError {
 }
 
 impl std::error::Error for ConstraintError {}
+
+/// Result type for constraint validation operations
+pub type ConstraintResult<T> = Result<T, ConstraintError>;
 
 // ==================== PROTOCOL INVARIANTS ====================
 
@@ -350,7 +352,7 @@ impl ConstraintValidator {
 
     fn validate_mode_switch_cooldown(
         &mut self,
-        proposal: &ConsensusModeProposal,
+        _proposal: &ConsensusModeProposal,
     ) -> ConstraintResult<()> {
         let epochs_since_last_switch =
             self.context.current_epoch - self.context.last_mode_switch_epoch;

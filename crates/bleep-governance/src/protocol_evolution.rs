@@ -10,11 +10,11 @@
 // 6. Rollback is possible if invariants are violated
 // 7. Protocol versions are tracked for fork detection
 
-use crate::apip::{APIP, APIPStatus, RiskLevel};
-use crate::protocol_rules::{ProtocolRule, ProtocolRuleSet, RuleVersion};
+use crate::apip::{APIP, APIPStatus};
+use crate::protocol_rules::ProtocolRuleSet;
 use crate::safety_constraints::{SafetyConstraintsEngine, ValidationReport};
 use crate::ai_reputation::{AIReputationTracker, ProposalOutcome};
-use log::{info, warn, error};
+use log::{info, warn};
 use thiserror::Error;
 use serde::{Serialize, Deserialize};
 use std::collections::HashMap;

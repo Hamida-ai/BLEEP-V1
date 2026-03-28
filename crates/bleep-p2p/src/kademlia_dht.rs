@@ -8,17 +8,16 @@
 //! - Parallel alpha=3 lookups (iterative closest-node algorithm)
 //! - Bucket refresh on a background timer
 
-use std::collections::{BTreeMap, HashMap, HashSet, VecDeque};
+use std::collections::VecDeque;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use dashmap::DashMap;
-use tokio::sync::{Mutex, RwLock};
+use tokio::sync::RwLock;
 use tokio::time::interval;
-use tracing::{debug, info, warn};
+use tracing::{debug, info};
 
-use crate::error::{P2PError, P2PResult};
 use crate::types::{NodeId, PeerInfo, unix_now};
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -28,6 +27,7 @@ use crate::types::{NodeId, PeerInfo, unix_now};
 /// Max peers per K-bucket.
 const K: usize = 20;
 /// Parallel lookup concurrency.
+#[allow(dead_code)]
 const ALPHA: usize = 3;
 /// Number of K-buckets (one per bit in the 256-bit key space).
 const BUCKET_COUNT: usize = 256;
@@ -96,6 +96,7 @@ impl KBucket {
         self.entries.iter().collect()
     }
 
+    #[allow(dead_code)]
     fn oldest_entry(&self) -> Option<&BucketEntry> {
         self.entries.front()
     }

@@ -120,6 +120,5 @@ pub fn init_governance() -> Result<ProtocolEvolutionOrchestrator, Box<dyn std::e
 pub mod live_governance;
 
 pub use live_governance::{
-    LiveGovernanceEngine, GovernanceConfig, Proposal, ProposalState,
-    Vote, GovernableParam, ExecutionResult, GovernanceError, GovernanceEvent,
+    LiveGovernanceEngine, GovernanceConfig,
 };

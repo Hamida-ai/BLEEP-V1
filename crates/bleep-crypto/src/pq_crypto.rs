@@ -443,7 +443,7 @@ impl SignatureScheme {
         //
         // For production mainnet, replace this with the MPC ceremony SRS seeded
         // keygen path when pqcrypto exposes a seeded API.
-        let (pk, sk) = sphincsshake256fsimple::keypair();
+        let (_pk, sk) = sphincsshake256fsimple::keypair();
         let mut sk_bytes = sk.as_bytes().to_vec();
         let mut mask = vec![0u8; sk_bytes.len()];
         rng.fill_bytes(&mut mask);

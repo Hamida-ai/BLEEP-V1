@@ -10,7 +10,7 @@
 // 6. AI cannot artificially inflate its own reputation
 
 use serde::{Serialize, Deserialize};
-use log::{info, warn};
+use log::{info};
 use std::collections::HashMap;
 use thiserror::Error;
 

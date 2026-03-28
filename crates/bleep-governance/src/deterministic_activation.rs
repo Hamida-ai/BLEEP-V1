@@ -9,12 +9,12 @@
 // 5. Activation records are immutable and auditable
 // 6. Emergency reversion is governance-controlled
 
-use crate::apip::{APIP, APIPStatus};
-use crate::protocol_rules::{ProtocolRuleSet, ProtocolRule, RuleVersion};
+use crate::apip::APIP;
+use crate::protocol_rules::ProtocolRuleSet;
 use crate::protocol_evolution::ActivationRecord;
-use crate::invariant_monitoring::{GlobalInvariantMonitor, InvariantType};
+use crate::invariant_monitoring::GlobalInvariantMonitor;
 use serde::{Serialize, Deserialize};
-use log::{info, warn, error};
+use log::{info, warn};
 use thiserror::Error;
 use std::collections::HashMap;
 
@@ -160,7 +160,7 @@ impl DeterministicActivationManager {
         &mut self,
         apip: &APIP,
         new_version: u32,
-        approval_epoch: u64,
+        _approval_epoch: u64,
     ) -> Result<ActivationPlan, ActivationError> {
         // Extract rule changes
         let mut rule_changes = Vec::new();
@@ -362,7 +362,7 @@ impl DeterministicActivationManager {
     /// Check invariants and trigger rollback if needed
     pub fn check_invariants(
         &mut self,
-        shard_id: u32,
+        _shard_id: u32,
         proposal_id: &str,
     ) -> Result<bool, ActivationError> {
         let health = self.invariant_monitor.global_health();

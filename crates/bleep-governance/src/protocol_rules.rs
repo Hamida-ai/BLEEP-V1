@@ -12,7 +12,7 @@
 use serde::{Serialize, Deserialize};
 use serde_json;
 use sha2::{Digest, Sha256};
-use log::{info, warn, error};
+use log::{info};
 use std::collections::BTreeMap;
 use thiserror::Error;
 

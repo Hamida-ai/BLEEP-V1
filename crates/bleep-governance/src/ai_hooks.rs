@@ -11,10 +11,10 @@
 // 7. AI reputation affects only advisory weighting
 // 8. Critical decisions require validator consensus
 
-use crate::apip::{APIP, RiskLevel, RuleChange, AIModelMetadata};
-use crate::protocol_rules::{ProtocolRuleSet, RuleVersion};
+use crate::apip::APIP;
+use crate::protocol_rules::ProtocolRuleSet;
 use crate::ai_reputation::AIReputationTracker;
-use log::{info, warn};
+use log::{info};
 use thiserror::Error;
 use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
@@ -215,10 +215,10 @@ impl AIHooks {
         
         // Analyze each rule change
         for change in &proposal.rule_changes {
-            if let Ok(rule) = ruleset.get_rule(&change.rule_name) {
+            if let Ok(_rule) = ruleset.get_rule(&change.rule_name) {
                 // Compute impact deterministically
                 let value_change = (change.new_value as i64 - change.old_value as i64).abs() as u64;
-                let pct_change = (value_change * 100) / change.old_value.max(1);
+                let _pct_change = (value_change * 100) / change.old_value.max(1);
                 
                 match change.rule_name.as_str() {
                     "SHARD_SPLIT_THRESHOLD" => {
@@ -416,7 +416,7 @@ impl AIHooksValidator {
     }
     
     /// Safe integration: AI provides input, consensus decides
-    pub fn get_ai_input(&mut self, proposal: &APIP) -> Result<AdvisoryScore, AIHookError> {
+    pub fn get_ai_input(&mut self, _proposal: &APIP) -> Result<AdvisoryScore, AIHookError> {
         // Run compliance assessment
         let score = self.hooks.assess_compliance(&ProtocolRuleSet::new(1, 0))?;
         

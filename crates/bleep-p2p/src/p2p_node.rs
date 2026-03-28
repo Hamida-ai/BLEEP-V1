@@ -22,21 +22,19 @@
 
 use std::net::SocketAddr;
 use std::sync::Arc;
-use std::time::Duration;
 
-use tokio::sync::{broadcast, mpsc};
+use tokio::sync::mpsc;
 use tokio::task::JoinHandle;
 use tracing::{error, info, warn};
 
 use crate::ai_security::PeerScoring;
-use crate::error::{P2PError, P2PResult};
+use crate::error::P2PResult;
 use crate::gossip_protocol::GossipProtocol;
-use crate::kademlia_dht::KademliaDht;
 use crate::message_protocol::MessageProtocol;
 use crate::onion_routing::OnionRouter;
 use crate::peer_manager::{PeerEvent, PeerManager, PeerManagerConfig};
 use crate::quantum_crypto::{
-    sphincs_sign, Ed25519Keypair, KyberKeypair, NodeIdentity, SphincsKeypair,
+    Ed25519Keypair, KyberKeypair, NodeIdentity,
 };
 use crate::types::{MessageType, NodeId, PeerInfo, SecureMessage};
 
@@ -103,7 +101,7 @@ impl P2PNode {
         );
 
         // Message protocol
-        let ed_kp = Ed25519Keypair::from_bytes(
+        let _ed_kp = Ed25519Keypair::from_bytes(
             identity.ed_keypair.sign(b"derived").as_slice()[..32]
                 .try_into()
                 .unwrap_or(&[0u8; 32]),

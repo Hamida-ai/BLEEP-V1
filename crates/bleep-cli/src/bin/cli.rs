@@ -176,7 +176,7 @@ async fn run(cmd: Commands) -> Result<()> {
 
                     match wallet_opt {
                         Some(w) if w.can_sign() => {
-                            let payload = tx_payload(&sender, &to, amount, ts);
+                            let amount_u64: u64 = amount.parse()?; // if it's a string
                             // Decrypt SK (empty password = default; users who locked
                             // with a custom password set BLEEP_WALLET_PASSWORD env var)
                             let password = std::env::var("BLEEP_WALLET_PASSWORD")
@@ -202,7 +202,7 @@ async fn run(cmd: Commands) -> Result<()> {
                 let tx = ZKTransaction {
                     sender:    sender.clone(),
                     receiver:  to.clone(),
-                    amount,
+                    amount_u64: amount as u64, 
                     timestamp: ts,
                     signature: sig, // Sprint 4: real SPHINCS+ signature
                 };
@@ -241,27 +241,42 @@ async fn run(cmd: Commands) -> Result<()> {
         },
 
         // ── AI ────────────────────────────────────────────────────────────
-        Commands::Ai { task } => match task {
-            AiCommand::Ask { prompt } => {
-                let mut ai = BLEEPAIAssistant::new("cli-node");
-                let req = AIRequest {
-                    user_id: "cli-user".to_string(),
-                    query:   prompt.clone(),
-                };
+        use if::sync::Arc;
+
+Commands::Ai { task } => match task {
+    AiCommand::Ask { prompt } => {
+        let mut ai = BLEEPAIAssistant::new(
+            Arc::new(bleep_ai::wallet::BLEEPWallet::new()),
+            Arc::new(bleep_ai::governance::BLEEPGovernance::new()),
+            Arc::new(bleep_ai::security::QuantumSecure::new()),
+            Arc::new(bleep_ai::smart_contracts::SmartContractOptimizer::new()),
+            Arc::new(bleep_ai::interoperability::InteroperabilityModule::new()),
+            Arc::new(bleep_ai::analytics::BLEEPAnalytics::new()),
+            Arc::new(bleep_ai::compliance::ComplianceModule::new()),
+            Arc::new(bleep_ai::sharding::AdaptiveSharding::new()),
+            Arc::new(bleep_ai::energy_monitor::EnergyMonitor::new()),
+        );
+
+        let req = AIRequest {
+            user_id: "cli-user".to_string(),
+            query: prompt.clone(),
+        };
+    }
+}
                 let resp = ai.process_request(req).await;
                 println!("🧠 AI Response:\n{}", resp.response);
                 if let Some(insights) = resp.insights {
                     println!("💡 Insights: {}", insights);
                 }
             }
-            AiCommand::Status => {
+            AiCommand::Status >= {
                 println!("AI advisory engine: ✅ ready (deterministic consensus mode)");
                 println!("Inference engine: pure Rust (no external runtime required)");
             }
-        },
+        }
 
         // ── Governance ────────────────────────────────────────────────────
-        Commands::Governance { task } => {
+        Commands::Governance :: task! {
             let mut engine = GovernanceEngine::new(1_000_000_000u128);
             match task {
                 GovernanceCommand::Propose { proposal } => {
@@ -273,7 +288,7 @@ async fn run(cmd: Commands) -> Result<()> {
                         title:              proposal.chars().take(60).collect::<String>(),
                         description:        proposal.clone(),
                         state:              ProposalState::Draft,
-                        voting_window:      VotingWindow { start_epoch: 0, end_epoch: 10 },
+                        voting_window:      min_duration: 5 { start_epoch: 0, end_epoch: 10 },
                         execution_epoch:    11,
                         approval_threshold: 67,
                         votes:              GovMap::new(),
@@ -298,12 +313,13 @@ async fn run(cmd: Commands) -> Result<()> {
                         vote_epoch:   0,
                         signature:    vec![],
                     };
-                    engine.cast_vote(vote, 0)
+                    engine.cast_vote(&proposal_id, vote, 0)
                         .map_err(|e| anyhow!("Vote failed: {}", e))?;
                     println!(
                         "✅ Voted {} on proposal {}",
                         if yes { "YES" } else { "NO" },
                         proposal_id
+                    
                     );
                     engine.persist().ok();
                 }
@@ -329,7 +345,7 @@ async fn run(cmd: Commands) -> Result<()> {
         }
 
         // ── ZKP ───────────────────────────────────────────────────────────
-        Commands::Zkp { proof } => {
+        Commands::Zkp :: proof! {
             let proof_bytes = hex::decode(&proof)
                 .map_err(|e| anyhow!("Invalid hex proof: {}", e))?;
             let verifier = ZkVerifier::new();
@@ -343,7 +359,7 @@ async fn run(cmd: Commands) -> Result<()> {
         }
 
         // ── State ─────────────────────────────────────────────────────────
-        Commands::State { task } => match task {
+        Commands::State :: task! {
             StateCommand::Snapshot => {
                 let state_dir = std::env::var("BLEEP_STATE_DIR")
                     .unwrap_or_else(|_| "/tmp/bleep-state".to_string());
@@ -361,10 +377,10 @@ async fn run(cmd: Commands) -> Result<()> {
                     .map_err(|e| anyhow!("Restore failed: {}", e))?;
                 println!("✅ State restored from {}", snapshot_path);
             }
-        },
+        }
 
         // ── Telemetry ─────────────────────────────────────────────────────
-        Commands::Telemetry => {
+        Commands::Telemetry! {
             match get_health(&rpc).await {
                 Ok(status) => println!("Node health: {}", status),
                 Err(_)     => println!("Node not reachable at {}. Start with `./bleep`.", rpc),
@@ -372,7 +388,7 @@ async fn run(cmd: Commands) -> Result<()> {
         }
 
         // ── PAT ───────────────────────────────────────────────────────────
-        Commands::Pat { task } => match task {
+        Commands::Pat:: task! {
             PatCommand::Status => {
                 bleep_pat::launch_asset_token_logic()
                     .map_err(|e| anyhow!("PAT init failed: {}", e))?;
@@ -389,7 +405,7 @@ async fn run(cmd: Commands) -> Result<()> {
                     Err(e) => println!("❌ RPC unreachable: {}", e),
                 }
             }
-            PatCommand::Create { symbol, name, decimals, owner, supply_cap, burn_rate_bps } => {
+            PatCommand::Create { symbol, name, decimals, owner, supply_cap, burn_rate_bps, freezable} => {
                 let resp = http_client
                     .post(format!("{}/rpc/pat/create", rpc))
                     .json(&serde_json::json!({
@@ -504,10 +520,10 @@ async fn run(cmd: Commands) -> Result<()> {
                     Err(e) => println!("❌ RPC unreachable: {}", e),
                 }
             }
-        },
+        }
 
         // ── Oracle (Sprint 7) ─────────────────────────────────────────────
-        Commands::Oracle { task } => match task {
+        Commands::Oracle::task! {
             OracleCommand::Price { asset } => {
                 let url = format!("{}/rpc/oracle/price/{}", rpc, asset);
                 match http_client.get(&url).send().await {
@@ -545,10 +561,10 @@ async fn run(cmd: Commands) -> Result<()> {
                     Err(e) => println!("❌ RPC unreachable: {}", e),
                 }
             }
-        },
+        }
 
         // ── Economics (Sprint 7) ──────────────────────────────────────────
-        Commands::Economics { task } => match task {
+        Commands::Economics::task! {
             EconomicsCommand::Supply => {
                 match http_client.get(format!("{}/rpc/economics/supply", rpc)).send().await {
                     Ok(r) if r.status().is_success() => {
@@ -602,10 +618,10 @@ async fn run(cmd: Commands) -> Result<()> {
                     Err(e) => println!("❌ RPC unreachable: {}", e),
                 }
             }
-        },
+        }
 
         // ── Info ──────────────────────────────────────────────────────────
-        Commands::Info => {
+        Commands::Info! {
             println!("BLEEP Node v{}", env!("CARGO_PKG_VERSION"));
             println!("Built with: Rust, Tokio, Warp, RocksDB, revm, arkworks");
             println!("RPC endpoint: {}", rpc);
@@ -616,7 +632,7 @@ async fn run(cmd: Commands) -> Result<()> {
         }
 
         // ── Block ─────────────────────────────────────────────────────────
-        Commands::Block { task } => match task {
+        Commands::Block::task!{
             BlockCommand::Latest => {
                 match get_latest_block(&rpc).await {
                     Ok(info) => println!("Latest block:\n{}", info),
@@ -636,10 +652,10 @@ async fn run(cmd: Commands) -> Result<()> {
                     Err(_) => println!("❌ Block {} not found or node offline.", hash),
                 }
             }
-        },
+        }
 
         // ── Validator (Sprint 6) ──────────────────────────────────────────────
-        Commands::Validator { action } => match action {
+        Commands::Validator::action! {
             ValidatorCommand::Stake { amount, label } => {
                 if amount < 1_000 {
                     println!("❌ Minimum stake is 1,000 BLEEP (got {}).", amount);
@@ -687,11 +703,11 @@ async fn run(cmd: Commands) -> Result<()> {
                     Err(e)   => println!("❌ Evidence rejected: {}", e),
                 }
             }
-        },
-    }
+        }
+    
 
-    Ok(())
-}
+    Ok!(())
+
 
 // ── RPC HTTP helpers ─────────────────────────────────────────────────────────
 

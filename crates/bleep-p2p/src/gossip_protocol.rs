@@ -7,21 +7,17 @@
 //! - Anti-flood: per-peer message-rate tracking via PeerScoring.
 //! - All outbound messages are sealed via MessageProtocol (AES-GCM + Ed25519).
 
-use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::Duration;
 
-use dashmap::DashMap;
 use lru::LruCache;
 use parking_lot::Mutex;
-use tokio::sync::mpsc;
 use tokio::time::interval;
-use tracing::{debug, info, warn};
+use tracing::{debug, warn};
 
-use crate::error::{P2PError, P2PResult};
 use crate::message_protocol::MessageProtocol;
 use crate::peer_manager::PeerManager;
-use crate::types::{MessageType, NodeId, SecureMessage, unix_now};
+use crate::types::{MessageType, NodeId, SecureMessage};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CONSTANTS
@@ -115,7 +111,7 @@ impl GossipProtocol {
             .map(|p| p.id.clone())
             .collect();
 
-        let ranked = self
+        let _ranked = self
             .peer_manager
             .dht() // access to scoring via peer_manager
             .all_peers()

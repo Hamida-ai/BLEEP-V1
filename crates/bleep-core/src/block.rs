@@ -32,7 +32,7 @@ use chrono::Utc;
 
 // bleep_crypto::tx_signer used by InboundBlockHandler in main.rs (not directly in block.rs)
 use pqcrypto_sphincsplus::sphincsshake256fsimple;
-use pqcrypto_traits::sign::{PublicKey as _, SecretKey as _, DetachedSignature as _};
+use pqcrypto_traits::sign::{SecretKey as _, DetachedSignature as _};
 
 /// Byte length of a SPHINCS+-SHAKE-256-simple public key.
 pub const SPHINCS_PK_LEN: usize = 32;

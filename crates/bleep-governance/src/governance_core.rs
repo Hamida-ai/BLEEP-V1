@@ -14,7 +14,7 @@
 use serde::{Serialize, Deserialize};
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
-use log::{info, warn, error};
+use log::{info, error};
 use thiserror::Error;
 
 /// Proposal type determining what action is executed

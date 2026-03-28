@@ -7,8 +7,6 @@
 //! - Symmetric         : AES-256-GCM with random 12-byte nonce prepended
 //! - KDF               : HKDF-SHA256
 
-use std::fmt;
-
 use aes_gcm::{
     aead::{Aead, AeadCore, KeyInit, OsRng as AeadOsRng},
     Aes256Gcm, Key, Nonce,
@@ -23,7 +21,7 @@ use pqcrypto_traits::{
 };
 use rand::RngCore;
 use sha2::{Digest, Sha256};
-use zeroize::{Zeroize, ZeroizeOnDrop};
+use zeroize::ZeroizeOnDrop;
 
 use crate::error::{P2PError, P2PResult};
 

@@ -251,7 +251,7 @@ impl BLEEPAdaptiveConsensus {
             info!("Block {} finalized on retry using {:?}", block.index, self.consensus_mode);
             Ok(())
         } else {
-            Err(BLEEPError::ConsensusFailure(format!(
+            Err(BLEEPError::ConsensusFailed(format!(
                 "Block {} could not be finalized under any mode",
                 block.index
             )))

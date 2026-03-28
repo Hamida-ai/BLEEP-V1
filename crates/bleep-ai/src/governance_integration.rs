@@ -325,10 +325,10 @@ impl GovernanceIntegration {
         rationale: String,
         epoch: u64,
     ) -> Result<(), GovernanceError> {
-        if let Some(id) = proposal_id {
+        if let Some(ref id) = proposal_id {
             // Update existing proposal
             let proposal = self.proposals.iter_mut()
-                .find(|p| p.id == id)
+                .find(|p| p.id == *id)
                 .ok_or_else(|| GovernanceError::GovernanceVoteFailed(
                     "Proposal not found".to_string(),
                 ))?;

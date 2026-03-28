@@ -2,14 +2,11 @@ use std::sync::Arc;
 use thiserror::Error;
 use serde::{Deserialize, Serialize};
 use log::{info, warn, error};
-use tokio::sync::RwLock;
 use dashmap::DashMap;
 use sha2::{Digest, Sha256};
 use bleep_crypto::quantum_secure::QuantumSecure;
 // BLEEPZKPModule — use the canonical definition from bleep-crypto
 use bleep_crypto::zkp_verification::BLEEPZKPModule;
-// calculate_merkle_root from bleep-state
-use bleep_state::state_merkle::calculate_merkle_root;
 // BLEEPInteroperabilityModule — from bleep-interop (now a proper crate)
 use bleep_interop::interoperability::BLEEPInteroperabilityModule;
 
@@ -61,6 +58,7 @@ pub struct Proposal {
 pub struct SelfAmendingGovernance {
     proposals: Arc<DashMap<u64, Proposal>>,
     users: Arc<DashMap<u64, User>>,
+    #[allow(dead_code)]
     quantum_secure: Arc<QuantumSecure>,
     zkp_module: Arc<BLEEPZKPModule>,
     interoperability: Arc<BLEEPInteroperabilityModule>,
@@ -128,7 +126,7 @@ impl SelfAmendingGovernance {
     /// Categorize proposals using simple heuristics
     async fn categorize_proposal(&self, description: &str) -> Result<String, SelfAmendingError> {
         // Simple heuristic categorization based on keywords
-        let categories = vec!["Governance", "Development", "Update", "Miscellaneous"];
+        let _categories = vec!["Governance", "Development", "Update", "Miscellaneous"];
         
         let description_lower = description.to_lowercase();
         if description_lower.contains("governance") || description_lower.contains("vote") {
@@ -154,7 +152,7 @@ impl SelfAmendingGovernance {
 
         // Generate a ZKP for the vote
         let vote_bytes = format!("{}:{}", proposal_id, if support { 1 } else { 0 }).into_bytes();
-        let proof = self.zkp_module.generate_proof(&vote_bytes)
+        let _proof = self.zkp_module.generate_proof(&vote_bytes)
             .map_err(|_| SelfAmendingError::ZKPGenerationError)?;
 
         if let Some(mut proposal) = self.proposals.get_mut(&proposal_id) {
