@@ -4,7 +4,7 @@
 // Stores registered tasks and evaluates which are due to run.
 // ============================================================================
 
-use crate::errors::{SchedulerError, SchedulerResult};
+use crate::errors::SchedulerResult;
 use crate::task::{TaskId, TaskKind, Trigger};
 use dashmap::DashMap;
 use std::future::Future;

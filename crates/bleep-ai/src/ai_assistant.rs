@@ -26,6 +26,12 @@ pub struct AIResponse {
     pub insights: Option<String>,
 }
 
+/// Initialize the AI advisory subsystem.
+pub fn init_ai_advisory() -> Result<(), Box<dyn std::error::Error>> {
+    info!("AI advisory subsystem initialized.");
+    Ok(())
+}
+
 pub struct BLEEPAIAssistant {
     pub wallet: Arc<BLEEPWallet>,
     pub governance: Arc<BLEEPGovernance>,

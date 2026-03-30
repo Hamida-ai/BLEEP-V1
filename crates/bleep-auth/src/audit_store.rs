@@ -260,7 +260,7 @@ impl AuditLogStore {
             .map_err(|e| format!("RocksDB write: {}", e))
     }
 
-    fn cf(&self, name: &str) -> Result<&rocksdb::ColumnFamily, String> {
+    fn cf(&self, name: &str) -> Result<Arc<rocksdb::BoundColumnFamily<'_>>, String> {
         self.db
             .cf_handle(name)
             .ok_or_else(|| format!("column family '{}' missing", name))

@@ -237,6 +237,10 @@ fn build_intent(raw: &serde_json::Value) -> Result<InstantIntent, Box<dyn std::e
         recipient: UniversalAddress::new(dst, raw["recipient_address"].as_str().unwrap_or("").to_string()),
         max_solver_reward_bps: raw["max_solver_reward_bps"].as_u64().map(|v| v as u16).unwrap_or(50),
         slippage_tolerance_bps: 100,
+        nonce: 0,
+        signature: vec![],
+        escrow_tx_hash: String::new(),
+        escrow_proof: vec![],
     })
 }
 

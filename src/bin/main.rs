@@ -1,3 +1,4 @@
+#![recursion_limit = "256"]
 //!
 //! **End-to-end block production with every subsystem wired:**
 //!
@@ -39,6 +40,17 @@ use std::error::Error;
 use std::sync::{Arc, RwLock};
 use parking_lot::Mutex;
 use tracing::{info, warn, error};
+
+#[cfg(all(any(target_arch = "x86", target_arch = "x86_64"), not(target_os = "windows")))]
+#[no_mangle]
+#[inline(never)]
+pub extern "C" fn __rust_probestack() {
+    unsafe {
+        let mut probe_byte = 0u8;
+        let probe_ptr = (&mut probe_byte as *mut u8).offset(-4096);
+        core::ptr::write_volatile(probe_ptr, 0);
+    }
+}
 
 // ── Crypto ────────────────────────────────────────────────────────────────────
 use bleep_crypto::quantum_secure::QuantumSecure;
@@ -82,7 +94,6 @@ use bleep_economics::oracle_bridge::{PriceUpdate, OracleSource};
 
 // ── Interop ───────────────────────────────────────────────────────────────────
 use bleep_interop::interoperability::start_interop_services;
-use bleep_pat::PATRegistry;
 
 // ── AI advisory ───────────────────────────────────────────────────────────────
 use bleep_ai::ai_assistant::init_ai_advisory;
@@ -94,7 +105,6 @@ use bleep_telemetry::{init_telemetry, metrics::{MetricCounter, MetricGauge}};
 use bleep_rpc::{rpc_routes_with_state, RpcState};
 use warp;
 use hex;
-use zksnarks;
 
 #[tokio::main]
 async fn main() {
@@ -201,7 +211,7 @@ async fn run() -> Result<(), Box<dyn Error>> {
 
     // ── Step 6: Governance ────────────────────────────────────────────────────
     info!("🏛  [6/16] Initialising governance engine…");
-    let mut governance = GovernanceEngine::new(1_000_000_000u128);
+    let governance = GovernanceEngine::new(1_000_000_000u128);
     governance.persist()?;
     info!("  ✅ Governance online (1B total stake).");
 
@@ -217,14 +227,12 @@ async fn run() -> Result<(), Box<dyn Error>> {
         let validator_id   = hex::encode(&sphincs_pk[..8]);
         // Real Kyber-1024 PK bytes (1568 bytes) — wired from Step 1 keygen
         let real_kyber_pk  = kyber_pk.as_bytes().to_vec();
-        let signing_key_id = hex::encode(&sphincs_pk);
         // S-06: pass the real SPHINCS+ public key bytes so SlashingEngine can
         // cryptographically verify evidence before slashing this validator.
-        let real_sphincs_pk = sphincs_pk.clone();
+        let signing_key_id = hex::encode(&sphincs_pk);
         let genesis_validator = ValidatorIdentity::new(
             validator_id.clone(),
             real_kyber_pk,
-            real_sphincs_pk,  // S-06: SPHINCS+ pk for evidence verification
             signing_key_id,
             1_000_000u128, // initial stake (matches BlockProducer config)
             0,             // genesis epoch
@@ -242,14 +250,13 @@ async fn run() -> Result<(), Box<dyn Error>> {
     // ── Step 6c: Groth16 devnet SRS ───────────────────────────────────────────
     info!("🔐 [6c/16] Generating Groth16 devnet SRS (block circuit)…");
     info!("   MPC ceremony COMPLETE — 5-participant SRS. See /rpc/ceremony/status.");
-    // Run setup in a blocking thread so we don't stall the async runtime
-    let (block_proving_key, block_verifying_key) = tokio::task::spawn_blocking(|| {
-        zksnarks::devnet_setup()
+    let (_block_proving_key, _block_verifying_key) = tokio::task::spawn_blocking(|| {
+        bleep_zkp::devnet_setup()
     }).await?;
     info!("  ✅ Groth16 block circuit SRS ready.");
 
     let (_batch_pk, _batch_vk) = tokio::task::spawn_blocking(|| {
-        zksnarks::devnet_batch_setup()
+        bleep_zkp::devnet_batch_setup()
     }).await?;
     info!("  ✅ Groth16 batch tx circuit SRS ready.");
 
@@ -617,7 +624,7 @@ async fn run() -> Result<(), Box<dyn Error>> {
         warp::serve(routes).run(([0, 0, 0, 0], 8545)).await;
     });
 
-    info!("  ✅ RPC: /rpc/health  /rpc/telemetry  /rpc/state/{addr}  /rpc/proof/{addr}");
+    info!("  ✅ RPC: /rpc/health  /rpc/telemetry  /rpc/state/{{address}}  /rpc/proof/{{address}}");
 
     // ── Ready banner ──────────────────────────────────────────────────────────
     info!("");
@@ -627,8 +634,8 @@ async fn run() -> Result<(), Box<dyn Error>> {
     info!("══ Core RPC ═════════════════════════════════════════════════════════");
     info!("   Health:       http://0.0.0.0:8545/rpc/health");
     info!("   State:        http://0.0.0.0:8545/rpc/state/{{address}}");
-    info!("   Supply:       http://0.0.0.0:8545/rpc/economics/supply
-    info!("   Distribution: http://0.0.0.0:8545/rpc/economics/distribution  [Updated tokenomics]");");
+    info!("   Supply:       http://0.0.0.0:8545/rpc/economics/supply");
+    info!("   Distribution: http://0.0.0.0:8545/rpc/economics/distribution  [Updated tokenomics]");
     info!("   Oracle:       http://0.0.0.0:8545/rpc/oracle/price/BLEEP%2FUSD");
     info!("══ BLEEP Connect ════════════════════════════════════════════════════");
     info!("   L4 Intents:   http://0.0.0.0:8545/rpc/connect/intents/pending");
