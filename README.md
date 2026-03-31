@@ -418,13 +418,13 @@ Double-spend prevention in Tier 3: `GlobalNullifierSet` performs an atomic `Writ
 
 Two components with clearly separated scopes. Neither has write access to chain state, the governance queue, or the block production pipeline.
 
-### Phase 3 — AIConstraintValidator (operational)
+### AIConstraintValidator (operational)
 
 A deterministic rule engine. Not a trained model. Checks governance proposals against the four constitutional invariants before they enter the vote queue. Rejects proposals that would violate compile-time invariants before they consume any validator attention. The `constitutional_violation_rejected_at_submission` test runs on every CI build.
 
 `AIConsensusOrchestrator` produces advisory healing proposals (six typed proposal types: `ConsensusModeProposal`, `ShardRollbackProposal`, `ShardRebalanceProposal`, `ValidatorSecurityProposal`, `TokenomicsProposal`, `GovernancePriorityProposal`). The consensus layer decides whether to act on them. The orchestrator has no unilateral authority.
 
-### Phase 4 — DeterministicInferenceEngine (under development)
+### DeterministicInferenceEngine (under development)
 
 ONNX-based runtime. Enforces six invariants for any model operating on a consensus-critical path — these aren't quality controls, they're determinism requirements:
 
