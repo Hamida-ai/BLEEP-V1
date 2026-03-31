@@ -1,87 +1,831 @@
-# BLEEP · Quantum Trust Network
+# BLEEP — Quantum Trust Network
 
-> **Protocol Version 3 · Chain ID: `bleep-testnet-1` · 19-crate Rust workspace**
->
-> A post-quantum Layer 1 blockchain in which transaction validity, node identity, and network
-> message authentication are enforced exclusively using NIST-finalised post-quantum primitives
-> at Security Level 5. No classical public-key primitive is present on any cryptographically
-> sensitive path.
-
-[![Build](https://img.shields.io/badge/build-passing-brightgreen)](https://github.com/bleep-project/bleep)
-[![Audit](https://img.shields.io/badge/audit-14%20findings%2C%20all%20critical%2Fhigh%20resolved-blue)](docs/SECURITY_AUDIT_SPRINT9.md)
-[![Testnet TPS](https://img.shields.io/badge/testnet%20avg-10%2C921%20TPS-orange)](https://bleep-testnet-1.bleep.network)
-[![License](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-lightgrey)](LICENSE)
+**Protocol Version 3 · `bleep-testnet-1`. **
 
 ---
 
-## ⚠ Post-Quantum Security Boundary — Read First
+Every transaction on a classical blockchain is a permanent public record signed with a key that Shor's algorithm breaks in polynomial time. An adversary doesn't need a quantum computer today — they need storage capacity. They harvest now and decrypt later, when the hardware catches up. For a live chain with real economic value, that window closes exactly once.
 
-BLEEP's post-quantum security boundary covers **transaction signing, block signing, P2P message authentication, and key encapsulation**. These operations use SPHINCS+-SHAKE-256f-simple (FIPS 205, Security Level 5) and Kyber-1024/ML-KEM-1024 (FIPS 203, Security Level 5).
+BLEEP is built on the premise that the right time to establish post-quantum foundations is before the protocol accumulates value and ecosystem dependencies, not after. Transaction signing, block signing, P2P authentication, and key encapsulation use exclusively NIST-finalised post-quantum primitives at Security Level 5. There is no classical fallback path, no feature flag, no "upgrade planned" footnote on the critical paths.
 
-The **Groth16 zero-knowledge proof subsystem** (block validity proofs and the Tier 3 cross-chain bridge) is based on BLS12-381 — a pairing-based construction whose security relies on discrete logarithm hardness. This assumption is broken by Shor's algorithm. Groth16 is therefore **not post-quantum secure** and is classified as a verification compatibility feature outside the post-quantum security boundary. This limitation is structural, not a configuration choice. Migration to a post-quantum-secure proof system is the primary open research direction; see [Future Work](#future-work).
-
----
-
-## Table of Contents
-
-1. [Overview](#overview)
-2. [Design Principles](#design-principles)
-3. [Architecture](#architecture)
-4. [Crate Map](#crate-map)
-5. [Cryptographic Model](#cryptographic-model)
-6. [Consensus](#consensus)
-7. [State and Storage](#state-and-storage)
-8. [Execution Environment](#execution-environment)
-9. [P2P Networking](#p2p-networking)
-10. [Governance](#governance)
-11. [Economics and Tokenomics](#economics-and-tokenomics)
-12. [BLEEP Connect — Cross-Chain Interoperability](#bleep-connect)
-13. [AI Advisory Components](#ai-advisory-components)
-14. [Protocol Parameters](#protocol-parameters)
-15. [Getting Started](#getting-started)
-16. [Configuration](#configuration)
-17. [RPC API Reference](#rpc-api-reference)
-18. [CLI Reference](#cli-reference)
-19. [Security Model](#security-model)
-20. [Known Limitations](#known-limitations)
-21. [Future Work](#future-work)
-22. [Roadmap](#roadmap)
-23. [Contributing](#contributing)
-24. [License](#license)
+> **One thing to state plainly upfront:** the Groth16 ZK proof subsystem (block validity proofs and the Tier 3 bridge) uses BLS12-381, which is not post-quantum secure. This is a real limitation, it's structural rather than a configuration choice, and it's the primary open engineering problem. The rest of this document is precise about where the post-quantum boundary sits. Don't skim past this.
 
 ---
 
-## Overview
+## Contents
 
-BLEEP is a Quantum Trust Network: a distributed execution protocol in which trust is derived exclusively from post-quantum cryptographic guarantees. The protocol addresses the **harvest-now, decrypt-later** threat model — the observation that an adversary can archive signed transactions and public keys today and apply quantum decryption retroactively when capable hardware becomes available.
+- [How the protocol works](#how-the-protocol-works)
+- [Workspace layout](#workspace-layout)
+- [Cryptography](#cryptography)
+- [Consensus](#consensus)
+- [State layer](#state-layer)
+- [Execution](#execution)
+- [Networking](#networking)
+- [Governance](#governance)
+- [Economics](#economics)
+- [BLEEP Connect](#bleep-connect)
+- [AI advisory](#ai-advisory)
+- [Running a node](#running-a-node)
+- [Configuration](#configuration)
+- [RPC reference](#rpc-reference)
+- [CLI reference](#cli-reference)
+- [Security](#security)
+- [Limitations](#limitations)
+- [Roadmap](#roadmap)
+- [Contributing](#contributing)
 
-Every transaction record on a classical blockchain constitutes a long-lived cryptographic liability. BLEEP eliminates this liability at genesis by using only NIST-finalised post-quantum primitives (FIPS 203, FIPS 205) on all signing and key-encapsulation paths. No classical fallback exists under any configuration or error condition.
+---
 
-**Protocol Version 3 testnet results:**
+## How the protocol works
 
-| Metric | Value |
+BLEEP is a proof-of-stake BFT chain. Safety holds when Byzantine stake stays below S/3. Finality is not probabilistic — a block receiving precommits from validators representing more than 6,667 bps of total staked supply is final, period. There's no challenge window, no reorg depth after which you "probably" won't get rolled back.
+
+The state function is `S_{t+1} = F(S_t, T)` where F is a deterministic total function. Every honest validator running the same software version produces byte-identical outputs from identical inputs. Non-determinism on any consensus-critical path is a protocol bug, not an edge case to handle gracefully.
+
+Four parameters are enforced by Rust compile-time `const` assertions — meaning a code change that violates them doesn't compile:
+
+| Parameter | Value | Constant |
+|---|---|---|
+| Maximum token supply | 200,000,000 BLEEP | `MAX_SUPPLY` |
+| Minimum finality threshold | > 6,667 bps of total stake | `FinalityManager` |
+| Maximum per-epoch inflation | 500 bps | `MAX_INFLATION_RATE_BPS` |
+| Fee burn floor | 2,500 bps | `FEE_BURN_BPS` |
+
+These aren't soft limits that governance can vote around. They're build invariants.
+
+**Testnet numbers** (1-hour sustained benchmark, 10 shards, 7 validators):
+
+```
+avg TPS:          10,921   (target ≥ 10,000 — pass)
+peak TPS:         13,200
+total txs:        39,315,600
+Groth16 avg:      847 ms
+full-cap blocks:  82.3%
+```
+
+---
+
+## Workspace layout
+
+19 crates in a single Cargo workspace. The dependency graph is acyclic and enforced at build time — `bleep-crypto` has zero dependencies on other BLEEP crates, and no crate in the execution or networking layer can reach into raw key material.
+
+```
+crates/
+├── bleep-crypto          # SPHINCS+, Kyber-1024, AES-256-GCM, SHA3-256, BLAKE3
+├── bleep-zkp             # Groth16/BLS12-381 circuits, prover/verifier, MPC SRS
+├── bleep-wallet-core     # EncryptedWallet, Zeroizing key storage, WalletManager
+├── bleep-core            # Block, Transaction, Blockchain, Mempool, BlockValidator
+├── bleep-consensus       # BlockProducer, ConsensusOrchestrator, FinalityManager,
+│                         # SlashingEngine, SelfHealingOrchestrator, EpochConfig
+├── bleep-state           # StateManager (RocksDB), SparseMerkleTrie (256-level),
+│                         # sharding, 2PC coordinator, NullifierStore, AuditLog
+├── bleep-vm              # 7-engine dispatcher: Native / EVM / WASM / ZK /
+│                         # AI-Advised / CrossChain + VmRouter + StateDiff
+├── bleep-p2p             # Kademlia (k=20), epidemic gossip (fanout 8),
+│                         # onion routing, PeerScoring, 2 MiB message gate
+├── bleep-auth            # JWT sessions, RBAC, Kyber-1024 validator binding,
+│                         # salted SHA3-256 credentials, audit log, rate limiting
+├── bleep-rpc             # warp HTTP/JSON — 46 endpoints
+├── bleep-scheduler       # 20-task Tokio scheduler (epoch, rewards, healing, ...)
+├── bleep-governance      # LiveGovernanceEngine, ZKVotingEngine,
+│                         # ForklessUpgradeEngine, proposal lifecycle
+├── bleep-economics       # EIP-1559 fee market, FeeDistribution, SafetyVerifier,
+│                         # validator emission schedule, oracle bridge
+├── bleep-ai              # AIConstraintValidator (Phase 3 — operational),
+│                         # DeterministicInferenceEngine (Phase 4 — in dev),
+│                         # AIAttestationManager
+├── bleep-interop/        # BLEEP Connect — 10 sub-crates, 4 bridge tiers
+│   ├── bleep-connect-types
+│   ├── bleep-connect-crypto
+│   ├── bleep-connect-adapters
+│   ├── bleep-connect-commitment-chain
+│   ├── bleep-connect-executor
+│   ├── bleep-connect-layer4-instant    # live on Ethereum Sepolia
+│   ├── bleep-connect-layer3-zkproof    # live on Ethereum Sepolia
+│   ├── bleep-connect-layer2-fullnode   # implemented, mainnet target
+│   ├── bleep-connect-layer1-social     # implemented, mainnet target
+│   └── bleep-connect-core
+├── bleep-pat             # Programmable Asset Token registry
+├── bleep-indexer         # DashMap chain indexes, reorg rollback, checkpoints
+├── bleep-cli             # clap async CLI
+└── bleep-telemetry       # tracing-subscriber, MetricCounter, Prometheus
+```
+
+Node entrypoint: `src/bin/main.rs`. Startup follows a 16-step dependency-ordered sequence. Post-quantum keypairs are generated first. `StateManager` opens RocksDB — including `nullifier_store` and `audit_log` column families — before block production logic activates. The Groth16 SRS is verified against the MPC transcript before any ZK operations. The node signals readiness only after all 46 RPC endpoints are confirmed active. Any failure in the sequence halts rather than leaving the node partially initialised.
+
+---
+
+## Cryptography
+
+`bleep-crypto` is the root dependency of the protocol. No other crate performs raw cryptographic operations.
+
+### Algorithms
+
+**Transaction and block signing — SPHINCS+-SHAKE-256f-simple (FIPS 205, SLH-DSA, Security Level 5)**
+
+Security reduces to the one-wayness of SHAKE-256. No algebraic structure means no Shor's-algorithm attack surface. The tradeoff is size: 7,856-byte signatures. At 4,096 transactions per block that's ~32 MB of signature data per block — roughly 87 MB/s of bandwidth floor from signatures alone before you count payloads and vote messages. This is a real operational cost, and signature aggregation for hash-based schemes remains an open research problem. See [Limitations](#limitations).
+
+**Key encapsulation — Kyber-1024 / ML-KEM-1024 (FIPS 203, Security Level 5)**
+
+Used for validator binding, inter-node session establishment, and wallet key management. Security reduces to Module-LWE hardness. 1,568-byte public keys are larger than Curve25519's 32 bytes — this shows up in per-session handshake overhead and validator registry storage.
+
+**Symmetric — AES-256-GCM**
+
+Onion routing hops, wallet signing key encryption at rest. The 256-bit key gives ~128 bits of post-quantum security against Grover. Accepted.
+
+**Hashing — SHA3-256, BLAKE3**
+
+SHA3-256: state commitments, Merkle node hashing, block hashing, audit log chaining, AI model binary hashing. BLAKE3: indexer content-addressing (throughput-sensitive path). Grover halves the effective security — accepted at Level 5.
+
+### Key lifecycle
+
+Secret keys are wrapped in `zeroize::Zeroizing<Vec<u8>>` from allocation to deallocation. The `Zeroize` derive macro zeros the backing allocation before the allocator reclaims it, regardless of whether the drop is normal or through stack unwinding. This closes the class of vulnerability where key material lingers in swap or core dumps (audit finding SA-L3).
+
+```rust
+use bleep_crypto::{generate_tx_keypair, tx_payload, sign_tx_payload, verify_tx_signature};
+
+let (pk, sk) = generate_tx_keypair();
+let payload  = tx_payload(&sender, &receiver, amount, timestamp);
+let sig      = sign_tx_payload(&payload, &sk)?;  // 7,856-byte SPHINCS+ signature
+assert!(verify_tx_signature(&payload, &sig, &pk));
+// sk drops here — Zeroizing zeroes the backing Vec before dealloc
+```
+
+`sign_tx_payload` returns the signature, never key bytes. A prior implementation returned raw key material as the signature value; this was corrected before the independent audit.
+
+### Groth16 and the post-quantum boundary
+
+Groth16 over BLS12-381 is used for block validity proofs and the Tier 3 bridge. It is **not** post-quantum secure. Shor's algorithm can forge a Groth16 proof given a quantum computer of sufficient scale.
+
+The post-quantum boundary sits here:
+
+```
+IN SCOPE (post-quantum secure)          OUT OF SCOPE
+────────────────────────────────        ─────────────────────────────
+transaction signing (SPHINCS+)          block validity proofs (Groth16)
+block signing (SPHINCS+)                Tier 3 bridge proofs (Groth16)
+P2P authentication (SPHINCS+)
+key encapsulation (Kyber-1024)
+```
+
+For block production, a QPT adversary needs to forge **both** a Groth16 proof **and** a SPHINCS+ block signature to produce an accepted block. SPHINCS+ remains secure. For the Tier 3 bridge, the exposure is direct — a QPT adversary can forge a cross-chain intent proof without breaking any other component. High-value cross-chain transfers should use Tier 2 until the proof system is migrated.
+
+The MPC ceremony for the Groth16 SRS (`powers-of-tau-bls12-381-bleep-v1`, 5 participants) is sound if at least one participant destroyed their toxic waste. Audit finding SA-M1 identified that the original ceremony accepted unsigned contributions; the fix requires each contribution to carry a SPHINCS+ signature over `(id || hash || timestamp)`.
+
+Five fuzz targets run on every CI build: hash determinism, sign/verify round-trips, Kyber encap/decap, Merkle insertion soundness, state transition fund conservation.
+
+---
+
+## Consensus
+
+### Validator model
+
+Let V = {v₁…vₙ} be the active validator set at epoch e. Each validator holds a SPHINCS+ verification key, a Kyber-1024 encapsulation key, and a stake sᵢ in microBLEEP. S = Σsᵢ.
+
+Safety holds when Byzantine stake f < S/3 — this is the stake-weighted BFT bound, not a participant count. The network model is partial synchrony: safety holds under full asynchrony, liveness requires eventual delivery within Δ. The 3,000 ms slot timer is calibrated against observed testnet propagation latency.
+
+### Block production
+
+Each 3-second slot:
+
+1. Proposer selected with probability ∝ stake fraction — deterministic, no coordinator.
+2. `BlockProducer` pulls up to 4,096 transactions from the mempool by fee (descending), applies them to a draft state copy. Any transaction that trips an invariant — overdraft, nonce regression, supply cap breach — is evicted and the block rebuilt.
+3. SMT root computed and committed to the block header.
+4. Groth16 `BlockValidityCircuit` proof generated (avg 847 ms on testnet hardware). The circuit proves structural consistency and proposer possession — it doesn't prove full execution validity. That's independently verified by every validator.
+5. Block signed with SPHINCS+ and broadcast.
+6. Receiving validators verify Groth16 proof + SPHINCS+ signature + SMT root transition independently.
+7. Prevote, then precommit — each message SPHINCS+-signed.
+8. Finalisation at > 6,667 bps of S. Irreversible.
+9. Epoch boundary every 1,000 blocks (mainnet) / 100 blocks (testnet): validator rotation, reward distribution, slashing counter reset, governance events.
+
+`ConsensusOrchestrator` selects the mode deterministically at epoch boundaries — the same computation on every honest node. It doesn't coordinate; it computes.
+
+| Mode | Condition | Behaviour |
+|---|---|---|
+| `PoS-Normal` | Default | 3s slots, stake-proportional proposer |
+| `Emergency` | < 67% validator liveness | Reduced quorum, halts if safety bound at risk |
+| `Recovery` | Post-partition | Re-anchor to most recent finalised checkpoint |
+
+### Slashing
+
+| Violation | Penalty | Note |
+|---|---|---|
+| Double-sign | 33% burned, tombstoned | `saturating_sub` throughout — SA-M2 |
+| Equivocation | 25% burned | |
+| Downtime | 0.1% per consecutive missed block | |
+| Tier 4 executor timeout | 30% of executor bond | `EXECUTION_TIMEOUT = 120 s` |
+
+Balance debits use a RocksDB compare-and-swap loop (up to 3 retries), closing the TOCTOU race from audit finding SA-H2.
+
+`LongRangeReorg(10)` and `LongRangeReorg(50)` were rejected at `FinalityManager` in every iteration across the 72-hour adversarial run. Once a block is final, the only path to undoing it requires Byzantine stake ≥ S/3, which triggers the slashing cascade.
+
+---
+
+## State layer
+
+### Storage
+
+Account state lives in a 256-level Sparse Merkle Trie backed by RocksDB. The trie root goes in every block header.
+
+```
+Key:   b"acct:" + address_utf8
+Value: bincode( AccountState { balance: u128, nonce: u64, code_hash: Option<[u8; 32]> } )
+```
+
+`advance_block()` is the commit boundary — all writes buffer until it's called. A crash before `advance_block()` leaves the previous block's state intact.
+
+Three column families handle security-critical operations:
+
+- **`nullifier_store`** — bridge nullifier hashes, `WriteBatch` with `sync=true`. The original implementation used an in-memory `HashSet` that didn't survive restarts, permitting double-spend after a node crash (SA-C1). Fixed.
+- **`audit_log`** — SHA3-256 Merkle-chained entries. Each entry's hash covers the previous hash, sequence number, and event fields. Mutating any stored entry fails the chain verification. Survives restarts: chain tip and sequence counter are restored from `audit_meta` on startup, and the most recent 10,000 entries warm the in-memory cache.
+- **`audit_meta`** — chain tip and counter for log recovery.
+
+### SMT proofs
+
+The 256-level SMT gives fixed-size proofs — 8,192 bytes for both membership and non-membership, regardless of how many accounts exist. This matters for light clients.
+
+```
+Leaf key    = SHA3-256( address_utf8 )
+Leaf value  = SHA3-256( abi_encode(address, balance, nonce) )
+Interior    = SHA3-256( left_child || right_child )
+Empty node  = [0u8; 32]
+```
+
+```rust
+// full node
+let proof = state.prove_account("BLEEP1...");
+
+// light client, no node required
+assert!(proof.verify(&known_state_root));
+```
+
+`MerkleProof` serialises to JSON and is served at `GET /rpc/proof/{address}`.
+
+### Sharding
+
+10 shards in testnet configuration (`NUM_SHARDS`). `ShardManager` routes by account address hash. Each shard is an independent RocksDB instance. `ShardValidatorAssignment` maps validators to shards per epoch using a deterministic function of the epoch randomness beacon — no privileged authority in the loop.
+
+Cross-shard transactions go through `TwoPhaseCommitCoordinator`. The coordinator shard is derived from the transaction hash, eliminating coordinator election entirely. Stalled coordinators are force-aborted by `cross_shard_timeout_sweep` every 60 seconds. `ShardEpochBinding` commits each shard's state root to the epoch Merkle tree at every boundary.
+
+Increasing shard count beyond 10 reduces per-shard validator assignment and weakens per-shard BFT tolerance. The right number for mainnet depends on the final validator set size — this gets validated in Phase 5.
+
+---
+
+## Execution
+
+`VmRouter` dispatches to one of seven engines. The VM never touches `StateManager` directly — it returns a `StateDiff` that `BlockProducer` applies under a single lock after all calls complete.
+
+| Tier | Engine | Scope | Gas |
+|---|---|---|---|
+| 1 | Native | Transfer, stake, unstake, governance vote | none |
+| 2 | Router | Engine selection, gas validation, circuit breakers | validation only |
+| 3 | EVM (SputnikVM) | Ethereum-compatible contracts | Ethereum semantics |
+| 4 | WASM (Wasmi) | WASM contracts | configurable fuel |
+| 5 | ZK Proof | ZK execution, public input verification | fixed per verifier op |
+| 6 | AI-Advised | Pre-execution constraint validation (advisory, off-chain) | deterministic; no gas |
+| 7 | Cross-Chain | BLEEP Connect Tier 4 intent dispatch | protocol fee in bps |
+
+Each engine runs behind independent circuit breakers and gas budgets. A failure in one engine doesn't contaminate the others.
+
+---
+
+## Networking
+
+`bleep-p2p` is built on libp2p 0.53. Peer IDs are deterministic hashes of SPHINCS+ public keys — network identity is bound to post-quantum key material.
+
+Every inter-node message is a SPHINCS+-signed `SecureMessage`. Unauthenticated messages are dropped before payload processing. A 2 MiB gate is enforced at the receive boundary before any deserialisation (SA-H3) — this closes the class of memory exhaustion attacks that operate by sending large blobs to trigger allocation before signature verification.
+
+Onion routing uses AES-256-GCM keyed from Kyber-1024 per-hop shared secrets, up to 6 hops.
+
+`PeerScoring` computes a composite trust score in [0.0, 100.0] from success ratio, message rate, latency, and diversity. Scores decay at 0.99× per 300 seconds. Below 40: excluded from gossip relay. Below 55: excluded from onion relay.
+
+| Component | Detail |
 |---|---|
-| Average TPS (1-hour sustained, 10 shards) | 10,921 |
-| Peak TPS | 13,200 |
-| Total transactions processed | 39,315,600 |
-| Average Groth16 proof time | 847 ms |
-| Adversarial test scenarios (72-hour run) | 14 / 14 passed |
-| Independent security audit findings resolved | 12 / 14 (all Critical and High) |
+| DHT | Kademlia, k=20, XOR metric |
+| Gossip | Epidemic dissemination, fanout 8 — O(log n) rounds |
+| Onion routing | Kyber-1024 KEM per hop, AES-256-GCM payload, max 6 hops |
+| Message gate | 2 MiB enforced before deserialisation |
+| Trust | Composite score, exponential decay, Sybil resistance |
 
 ---
 
-## Design Principles
+## Governance
 
-### Safety Over Liveness
+Proposal lifecycle: **Submit → AIConstraintValidator pre-flight → Active → Tally → Execute → Record**
 
-Where a choice must be made between safety and liveness, BLEEP chooses safety. This follows Fischer, Lynch, and Paterson: no deterministic protocol can simultaneously guarantee safety, liveness, and fault tolerance under asynchrony. A node that cannot make progress safely halts rather than diverging.
+The `AIConstraintValidator` pre-flight runs before a proposal enters the vote queue. It checks proposals against the four constitutional invariants — a proposal that would push `MaxInflationBps` above 500 is rejected at this stage and never reaches a vote. The `constitutional_violation_rejected_at_submission` test covers this on every CI build.
 
-Finality requires more than **6,667 basis points (66.67%)** of total staked supply to commit — not a count of participants. This threshold is a constitutional invariant enforced by `FinalityManager` and cannot be reduced by any governance vote.
+Governance parameters on testnet:
 
-### Determinism as a Protocol Invariant
+| Parameter | Value |
+|---|---|
+| Voting window | 1,000 blocks (~50 min) |
+| Quorum | 1,000 bps (10% minimum stake participation) |
+| Pass threshold | 6,667 bps (66.67% of participating stake) |
+| Veto threshold | 3,333 bps |
+| Minimum deposit | 10,000 BLEEP |
 
-Every computation influencing chain state — consensus transitions, epoch boundaries, recovery operations, and all consensus-critical computations — must produce **byte-identical outputs on every honest node running the same software version**. Non-determinism on any of these paths is classified as a protocol bug.
+`ZKVotingEngine` provides privacy-preserving stake-weighted votes. Validator weight: 1.0×. Delegator: 0.5×. Community holder: 0.1×. `EligibilityProof` establishes voting power without revealing identity. `TallyProof` allows independent verification without learning individual votes.
 
+`ForklessUpgradeEngine` activates hash-committed upgrades at epoch boundaries only — validators know exactly what code will activate before casting a vote. `Version.is_valid_upgrade()` enforces monotonic version progression. Partial upgrade payloads are rejected atomically.
+
+`proposal-testnet-001` ran the full lifecycle on `bleep-testnet-1`: pre-flight, ZK votes from 7 validators, 70% quorum, on-chain execution at block 1,105. It reduced `FeeBurnBps` from 2,500 to 2,000.
+
+---
+
+## Economics
+
+### Token parameters
+
+| Parameter | Value | Source constant |
+|---|---|---|
+| Max supply (†) | 200,000,000 BLEEP | `MAX_SUPPLY` |
+| Decimals | 8 (1 BLEEP = 10⁸ microBLEEP) | |
+| Initial circulating supply | 25,000,000 (12.5%) | `INITIAL_CIRCULATING_SUPPLY` |
+| Max per-epoch inflation (†) | 500 bps | `MAX_INFLATION_RATE_BPS` |
+| Fee burn (†) | 2,500 bps (25%) | `FEE_BURN_BPS` |
+| Validator reward | 5,000 bps (50%) | `FEE_VALIDATOR_REWARD_BPS` |
+| Treasury | 2,500 bps (25%) | `FEE_TREASURY_BPS` |
+| Min base fee | 1,000 microBLEEP | `MIN_BASE_FEE` |
+| Max base fee | 10,000,000,000 microBLEEP | `MAX_BASE_FEE` |
+| Max base fee change/block | 1,250 bps | `max_increase_bps` |
+
+*(†) enforced by compile-time `const` assertion — violating the assertion fails the build*
+
+A `const` assertion in `distribution.rs` also verifies that Burn + Validator + Treasury = 10,000 bps exactly. The token distribution sum across all six allocation buckets is verified to equal `MAX_SUPPLY` at compile time.
+
+### Fee market
+
+EIP-1559-style, targeting 50% block capacity. Above target: base fee increases up to 12.5% per block. Below: decreases up to 12.5%. The 25% burn creates deflationary pressure under load — at sustained throughput above 10,000 TPS, annual burn exceeds Year 5+ validator emission (2,400,000 BLEEP/year).
+
+Audit finding SA-M4 (acknowledged, Medium): a proposer with consecutive slots can pin the base fee near maximum by filling blocks. PoS rotation limits the duration any single validator can sustain this. Documented in `THREAT_MODEL.md`.
+
+### Emission schedule
+
+| Year | Rate | Annual emission |
+|---|---|---|
+| 1 | 12% | 7,200,000 BLEEP |
+| 2 | 10% | 6,000,000 |
+| 3 | 8% | 4,800,000 |
+| 4 | 6% | 3,600,000 |
+| 5+ | 4% | 2,400,000/yr |
+
+Encoded as `VALIDATOR_EMISSION_YEAR` in `tokenomics.rs`. Not a governance parameter — changing it requires a software upgrade.
+
+### Token distribution
+
+| Allocation | Tokens | Launch unlock | Vesting |
+|---|---|---|---|
+| Validator Rewards | 60,000,000 (30%) | 10,000,000 | Emission schedule |
+| Ecosystem Fund | 50,000,000 (25%) | 5,000,000 | 10-year linear, governance disbursement |
+| Community Incentives | 30,000,000 (15%) | 5,000,000 | Governance-triggered |
+| Foundation Treasury | 30,000,000 (15%) | 5,000,000 | 6-year linear, governance spending |
+| Core Contributors | 20,000,000 (10%) | 0 | 1-year cliff + 4-year linear, immutable contract |
+| Strategic Reserve | 10,000,000 (5%) | 0 | Governance unlock, proposal + vote required |
+
+`LinearVestingSchedule` contracts for core contributors are immutable from deployment — terms can't be modified after genesis.
+
+### Game-theoretic safety verifier
+
+`SafetyVerifier` in `bleep-economics/src/game_theory.rs` evaluates five attack models at current protocol parameters: equivocation, censorship, non-participation, griefing, cartel formation. Each returns `attacker_profit`, `network_cost`, `is_profitable`. **The CI build fails if any model returns `is_profitable = true`.** This is the economic equivalent of the compile-time constitutional assertions.
+
+---
+
+## BLEEP Connect
+
+Four bridge tiers with different trust models. No tier requires a permanently privileged operator.
+
+| Tier | Mechanism | Latency | Security basis | Status |
+|---|---|---|---|---|
+| 4 — Instant | Executor auction + escrow | 200 ms – 1 s | Economic: 30% bond slashed on timeout | Live — Ethereum Sepolia |
+| 3 — ZK Proof | Groth16 batch proof | 10 – 30 s | Cryptographic: Groth16 (not PQ-secure) | Live — Ethereum Sepolia |
+| 2 — Full-Node | Multi-client verification | Hours | 90% consensus across ≥ 3 independent nodes | Implemented, mainnet target |
+| 1 — Social | Stakeholder governance | 7 days / 24 h (emergency) | Full governance consensus | Implemented, mainnet target |
+
+These are parallel options with different trust models, not deployment stages. Choose based on transfer value and time sensitivity.
+
+**Tier 4** — `InstantIntent` enters a 15-second executor auction (`EXECUTOR_AUCTION_DURATION`). Winner fulfils within 120 seconds or loses 30% of their bond. Protocol fee: 10 bps. Security is economic — don't route transfers that approach executor bond size through Tier 4.
+
+**Tier 3** — Batches up to 32 intents (`L3_BATCH_SIZE`) into a single 192-byte Groth16 proof (`L3_PROOF_SIZE_BYTES`), submitted to `BleepL3Bridge` on Sepolia (~250,000 gas). No trusted operator. **Not post-quantum secure** — a QPT adversary can forge the cross-chain proof directly. Use Tier 2 for large transfers until the bridge migrates to a post-quantum proof system.
+
+Double-spend prevention in Tier 3: `GlobalNullifierSet` performs an atomic `WriteBatch sync=true` on first submission and returns `Err(NullifierAlreadySpent)` on any duplicate. The original implementation used an in-memory `HashSet` that didn't survive restarts (SA-C1). Fixed.
+
+**Tier 2** — Requires 90% consensus (`CONSENSUS_THRESHOLD`) across ≥ 3 independent verifier nodes (`MIN_VERIFIER_NODES`) running different client implementations. Nodes query the actual on-chain state root independently. Optional Intel SGX attestation for high-value transfers. This tier avoids pairing-based cryptography entirely.
+
+**Tier 1** — Stakeholder governance for scenarios that defeat lower tiers: chain reorganisations, detected quantum attacks, smart contract bugs at bridge scale. Standard: 7-day window, 66% threshold. Emergency (`EmergencyPause`, `StateRollback`): 24-hour window, 80% threshold.
+
+---
+
+## AI advisory
+
+Two components with clearly separated scopes. Neither has write access to chain state, the governance queue, or the block production pipeline.
+
+### Phase 3 — AIConstraintValidator (operational)
+
+A deterministic rule engine. Not a trained model. Checks governance proposals against the four constitutional invariants before they enter the vote queue. Rejects proposals that would violate compile-time invariants before they consume any validator attention. The `constitutional_violation_rejected_at_submission` test runs on every CI build.
+
+`AIConsensusOrchestrator` produces advisory healing proposals (six typed proposal types: `ConsensusModeProposal`, `ShardRollbackProposal`, `ShardRebalanceProposal`, `ValidatorSecurityProposal`, `TokenomicsProposal`, `GovernancePriorityProposal`). The consensus layer decides whether to act on them. The orchestrator has no unilateral authority.
+
+### Phase 4 — DeterministicInferenceEngine (under development)
+
+ONNX-based runtime. Enforces six invariants for any model operating on a consensus-critical path — these aren't quality controls, they're determinism requirements:
+
+1. **Model hash verification** — SHA3-256 of the model binary must match `ModelMetadata.model_hash` before any inference. Mismatch returns an explicit error.
+2. **Deterministic input normalisation** — fixed mean, standard deviation, clamp applied to all inputs before inference.
+3. **Deterministic output rounding** — configurable decimal precision; floating-point variance doesn't propagate to outputs.
+4. **CPU-only execution** — no GPU paths. GPU floating-point produces non-determinism across different hardware even with identical inputs.
+5. **Governance-approval gating** — `approval_epoch` must be set by governance before any model touches a consensus-critical path. Ungated models are rejected at the call site.
+6. **No dynamic loading** — model versions are immutable once deployed. Replacement requires a governance proposal and vote.
+
+Every inference produces an `InferenceRecord` with model hash, normalised inputs, raw outputs, and deterministic seed. `AIAttestationManager` records each output as an `AIAttestationRecord` with commitment `SHA3-256(model_hash || inputs_hash || output_hash || epoch)`.
+
+**No trained model is currently deployed in any governance-critical or consensus-critical path.** The Phase 4 description above is the design, not the current deployment state.
+
+---
+
+## Running a node
+
+### Prerequisites
+
+```bash
+# Rust stable toolchain
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+rustup update stable
+
+# Ubuntu / Debian
+sudo apt-get install -y build-essential clang libclang-dev librocksdb-dev
+
+# macOS
+brew install rocksdb llvm
+export LIBRARY_PATH="$(brew --prefix rocksdb)/lib:$LIBRARY_PATH"
+```
+
+### Build
+
+```bash
+git clone https://github.com/bleep-project/bleep.git
+cd bleep
+
+# Full workspace
+cargo build --release --workspace
+
+# Node binary only
+cargo build --release --bin bleep
+
+# CLI only
+cargo build --release --bin bleep-cli
+```
+
+### Start a local node
+
+```bash
+./target/release/bleep
+# 16-step startup sequence, RPC at :8545, P2P at :7700
+
+curl -s http://127.0.0.1:8545/rpc/health | jq .
+```
+
+### Create a wallet and send a transaction
+
+```bash
+# Generate SPHINCS+ + Kyber-1024 keypair, encrypted with AES-256-GCM
+./target/release/bleep-cli wallet create
+
+# Check balance (falls back to local RocksDB if node unreachable)
+./target/release/bleep-cli wallet balance
+
+# Import from BIP-39 mnemonic (PBKDF2-HMAC-SHA512, 2,048 rounds)
+./target/release/bleep-cli wallet import "word1 word2 ... word12"
+
+# Send — prompts for passphrase to decrypt the SPHINCS+ signing key
+./target/release/bleep-cli tx send \
+  --to BLEEP1a3f7b2c9d4e8f1a0b5c6d7e9f2a3b4c5d6e7f8 \
+  --amount 1000
+```
+
+Wallet file layout (`~/.bleep/wallets.json`):
+
+```json
+[
+  {
+    "falcon_keys":  "<hex: SPHINCS+ public key>",
+    "kyber_keys":   "<hex: Kyber-1024 public key>",
+    "signing_key":  "<hex: AES-256-GCM( SPHINCS+ secret key )>",
+    "address":      "BLEEP1<40-hex-chars>",
+    "label":        null
+  }
+]
+```
+
+`signing_key` blob: `nonce(12 bytes) || ciphertext || GCM-tag(16 bytes)`. Nonce is freshly generated on every `lock()` call — two encryptions of the same key produce different blobs.
+
+Address format: `BLEEP1` + lower_hex(SHA256(SHA256(public_key))[..20])
+
+### Run tests
+
+```bash
+cargo test --workspace
+
+# Security-critical crates
+cargo test -p bleep-crypto
+cargo test -p bleep-state
+cargo test -p bleep-consensus
+cargo test -p bleep-wallet-core
+
+# Fuzz (requires nightly + cargo-fuzz)
+cargo fuzz run hash_determinism
+cargo fuzz run sign_verify_roundtrip
+cargo fuzz run kyber_encap_decap
+cargo fuzz run merkle_insertion_soundness
+cargo fuzz run state_transition_fund_conservation
+```
+
+### Executor node (Tier 4 bridge)
+
+```bash
+BLEEP_EXECUTOR_KEY=<32-byte-hex-seed>            \
+BLEEP_EXECUTOR_CAPITAL_BLEEP=100000000000        \
+BLEEP_EXECUTOR_CAPITAL_ETH=10000000000000000000  \
+BLEEP_EXECUTOR_RISK=Medium                       \
+BLEEP_RPC=http://your-node:8545                  \
+./target/release/bleep-executor
+```
+
+---
+
+## Configuration
+
+```toml
+# bleep.toml
+
+[node]
+p2p_port  = 7700
+rpc_port  = 8545
+state_dir = "/var/lib/bleep/state"
+log_level = "info"
+
+[consensus]
+block_interval_ms = 3000
+max_txs_per_block = 4096
+blocks_per_epoch  = 1000   # 100 on testnet
+validator_id      = "validator-0"
+
+[features]
+quantum = true   # do not disable on any network-connected node
+```
+
+| Env var | Default | Purpose |
+|---|---|---|
+| `BLEEP_RPC` | `http://127.0.0.1:8545` | RPC endpoint for CLI commands |
+| `BLEEP_STATE_DIR` | `/tmp/bleep-state` | Local RocksDB path (offline balance fallback) |
+| `RUST_LOG` | `info` | tracing log filter |
+
+Cargo feature flags: `mainnet` (default, on), `testnet` (off), `quantum` (default, on — enables `pqcrypto` and `pqcrypto-kyber`).
+
+---
+
+## RPC reference
+
+Port **8545**. All responses are JSON. Errors carry an `"error"` string field.
+
+### Node
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/rpc/health` | Status, height, peer count, uptime, version |
+| `GET` | `/rpc/telemetry` | Blocks produced, transactions processed, uptime |
+| `GET` | `/rpc/block/latest` | Latest block height and hash |
+| `GET` | `/rpc/block/{id}` | Block by height or hash |
+| `POST` | `/rpc/tx/submit` | Submit a signed transaction |
+| `GET` | `/rpc/state/{address}` | Balance, nonce, state root, block height |
+| `GET` | `/rpc/proof/{address}` | 256-level SMT inclusion/exclusion proof (8,192 bytes) |
+
+### Validators
+
+| Method | Path | Description |
+|---|---|---|
+| `POST` | `/rpc/validator/stake` | Register or increase stake |
+| `POST` | `/rpc/validator/unstake` | Initiate graceful exit |
+| `GET` | `/rpc/validator/list` | Active validators with stake |
+| `GET` | `/rpc/validator/status/{id}` | Status and slashing history |
+| `POST` | `/rpc/validator/evidence` | Submit double-sign evidence — triggers immediate slashing |
+
+### Economics and oracle
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/rpc/economics/supply` | Circulating supply, minted, burned, base fee |
+| `GET` | `/rpc/economics/fee` | Current base fee + last epoch |
+| `GET` | `/rpc/economics/epoch/{n}` | Epoch output: emissions, burns, price |
+| `GET` | `/rpc/oracle/price/{asset}` | Aggregated oracle price (median, sources) |
+| `POST` | `/rpc/oracle/update` | Submit price update |
+
+### BLEEP Connect
+
+| Method | Path | Description |
+|---|---|---|
+| `POST` | `/rpc/connect/intent` | Submit instant intent (Tier 4) |
+| `GET` | `/rpc/connect/intent/{id}` | Intent status |
+| `GET` | `/rpc/connect/intents/pending` | All pending Tier 4 intents |
+
+### AI
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/rpc/ai/attestations/{epoch}` | AI attestation records for epoch |
+
+### Example responses
+
+```bash
+GET /rpc/health
+{
+  "status": "ok",
+  "height": 1024,
+  "peers": 8,
+  "uptime_secs": 3600,
+  "version": "3.0.0"
+}
+
+GET /rpc/state/BLEEP1...
+{
+  "address": "BLEEP1a3f7b...",
+  "balance": "10000000000",   # decimal string — avoids JSON u128 overflow
+  "nonce": 4,
+  "state_root": "8a3f2c1d...",
+  "block_height": 1024
+}
+```
+
+Verify a proof offline:
+
+```rust
+let proof: MerkleProof = serde_json::from_str(&response_body)?;
+assert!(proof.verify(&known_state_root));
+```
+
+---
+
+## CLI reference
+
+```
+bleep-cli <COMMAND>
+
+  start-node                           Start a full node
+
+  wallet create                        New SPHINCS+ + Kyber-1024 keypair, AES-256-GCM encrypted
+  wallet balance                       Query /rpc/state, fall back to local RocksDB
+  wallet import <phrase>               BIP-39 -> PBKDF2 -> SPHINCS+ keypair
+  wallet export                        Print wallet addresses
+
+  tx send --to <addr> --amount <n>     Sign (SPHINCS+) and POST /rpc/tx/submit
+  tx history                           Transaction history
+
+  validator stake --amount <n>         Register or increase stake
+  validator unstake                    Initiate exit
+  validator list                       Active validators
+  validator status <id>                Status + slashing history
+  validator submit-evidence <file>     Double-sign evidence
+
+  governance propose <text>            Submit a proposal (requires deposit)
+  governance vote <id> --yes/--no      Cast stake-weighted ZK vote
+  governance list                      All proposals
+  governance status <id>               Proposal detail
+
+  block latest                         Latest block
+  block get <id>                       Block by hash or height
+  block validate <hash>                Validate block hash
+
+  state snapshot                       RocksDB snapshot
+  state restore <path>                 Restore from snapshot
+
+  zkp <proof>                          Verify a Groth16 proof string
+  ai ask <prompt>                      AI advisory query (advisory only)
+  ai status                            Engine status + approved model hashes
+  ai attestations <epoch>              Attestation records for epoch
+
+  pat mint/burn/transfer/balance       PAT token operations
+  oracle price/submit                  Oracle price queries and updates
+  economics supply/fee/epoch           Tokenomics queries
+  telemetry                            Live node metrics
+  info                                 Node version and RPC health
+```
+
+---
+
+## Security
+
+### Threat model
+
+Three adversary classes:
+
+**Classical PPT** — targets 256-bit security. All primitives in scope meet this. Groth16 gives 128-bit security in the generic group model over BLS12-381.
+
+**Quantum QPT (Shor's algorithm)** — SPHINCS+-SHAKE-256f-simple and Kyber-1024/ML-KEM-1024 hold at Security Level 5. Groth16 and BLS12-381 break. Consequences are in [Limitations](#limitations).
+
+**Byzantine validator** — controls f < S/3 of staked supply, may behave arbitrarily including equivocation and selective silence. BFT safety holds unconditionally under this model.
+
+### Independent audit
+
+Sprint 9 audit covered 16,127 lines of Rust across six crates.
+
+| Severity | Total | Resolved | Status |
+|---|---|---|---|
+| Critical | 2 | 2 | ✓ |
+| High | 3 | 3 | ✓ |
+| Medium | 4 | 3 | SA-M4 acknowledged — EIP-1559 design property |
+| Low | 3 | 3 | ✓ |
+| Informational | 2 | 1 | SA-I2 — NTP drift guard is a mainnet activation gate |
+
+Key findings and resolutions:
+
+- **SA-C1** (Critical) — `NullifierStore` used an in-memory `HashSet`; double-spend possible after restart → replaced with RocksDB `WriteBatch sync=true`
+- **SA-C2** (Critical) — JWT rotation accepted low-entropy secrets → Shannon entropy gate ≥ 3.5 bits/byte enforced on all rotation
+- **SA-H2** (High) — Balance check-and-debit had a TOCTOU race → RocksDB compare-and-swap loop, up to 3 retries
+- **SA-H3** (High) — No message size limit before deserialisation → 2 MiB gate at receive boundary
+- **SA-M1** (Medium) — Groth16 ceremony accepted unsigned contributions → each contribution now requires SPHINCS+ signature over `(id || hash || timestamp)`
+- **SA-M2** (Medium) — Slash arithmetic could underflow → all slash arithmetic uses `saturating_sub`
+- **SA-L3** (Low) — Secret keys persisted in memory after drop → all secret key types wrapped in `Zeroizing<Vec<u8>>`
+
+Full report: `docs/SECURITY_AUDIT_SPRINT9.md`
+
+### Adversarial test suite (72-hour continuous, 7 validators)
+
+| Scenario | Result |
+|---|---|
+| `ValidatorCrash(1)`, `ValidatorCrash(2)` | Pass — consensus resumed within expected recovery window |
+| `ValidatorCrash(3)` | Correctly halts — f=3 ≥ 2.33 violates BFT bound |
+| `NetworkPartition(4/3)`, `NetworkPartition(5/2)` | Pass — majority partition continued, healed cleanly |
+| `LongRangeReorg(10)`, `LongRangeReorg(50)` | Pass — rejected at `FinalityManager` (invariant I-CON3) |
+| `DoubleSign(validator-0)`, `DoubleSign(validator-3)` | Pass — 33% slashed, tombstoned |
+| `TxReplay` | Pass — rejected by nonce check (I-S5) |
+| `EclipseAttack(validator-6)` | Pass — Kademlia k=20 + DNS seeds |
+| `InvalidBlockFlood(1000)` | Pass — rejected at SPHINCS+ gate, peer rate-limited |
+| `LoadStress(1,000 / 5,000 / 10,000 TPS, 60s)` | Pass — block capacity saturated at max without drops |
+
+---
+
+## Limitations
+
+These are stated plainly. If you're evaluating BLEEP for production use, these are the things that matter most.
+
+**The ZK proof subsystem is not post-quantum secure.** Groth16 over BLS12-381 is broken by Shor's algorithm. Block validity proofs and the Tier 3 bridge are outside the post-quantum boundary. For block production, an attacker also needs to break SPHINCS+, which is believed infeasible. For the Tier 3 bridge, the exposure is direct. Migrating to STARKs, lattice-based SNARKs, or hash-based systems (Ligero, Brakedown) closes this gap — it's a research-grade engineering effort spanning multiple cycles, not a configuration change.
+
+**SPHINCS+ bandwidth.** 7,856-byte signatures vs 64 bytes for ECDSA. On a 4,096-tx block: ~32 MB of signatures per block, ~87 MB/s minimum bandwidth from signatures alone before payloads and vote messages. Signature aggregation for hash-based schemes is an open research problem. No standardised solution exists.
+
+**Trusted setup.** The Groth16 SRS requires a trusted setup ceremony. Five participants gives soundness conditional on at least one honest participant — weaker than a transparent proof system. A larger ceremony or migration to a transparent system (STARKs) removes this assumption.
+
+**Per-shard BFT tolerance.** Increasing shard count beyond 10 reduces per-shard validator assignment. The safe maximum for mainnet depends on final validator count and needs validation at realistic network size (Phase 5 milestone).
+
+**AI components are pre-production.** No trained ONNX model is deployed in any consensus-critical path. The `DeterministicInferenceEngine` description in this document is the design, not the deployment state. The determinism invariants can't be empirically confirmed until a model is deployed.
+
+**Tier 2 and Tier 1 bridge not yet live.** Implemented and tested against mock verifier sets. Not yet deployed in a live multi-party environment. Mainnet target.
+
+**NTP drift guard not enforced at testnet startup.** Implemented (warn > 1 s, halt > 30 s). Activated as a mainnet gate (SA-I2).
+
+---
+
+## Roadmap
+
+| Phase | Status | Definition of done |
+|---|---|---|
+| 1 — Foundation | ✅ Complete | 19 crates compile, PQ crypto active, Groth16 circuits, 4-node devnet, Tier 4 live on Sepolia |
+| 2 — Testnet Alpha | ✅ Complete | 7-validator `bleep-testnet-1`, public faucet, block explorer, full CI pipeline |
+| 3 — Protocol Hardening | ✅ Complete | Security audit (all critical/high resolved), 72-hour chaos suite, MPC ceremony, ≥10,000 TPS benchmark |
+| 4 — AI Model Training | ⏳ Active | `DeterministicInferenceEngine` passes determinism suite, governance pre-flight ≥ 95% accuracy |
+| 5 — Public Testnet | ⏳ Upcoming | ≥ 50 validators, ≥ 6 continents, 30 consecutive days without manual intervention |
+| 6 — Pre-Sale / ICO | ⏳ Upcoming | ICO complete, all vesting contracts deployed and verified on-chain |
+| 7 — Mainnet | 🔜 Planned | ≥ 21 validators, governance active from block 1, BLEEP Connect Tier 1–4 live, NTP guard active |
+
+Mainnet hard requirements: ≥ 21 validators with geographic diversity, governance active from block 1, BLEEP Connect Tier 1–4 live on Ethereum and Solana, NTP drift guard activated (SA-I2), `GenesisAllocation` vesting contracts deployed, client SDKs shipped.
+
+---
+
+## Contributing
+
+```bash
+git checkout -b feat/your-feature
+cargo test --workspace
+cargo clippy --workspace -- -D warnings
+cargo fmt --all -- --check
+```
+
+Open a PR against `main` with a clear description of the change and which crates it affects.
+
+Changes to `bleep-consensus`, `bleep-crypto`, or `bleep-state` get extended review. These crates sit on the security boundary. If you're making changes to constitutional constants (`MAX_SUPPLY`, `MAX_INFLATION_RATE_BPS`, `FEE_BURN_BPS`, finality threshold), the answer is no unless it comes through a formal protocol amendment — the point of compile-time enforcement is that these don't change at all.
+
+**Security disclosures:** Don't open public issues for vulnerabilities. Email `security@bleep.network` with a description, steps to reproduce, and a proposed fix. 72-hour acknowledgment target, 14-day patch timeline for Critical and High.
+
+---
+
+## License
+
+MIT OR Apache-2.0, at your option. See [LICENSE](LICENSE).
+
+---
+
+*BLEEP · Quantum Trust Network · Protocol Version 3 · `bleep-testnet-1`*
+
+*This document describes Protocol Version 3. It is not financial or investment advice. Protocol parameters may change before mainnet deployment.*
 This invariant constrains the use of AI-assisted components: any model operating on a consensus-critical path must produce byte-identical outputs given identical inputs, be identified by a governance-approved SHA3-256 hash, and use deterministic feature extraction and output rounding.
 
 ### Constitutional Immutability
