@@ -109,7 +109,6 @@ pub struct ChaosEngine {
     config:          ChaosConfig,
     validator_count: usize,
     outcomes:        Vec<ChaosOutcome>,
-    rng_seed:        u64,
 }
 
 impl ChaosEngine {
@@ -118,7 +117,6 @@ impl ChaosEngine {
             config: ChaosConfig::default(),
             validator_count,
             outcomes: Vec::new(),
-            rng_seed: 0xcafe_babe_dead_beef,
         }
     }
 

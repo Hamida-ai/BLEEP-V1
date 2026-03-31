@@ -18,8 +18,8 @@ fn main() {
 
 fn run_wallet_engine() -> Result<(), Box<dyn Error>> {
     // Step 1: Generate new post-quantum keypairs for a wallet
-    let (falcon_pk, falcon_sk) = generate_falcon_keypair()?;
-    let (kyber_pk, kyber_sk) = generate_kyber_keypair()?;
+    let (falcon_pk, _falcon_sk) = generate_falcon_keypair()?;
+    let (kyber_pk, _kyber_sk) = generate_kyber_keypair()?;
     info!("🔐 Falcon and Kyber keypairs generated.");
 
     // Step 2: Initialize a new encrypted wallet

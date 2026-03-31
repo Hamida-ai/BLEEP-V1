@@ -8,7 +8,6 @@
 // Permission evaluation is pure functional — no locks, no global state.
 // ============================================================================
 
-use crate::errors::{AuthError, AuthResult};
 use dashmap::DashMap;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;

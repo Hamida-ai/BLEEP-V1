@@ -72,6 +72,7 @@ pub struct PbftConsensusEngine {
     total_validators:  usize,
     quorum_size:       usize,
     finalized_blocks:  HashMap<u64, PbftBlockState>,
+    #[allow(dead_code)]
     current_view:      u64,
 
     /// H-02 FIX: per-block prepare-vote accumulators.
@@ -134,6 +135,7 @@ impl PbftConsensusEngine {
     /// Process a pre-prepare message (block proposal from the leader).
     ///
     /// SAFETY: Block must already be produced by PoS. PBFT only finalizes.
+    #[allow(dead_code)]
     fn pre_prepare(&mut self, block_height: u64, _block: &Block) -> Result<(), ConsensusError> {
         if self.finalized_blocks.contains_key(&block_height) {
             return Err(ConsensusError::ProposalRejected {
@@ -160,6 +162,7 @@ impl PbftConsensusEngine {
     /// advances to `Prepared` only when `|prepare_votes| >= quorum_size`.
     /// Unknown validators and duplicate votes are both silently rejected so
     /// that vote stuffing or replay cannot manufacture a false quorum.
+    #[allow(dead_code)]
     fn process_prepare(&mut self, block_height: u64, preparer_id: &str) -> Result<(), ConsensusError> {
         // Only accept votes for blocks in Proposed state
         if self.finalized_blocks.get(&block_height) != Some(&PbftBlockState::Proposed) {
@@ -196,6 +199,7 @@ impl PbftConsensusEngine {
     /// Same real vote-accumulation logic as `process_prepare`. The block is
     /// only committed once `|commit_votes| >= quorum_size` distinct known
     /// validators have committed.
+    #[allow(dead_code)]
     fn process_commit(&mut self, block_height: u64, committer_id: &str) -> Result<(), ConsensusError> {
         // Only accept commits for blocks that have reached Prepared
         if self.finalized_blocks.get(&block_height) != Some(&PbftBlockState::Prepared) {

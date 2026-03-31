@@ -1,6 +1,4 @@
-use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
-use tracing::{info, warn};
 
 use crate::{
     EmissionType, BurnType, TokenomicsError,
@@ -68,7 +66,7 @@ impl BleepEconomicsRuntime {
             pending_txns: 0,
             utilization_bps: 5000,
             avg_tx_size_bytes: 250, // static default
-        });
+        }).expect("fee market genesis congestion record failed");
 
         runtime
     }
@@ -103,7 +101,7 @@ impl BleepEconomicsRuntime {
             } else {
                 0
             },
-        });
+        })?;
 
         for update in &input.oracle_updates {
             let _ = self.state.oracle_bridge.submit_price_update(update.clone());
@@ -212,5 +210,9 @@ impl BleepEconomicsRuntime {
 
     pub fn total_minted(&self) -> u128 {
         self.state.tokenomics.supply_state.total_minted
+    }
+
+    pub fn get_epoch_output(&self, epoch: u64) -> Option<EpochOutput> {
+        self.epoch_history.iter().find(|entry| entry.epoch == epoch).cloned()
     }
 }

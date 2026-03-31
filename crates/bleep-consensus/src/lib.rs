@@ -24,9 +24,29 @@ pub use slashing_engine::{SlashingEngine, SlashingEvidence, SlashingEvent, Slash
 pub use orchestrator::ConsensusOrchestrator;
 pub use finality::{FinalizyCertificate, FinalityProof, FinalizityManager, ValidatorSignature};
 
+use std::collections::HashMap;
+use std::sync::Arc;
+use crate::engine::ConsensusMetrics;
+use crate::pos_engine::PoSConsensusEngine;
+
 pub fn run_consensus_engine() -> Result<(), Box<dyn std::error::Error>> {
-    // Consensus engine initialization - called at node startup
-    // Returns immediately; actual consensus runs in background tasks
+    let config = EpochConfig::new(100, 0, 2)
+        .map_err(|e| format!("Consensus epoch configuration failed: {}", e))?;
+
+    let mut engines: HashMap<EpochConsensusMode, Arc<dyn ConsensusEngine>> = HashMap::new();
+    let local_engine = Arc::new(PoSConsensusEngine::new("local-validator".to_string(), 1_000_000));
+    engines.insert(EpochConsensusMode::PosNormal, local_engine);
+
+    let mut orchestrator = ConsensusOrchestrator::new(
+        config,
+        engines,
+        10,
+        0.66,
+        3,
+    ).map_err(|e| format!("Consensus orchestrator initialization failed: {}", e))?;
+
+    let mode = orchestrator.select_mode(0, &ConsensusMetrics::new());
+    log::info!("Consensus orchestrator initialized in mode: {}", mode.as_str());
     Ok(())
 }
 

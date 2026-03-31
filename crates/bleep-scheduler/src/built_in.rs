@@ -11,7 +11,6 @@
 //             NETWORKING | MAINTENANCE (7 tasks)
 // ============================================================================
 
-use crate::errors::SchedulerResult;
 use crate::registry::{RegisteredTask, TaskContext, TaskRegistry};
 use crate::task::TaskKind;
 use log::info;

@@ -24,7 +24,7 @@ use aes_gcm::{
 use rand::RngCore;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest as Sha2Digest, Sha256};
-use sha3::{Digest as Sha3Digest, Sha3_256};
+use sha3::{Sha3_256};
 
 // ─── EncryptedWallet ──────────────────────────────────────────────────────────
 

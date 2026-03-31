@@ -85,7 +85,6 @@ pub struct ShardCoordinator {
     pub epoch:       u64,
     pub pending_xs:  HashMap<u64, CrossShardTx>,  // tx_id → CrossShardTx
     next_tx_id:      u64,
-    tps_window:      VecDeque<u64>,   // tx counts per second window (last 60s)
     total_txs:       u64,
     total_xs_txs:    u64,
     committed_xs:    u64,
@@ -104,7 +103,6 @@ impl ShardCoordinator {
             epoch: 0,
             pending_xs: HashMap::new(),
             next_tx_id: 1,
-            tps_window: VecDeque::new(),
             total_txs: 0,
             total_xs_txs: 0,
             committed_xs: 0,

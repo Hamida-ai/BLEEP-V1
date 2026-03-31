@@ -1,0 +1,322 @@
+crates/bleep-consensus/src/consensus.rs:139:5: warning: field `pow_difficulty` is never read
+crates/bleep-consensus/src/consensus.rs:301:8: warning: methods `pow_algorithm` and `adjust_pow_difficulty` are never used
+crates/bleep-consensus/src/pbft_engine.rs:75:5: warning: field `current_view` is never read
+crates/bleep-consensus/src/pbft_engine.rs:137:8: warning: methods `pre_prepare`, `process_prepare`, and `process_commit` are never used
+crates/bleep-consensus/src/chaos_engine.rs:112:5: warning: field `rng_seed` is never read
+crates/bleep-consensus/src/shard_coordinator.rs:88:5: warning: field `tps_window` is never read
+warning: `bleep-consensus` (lib) generated 6 warnings
+warning: unused import: `std::collections::HashMap`
+ --> crates/bleep-economics/src/runtime.rs:1:5
+  |
+1 | use std::collections::HashMap;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused imports: `info` and `warn`
+ --> crates/bleep-economics/src/runtime.rs:3:15
+  |
+3 | use tracing::{info, warn};
+  |               ^^^^  ^^^^
+
+warning: unused `Result` that must be used
+  --> crates/bleep-economics/src/runtime.rs:66:9
+   |
+66 | /         runtime.state.fee_market.record_shard_congestion(ShardCongestion {
+67 | |             shard_id: 0,
+68 | |             pending_txns: 0,
+69 | |             utilization_bps: 5000,
+70 | |             avg_tx_size_bytes: 250, // static default
+71 | |         });
+   | |__________^
+   |
+   = note: this `Result` may be an `Err` variant, which should be handled
+   = note: `#[warn(unused_must_use)]` (part of `#[warn(unused)]`) on by default
+help: use `let _ = ...` to ignore the resulting value
+   |
+66 |         let _ = runtime.state.fee_market.record_shard_congestion(ShardCongestion {
+   |         +++++++
+
+warning: unused `Result` that must be used
+   --> crates/bleep-economics/src/runtime.rs:97:9
+    |
+ 97 | /         self.state.fee_market.record_shard_congestion(ShardCongestion {
+ 98 | |             shard_id: 0,
+ 99 | |             pending_txns: (input.block_count * 100) as u32,
+100 | |             utilization_bps: input.avg_utilisation_bps,
+...   |
+105 | |             },
+106 | |         });
+    | |__________^
+    |
+    = note: this `Result` may be an `Err` variant, which should be handled
+help: use `let _ = ...` to ignore the resulting value
+    |
+ 97 |         let _ = self.state.fee_market.record_shard_congestion(ShardCongestion {
+    |         +++++++
+
+warning: `bleep-economics` (lib) generated 4 warnings (run `cargo fix --lib -p bleep-economics` to apply 2 suggestions)
+warning: field `name` is never read
+  --> crates/bleep-telemetry/src/metrics.rs:13:5
+   |
+12 | pub struct MetricCounter {
+   |            ------------- field in this struct
+13 |     name: String,
+   |     ^^^^
+   |
+   = note: `MetricCounter` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: field `name` is never read
+  --> crates/bleep-telemetry/src/metrics.rs:49:5
+   |
+48 | pub struct MetricGauge {
+   |            ----------- field in this struct
+49 |     name: String,
+   |     ^^^^
+   |
+   = note: `MetricGauge` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+
+warning: `bleep-telemetry` (lib) generated 2 warnings
+crates/bleep-rpc/src/lib.rs:290:5: warning: field `tx_type` is never read
+crates/bleep-rpc/src/lib.rs:299:5: warning: field `timestamp` is never read
+warning: `bleep-rpc` (lib) generated 2 warnings
+warning: unused import: `crate::errors::SchedulerResult`
+  --> crates/bleep-scheduler/src/built_in.rs:14:5
+   |
+14 | use crate::errors::SchedulerResult;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `SchedulerError`
+ --> crates/bleep-scheduler/src/registry.rs:7:21
+  |
+7 | use crate::errors::{SchedulerError, SchedulerResult};
+  |                     ^^^^^^^^^^^^^^
+
+warning: `bleep-scheduler` (lib) generated 2 warnings (run `cargo fix --lib -p bleep-scheduler` to apply 2 suggestions)
+warning: field `started_at` is never read
+   --> crates/bleep-zkp/src/mpc_ceremony.rs:121:5
+    |
+116 | pub struct MPCCeremony {
+    |            ----------- field in this struct
+...
+121 |     started_at:       u64,
+    |     ^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `bleep-zkp` (lib) generated 1 warning
+   Compiling bleep-root v1.0.0 (/workspaces/BLEEP-v1)
+warning: unused import: `bleep_core::block::Transaction`
+ --> src/bin/bleep-block.rs:5:5
+  |
+5 | use bleep_core::block::Transaction;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `chrono::Utc`
+ --> src/bin/bleep-block.rs:9:5
+  |
+9 | use chrono::Utc;
+  |     ^^^^^^^^^^^
+
+warning: unused variable: `mempool`
+  --> src/bin/bleep-block.rs:29:9
+   |
+29 |     let mempool = Mempool::new();
+   |         ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_mempool`
+   |
+   = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: variable does not need to be mutable
+  --> src/bin/bleep-governance.rs:22:9
+   |
+22 |     let mut engine = GovernanceEngine::new(1_000_000); // Replace with r...
+   |         ----^^^^^^
+   |         |
+   |         help: remove this `mut`
+   |
+   = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+
+warning: `bleep-root` (bin "bleep-block") generated 3 warnings (run `cargo fix --bin "bleep-block" -p bleep-root` to apply 3 suggestions)
+warning: unused import: `bleep_crypto::quantum_resistance::sign_transaction`
+ --> src/bin/transaction.rs:4:5
+  |
+4 | use bleep_crypto::quantum_resistance::sign_transaction;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `std::error::Error`
+ --> src/bin/bleep-interop.rs:4:5
+  |
+4 | use std::error::Error;
+  |     ^^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `error`
+ --> src/bin/bleep-interop.rs:5:17
+  |
+5 | use log::{info, error};
+  |                 ^^^^^
+
+warning: `bleep-root` (bin "bleep-governance") generated 1 warning (run `cargo fix --bin "bleep-governance" -p bleep-root` to apply 1 suggestion)
+warning: `bleep-root` (bin "transaction") generated 1 warning (run `cargo fix --bin "transaction" -p bleep-root` to apply 1 suggestion)
+warning: `bleep-root` (bin "bleep-interop") generated 2 warnings (run `cargo fix --bin "bleep-interop" -p bleep-root` to apply 2 suggestions)
+warning: field `enabled` is never read
+  --> src/bin/bleep-telemetry.rs:33:5
+   |
+32 | struct TelemetryCollector {
+   |        ------------------ field in this struct
+33 |     enabled: bool,
+   |     ^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `bleep-root` (bin "bleep-telemetry") generated 1 warning
+warning: unused variable: `falcon_sk`
+  --> src/bin/bleep-wallet-core.rs:21:21
+   |
+21 |     let (falcon_pk, falcon_sk) = generate_falcon_keypair()?;
+   |                     ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_falcon_sk`
+   |
+   = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `kyber_sk`
+  --> src/bin/bleep-wallet-core.rs:22:20
+   |
+22 |     let (kyber_pk, kyber_sk) = generate_kyber_keypair()?;
+   |                    ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_kyber_sk`
+
+warning: `bleep-root` (bin "bleep-wallet-core") generated 2 warnings (run `cargo fix --bin "bleep-wallet-core" -p bleep-root` to apply 2 suggestions)
+warning: unused import: `std::error::Error`
+ --> src/bin/bleep-consensus.rs:3:5
+  |
+3 | use std::error::Error;
+  |     ^^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `bleep_pat::PATRegistry`
+  --> src/bin/main.rs:85:5
+   |
+85 | use bleep_pat::PATRegistry;
+   |     ^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: `bleep-root` (bin "bleep-consensus") generated 1 warning (run `cargo fix --bin "bleep-consensus" -p bleep-root` to apply 1 suggestion)
+warning: variable does not need to be mutable
+   --> src/bin/main.rs:205:9
+    |
+205 |     let mut governance = GovernanceEngine::new(1_000_000_000u128);
+    |         ----^^^^^^^^^^
+    |         |
+    |         help: remove this `mut`
+    |
+    = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `block_proving_key`
+   --> src/bin/main.rs:245:10
+    |
+245 |     let (block_proving_key, block_verifying_key) = tokio::task::spawn_b...
+    |          ^^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_block_proving_key`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `block_verifying_key`
+   --> src/bin/main.rs:245:29
+    |
+245 | ...block_proving_key, block_verifying_key) = tokio::task::spawn_blockin...
+    |                       ^^^^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_block_verifying_key`
+
+error[E0275]: overflow evaluating the requirement `hyper::error::Parse: Send`
+    |
+    = help: consider increasing the recursion limit by adding a `#![recursion_limit = "256"]` attribute to your crate (`bleep`)
+note: required because it appears within the type `hyper::error::Kind`
+   --> /home/codespace/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/hyper-0.14.32/src/error.rs:26:17
+    |
+ 26 | pub(super) enum Kind {
+    |                 ^^^^
+note: required because it appears within the type `hyper::error::ErrorImpl`
+   --> /home/codespace/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/hyper-0.14.32/src/error.rs:18:8
+    |
+ 18 | struct ErrorImpl {
+    |        ^^^^^^^^^
+    = note: required for `Unique<hyper::error::ErrorImpl>` to implement `Send`
+note: required because it appears within the type `Box<hyper::error::ErrorImpl>`
+   --> /rustc/e408947bfd200af42db322daf0fadfe7e26d3bd1/library/alloc/src/boxed.rs:234:11
+note: required because it appears within the type `warp::hyper::Error`
+   --> /home/codespace/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/hyper-0.14.32/src/error.rs:14:12
+    |
+ 14 | pub struct Error {
+    |            ^^^^^
+note: required because it appears within the type `warp::body::BodyReadError`
+   --> /home/codespace/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/warp-0.3.7/src/filters/body.rs:332:19
+    |
+332 | pub(crate) struct BodyReadError(::hyper::Error);
+    |                   ^^^^^^^^^^^^^
+note: required because it appears within the type `reject::Known`
+   --> /home/codespace/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/warp-0.3.7/src/reject.rs:221:25
+    |
+221 |           pub(crate) enum Known {
+    |                           ^^^^^
+...
+273 | / enum_known! {
+274 | |     MethodNotAllowed(MethodNotAllowed),
+275 | |     InvalidHeader(InvalidHeader),
+276 | |     MissingHeader(MissingHeader),
+...   |
+290 | |     BodyConsumedMultipleTimes(crate::body::BodyConsumedMultipleTimes),
+291 | | }
+    | |_- in this macro invocation
+note: required because it appears within the type `reject::Rejections`
+   --> /home/codespace/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/warp-0.3.7/src/reject.rs:213:6
+    |
+213 | enum Rejections {
+    |      ^^^^^^^^^^
+    = note: required for `Unique<reject::Rejections>` to implement `Send`
+note: required because it appears within the type `Box<reject::Rejections>`
+   --> /rustc/e408947bfd200af42db322daf0fadfe7e26d3bd1/library/alloc/src/boxed.rs:234:11
+note: required because it appears within the type `reject::Reason`
+   --> /home/codespace/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/warp-0.3.7/src/reject.rs:208:6
+    |
+208 | enum Reason {
+    |      ^^^^^^
+note: required because it appears within the type `Rejection`
+   --> /home/codespace/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/warp-0.3.7/src/reject.rs:204:12
+    |
+204 | pub struct Rejection {
+    |            ^^^^^^^^^
+note: required because it appears within the type `Result<(), Rejection>`
+   --> /rustc/e408947bfd200af42db322daf0fadfe7e26d3bd1/library/core/src/result.rs:557:9
+note: required because it appears within the type `Option<Result<(), Rejection>>`
+   --> /rustc/e408947bfd200af42db322daf0fadfe7e26d3bd1/library/core/src/option.rs:600:9
+note: required because it appears within the type `Ready<Result<(), Rejection>>`
+   --> /home/codespace/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/futures-util-0.3.31/src/future/ready.rs:9:12
+    |
+  9 | pub struct Ready<T>(Option<T>);
+    |            ^^^^^
+    = note: required for `warp::filter::FilterFn<{closure@end::{closure#0}}>` to implement `warp::filter::FilterBase`
+    = note: required for `warp::filter::FilterFn<{closure@end::{closure#0}}>` to implement `warp::Filter`
+    = note: 108 redundant requirements hidden
+    = note: required for `Or<Or<Or<Or<..., ...>, ...>, ...>, ...>` to implement `warp::Filter`
+    = note: required for `EitherFuture<Or<Or<..., ...>, ...>, ...>` to implement `Future`
+    = note: required for `EitherFuture<Or<Or<..., ...>, ...>, ...>` to implement `futures_core::future::TryFuture`
+    = note: 1 redundant requirement hidden
+    = note: required for `FilteredFuture<EitherFuture<..., ...>>` to implement `Future`
+    = note: required for `ServiceFn<{closure@...}, ...>` to implement `Service<warp::http::Request<Body>>`
+    = note: required for `ServiceFn<{closure@...}, ...>` to implement `warp::hyper::service::http::HttpService<Body>`
+    = note: 1 redundant requirement hidden
+    = note: required for `NewSvcTask<..., ..., ..., ..., ...>` to implement `Future`
+    = note: the full name for the type has been written to '/workspaces/BLEEP-v1/target/release/deps/bleep-2dde0b72653555ce.long-type-203972476527631653.txt'
+    = note: consider using `--verbose` to print the full type name to the console
+    = note: this error originates in the macro `enum_known` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+For more information about this error, try `rustc --explain E0275`.
+warning: `bleep-root` (bin "bleep") generated 4 warnings
+error: could not compile `bleep-root` (bin "bleep") due to 1 previous error; 4 warnings emitted

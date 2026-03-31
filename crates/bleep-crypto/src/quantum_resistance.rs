@@ -40,6 +40,30 @@ pub fn init_crypto_logging() {
     // Logging init failures are non-fatal and should not propagate as errors
 }
 
+/// Initialize Falcon post-quantum signing support.
+pub fn init_falcon() -> Result<(), Box<dyn std::error::Error>> {
+    init_crypto_logging();
+    info!("Falcon post-quantum signing initialized.");
+    Ok(())
+}
+
+/// Initialize Kyber post-quantum key encapsulation support.
+pub fn init_kyber() -> Result<(), Box<dyn std::error::Error>> {
+    init_crypto_logging();
+    info!("Kyber post-quantum key encapsulation initialized.");
+    Ok(())
+}
+
+/// Run basic quantum-resistant key generation self-tests.
+pub fn run_keygen_tests() -> Result<(), Box<dyn std::error::Error>> {
+    let (pk, sk) = generate_falcon_keypair()?;
+    if pk.is_empty() || sk.is_empty() {
+        Err("Falcon key generation returned empty key material".into())
+    } else {
+        Ok(())
+    }
+}
+
 // 🔹 Quantum-Resistant Transaction Structure
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Transaction {

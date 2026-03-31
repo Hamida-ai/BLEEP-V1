@@ -78,15 +78,15 @@ pub use governance_integration::{
     GovernanceError,
 };
 
-mod wallet;
-mod governance;
-mod security;
-mod smart_contracts;
-mod interoperability;
-mod analytics;
-mod compliance;
-mod sharding;
-mod energy_monitor;
+pub mod wallet;
+pub mod governance;
+pub mod security;
+pub mod smart_contracts;
+pub mod interoperability;
+pub mod analytics;
+pub mod compliance;
+pub mod sharding;
+pub mod energy_monitor;
 pub mod ai_decision;
 pub mod zkp_verification;
 pub mod bleep_connect;

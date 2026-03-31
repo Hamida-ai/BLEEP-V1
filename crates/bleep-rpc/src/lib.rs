@@ -287,6 +287,7 @@ struct EvidenceResp {
 
 #[derive(Deserialize, Clone)]
 struct StakeRequest {
+    #[allow(dead_code)]
     tx_type:   String,
     amount:    u64,
     label:     String,
@@ -296,7 +297,6 @@ struct StakeRequest {
 #[derive(Deserialize, Clone)]
 struct UnstakeRequest {
     validator_id: String,
-    timestamp:    u64,
 }
 
 // ─── Route factory ────────────────────────────────────────────────────────────
@@ -389,7 +389,7 @@ pub fn rpc_routes_with_state(
     let state_query = warp::path!("rpc" / "state" / String)
         .and(warp::get())
         .and(with_rpc_state(rpc.clone()))
-        .map(|address: String, st: RpcState| -> Box<dyn warp::Reply> {
+        .map(|address: String, st: RpcState| -> Box<dyn warp::Reply + Send> {
             match &st.state_mgr {
                 None => Box::new(warp::reply::with_status(
                     warp::reply::json(&ErrResp {
@@ -421,7 +421,7 @@ pub fn rpc_routes_with_state(
     let proof_query = warp::path!("rpc" / "proof" / String)
         .and(warp::get())
         .and(with_rpc_state(rpc.clone()))
-        .map(|address: String, st: RpcState| -> Box<dyn warp::Reply> {
+        .map(|address: String, st: RpcState| -> Box<dyn warp::Reply + Send> {
             match &st.state_mgr {
                 None => Box::new(warp::reply::with_status(
                     warp::reply::json(&ErrResp {
@@ -447,7 +447,13 @@ pub fn rpc_routes_with_state(
         .and(warp::post())
         .and(warp::body::json::<StakeRequest>())
         .and(with_rpc_state(rpc.clone()))
-        .map(|req: StakeRequest, st: RpcState| -> Box<dyn warp::Reply> {
+        .map(|req: StakeRequest, st: RpcState| -> Box<dyn warp::Reply + Send> {
+            if req.tx_type.trim().to_lowercase() != "stake" {
+                return Box::new(warp::reply::with_status(
+                    warp::reply::json(&ErrResp { error: "invalid tx_type for stake request".into() }),
+                    warp::http::StatusCode::BAD_REQUEST,
+                ));
+            }
             match &st.validator_registry {
                 None => Box::new(warp::reply::with_status(
                     warp::reply::json(&ErrResp { error: "ValidatorRegistry unavailable".into() }),
@@ -511,7 +517,7 @@ pub fn rpc_routes_with_state(
         .and(warp::post())
         .and(warp::body::json::<UnstakeRequest>())
         .and(with_rpc_state(rpc.clone()))
-        .map(|req: UnstakeRequest, st: RpcState| -> Box<dyn warp::Reply> {
+        .map(|req: UnstakeRequest, st: RpcState| -> Box<dyn warp::Reply + Send> {
             match &st.validator_registry {
                 None => Box::new(warp::reply::with_status(
                     warp::reply::json(&ErrResp { error: "ValidatorRegistry unavailable".into() }),
@@ -537,7 +543,7 @@ pub fn rpc_routes_with_state(
     let validator_list = warp::path!("rpc" / "validator" / "list")
         .and(warp::get())
         .and(with_rpc_state(rpc.clone()))
-        .map(|st: RpcState| -> Box<dyn warp::Reply> {
+        .map(|st: RpcState| -> Box<dyn warp::Reply + Send> {
             match &st.validator_registry {
                 None => Box::new(warp::reply::with_status(
                     warp::reply::json(&ErrResp { error: "ValidatorRegistry unavailable".into() }),
@@ -563,7 +569,7 @@ pub fn rpc_routes_with_state(
     let validator_status = warp::path!("rpc" / "validator" / "status" / String)
         .and(warp::get())
         .and(with_rpc_state(rpc.clone()))
-        .map(|validator_id: String, st: RpcState| -> Box<dyn warp::Reply> {
+        .map(|validator_id: String, st: RpcState| -> Box<dyn warp::Reply + Send> {
             match &st.validator_registry {
                 None => Box::new(warp::reply::with_status(
                     warp::reply::json(&ErrResp { error: "ValidatorRegistry unavailable".into() }),
@@ -589,7 +595,7 @@ pub fn rpc_routes_with_state(
         .and(warp::post())
         .and(warp::body::bytes())
         .and(with_rpc_state(rpc.clone()))
-        .map(|body: bytes::Bytes, st: RpcState| -> Box<dyn warp::Reply> {
+        .map(|body: bytes::Bytes, st: RpcState| -> Box<dyn warp::Reply + Send> {
             // Deserialize the SlashingEvidence JSON
             let evidence: SlashingEvidence = match serde_json::from_slice(&body) {
                 Ok(e) => e,
@@ -1919,7 +1925,7 @@ fn faucet_drip(
                                 ),
                             }),
                             warp::http::StatusCode::TOO_MANY_REQUESTS,
-                        )) as Box<dyn warp::Reply>;
+                        )) as Box<dyn warp::Reply + Send>;
                     }
                 }
             }
@@ -1938,7 +1944,7 @@ fn faucet_drip(
                                 ),
                             }),
                             warp::http::StatusCode::TOO_MANY_REQUESTS,
-                        )) as Box<dyn warp::Reply>;
+                        )) as Box<dyn warp::Reply + Send>;
                     }
                 }
             }
@@ -1949,7 +1955,7 @@ fn faucet_drip(
                 return Box::new(warp::reply::with_status(
                     warp::reply::json(&ErrResp { error: "Faucet balance depleted.".into() }),
                     warp::http::StatusCode::SERVICE_UNAVAILABLE,
-                )) as Box<dyn warp::Reply>;
+                )) as Box<dyn warp::Reply + Send>;
             }
 
             // ── Dispense ──
@@ -1966,7 +1972,7 @@ fn faucet_drip(
                     message:       format!("1,000 test BLEEP sent to {}. Valid on bleep-testnet-1.", address),
                 }),
                 warp::http::StatusCode::OK,
-            )) as Box<dyn warp::Reply>
+            )) as Box<dyn warp::Reply + Send>
         })
 }
 
@@ -2020,20 +2026,20 @@ fn auth_rotate_secret(
                             ),
                         }),
                         warp::http::StatusCode::OK,
-                    )) as Box<dyn warp::Reply>
+                    )) as Box<dyn warp::Reply + Send>
                 }
                 Ok(_) => Box::new(warp::reply::with_status(
                     warp::reply::json(&ErrResp {
                         error: "Decoded secret is shorter than 32 bytes.".into(),
                     }),
                     warp::http::StatusCode::BAD_REQUEST,
-                )) as Box<dyn warp::Reply>,
+                )) as Box<dyn warp::Reply + Send>,
                 Err(e) => Box::new(warp::reply::with_status(
                     warp::reply::json(&ErrResp {
                         error: format!("Invalid base64: {}", e),
                     }),
                     warp::http::StatusCode::BAD_REQUEST,
-                )) as Box<dyn warp::Reply>,
+                )) as Box<dyn warp::Reply + Send>,
             }
         })
 }
@@ -2055,7 +2061,7 @@ fn auth_audit_export(
                 return Box::new(warp::reply::with_status(
                     warp::reply::json(&ErrResp { error: "Audit export disabled.".into() }),
                     warp::http::StatusCode::FORBIDDEN,
-                )) as Box<dyn warp::Reply>;
+                )) as Box<dyn warp::Reply + Send>;
             }
 
             let limit: Option<usize> = params.get("limit")
@@ -2125,7 +2131,7 @@ fn auth_audit_export(
                     .header("content-type", "application/x-ndjson")
                     .body(ndjson)
                     .unwrap()
-            ) as Box<dyn warp::Reply>
+            ) as Box<dyn warp::Reply + Send>
         })
 }
 
@@ -2156,8 +2162,8 @@ fn explorer_api_blocks(
         .map(|st: Arc<RpcState>| {
             let height = st.chain_height.load(std::sync::atomic::Ordering::Relaxed);
             let blocks: Vec<serde_json::Value> = (0..10u64)
-                .filter_map(|i| height.checked_sub(i))
-                .map(|h| serde_json::json!({
+                .filter_map(|i| height.checked_sub(i).map(|h| (i, h)))
+                .map(|(i, h)| serde_json::json!({
                     "height":    h,
                     "hash":      format!("{:064x}", h ^ 0xb1ee_b1ee_b1ee_b1ee),
                     "tx_count":  (h % 64) as u32,
@@ -2181,15 +2187,28 @@ fn explorer_api_validators(
         .map(|st: Arc<RpcState>| {
             let height = st.chain_height.load(std::sync::atomic::Ordering::Relaxed);
             // Return the 7-validator testnet set
-            let validators: Vec<serde_json::Value> = (0..7usize).map(|i| serde_json::json!({
-                "id":            format!("validator-{}", i),
-                "stake":         10_000_000u64,
-                "status":        "active",
-                "blocks_signed": height.saturating_sub((i as u64) * 3),
-                "uptime_pct":    99.5 - (i as f64) * 0.1,
-                "region":        ["us-east-1","eu-west-1","ap-southeast-1",
-                                  "us-west-2","sa-east-1","af-south-1","ap-northeast-1"][i],
-            })).collect();
+            let regions = [
+                "us-east-1",
+                "eu-west-1",
+                "ap-southeast-1",
+                "us-west-2",
+                "sa-east-1",
+                "af-south-1",
+                "ap-northeast-1",
+            ];
+            let validators: Vec<serde_json::Value> = (0..7usize)
+                .map(|i| {
+                    let region = regions[i];
+                    serde_json::json!({
+                        "id":            format!("validator-{}", i),
+                        "stake":         10_000_000u64,
+                        "status":        "active",
+                        "blocks_signed": height.saturating_sub((i as u64) * 3),
+                        "uptime_pct":    99.5 - (i as f64) * 0.1,
+                        "region":        region,
+                    })
+                })
+                .collect();
             warp::reply::json(&serde_json::json!({ "validators": validators, "count": 7 }))
         })
 }

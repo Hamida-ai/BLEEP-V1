@@ -35,6 +35,7 @@ members = [
 [package]
 name        = "bleep-root"
 version     = "1.0.0"
+default-run = "bleep"
 edition     = "2021"
 authors     = ["Muhammad Attahir"]
 license     = "MIT OR Apache-2.0"

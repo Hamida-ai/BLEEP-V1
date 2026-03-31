@@ -118,6 +118,7 @@ pub struct MPCCeremony {
     pub transcript:   Vec<TranscriptEntry>,
     pub state:        CeremonyState,
     current_hash:     [u8; 32],
+    #[allow(dead_code)]
     started_at:       u64,
 }
 
@@ -162,6 +163,11 @@ impl MPCCeremony {
         self.transcript.push(entry.clone());
 
         Ok(entry)
+    }
+
+    /// Return the ceremony start timestamp.
+    pub fn started_at(&self) -> u64 {
+        self.started_at
     }
 
     /// Finalise the ceremony once enough participants have contributed.

@@ -1,7 +1,7 @@
 // src/bin/transaction.rs
 
 use bleep_core::transaction::ZKTransaction;
-use bleep_crypto::quantum_resistance::sign_transaction;
+use bleep_crypto::quantum_secure::QuantumSecure;
 
 use std::error::Error;
 use log::{info, error};
@@ -18,7 +18,6 @@ fn main() {
 }
 
 fn submit_transaction() -> Result<(), Box<dyn Error>> {
-    // Step 1: Parse CLI arguments for transaction details
     let args: Vec<String> = env::args().collect();
     if args.len() < 3 {
         println!("Usage: transaction <recipient> <amount>");
@@ -27,17 +26,15 @@ fn submit_transaction() -> Result<(), Box<dyn Error>> {
     let recipient = &args[1];
     let amount: u64 = args[2].parse()?;
 
-    // Step 2: Build new ZKTransaction (dummy, as builder is not available)
-    // Dummy quantum secure for signature (replace with real instance)
-    let quantum_secure = bleep_crypto::quantum_secure::QuantumSecure::keygen();
-    let tx = ZKTransaction::new("sender", recipient, amount, &quantum_secure);
+    let quantum_secure = QuantumSecure::keygen();
+    let tx = ZKTransaction::new("bleep:sender", recipient, amount, &quantum_secure);
 
-    // Step 3: Sign transaction using Falcon or Kyber private key
-    // (No-op for now)
-    // sign_transaction(&mut tx)?;
-    info!("📝 Transaction signed: {} -> {} for {}", "sender", recipient, amount);
+    if !tx.verify(&quantum_secure) {
+        error!("❌ Transaction signature verification failed.");
+        return Err("Transaction signature invalid".into());
+    }
 
-    // Step 4: Print transaction (no pool integration)
+    info!("📝 Transaction signed and verified: {} -> {} for {}", "bleep:sender", recipient, amount);
     println!("📤 Transaction ready: {:?}", tx);
     Ok(())
 }

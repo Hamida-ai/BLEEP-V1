@@ -17,7 +17,8 @@
 
 use anyhow::{anyhow, Result};
 use clap::Parser;
-use tracing::{info, warn};
+use std::sync::Arc;
+use tracing::warn;
 
 use bleep_cli::{
     Cli, Commands, WalletCommand, TxCommand, AiCommand,
@@ -27,7 +28,18 @@ use bleep_cli::{
 
 // Real crate imports
 use bleep_wallet_core::wallet::WalletManager;
-use bleep_ai::ai_assistant::{BLEEPAIAssistant, AIRequest};
+use bleep_ai::{
+    ai_assistant::{BLEEPAIAssistant, AIRequest},
+    wallet::BLEEPWallet,
+    governance::BLEEPGovernance,
+    security::QuantumSecure,
+    smart_contracts::SmartContractOptimizer,
+    interoperability::InteroperabilityModule,
+    analytics::BLEEPAnalytics,
+    compliance::ComplianceModule,
+    sharding::AdaptiveSharding,
+    energy_monitor::EnergyMonitor,
+};
 use bleep_governance::governance_core::{GovernanceEngine, Proposal, ProposalType, Vote};
 use bleep_state::state_manager::StateManager;
 use bleep_zkp::Verifier as ZkVerifier;
@@ -243,7 +255,17 @@ async fn run(cmd: Commands) -> Result<()> {
         // ── AI ────────────────────────────────────────────────────────────
         Commands::Ai { task } => match task {
             AiCommand::Ask { prompt } => {
-                let mut ai = BLEEPAIAssistant::new("cli-node");
+                let ai = BLEEPAIAssistant::new(
+                    Arc::new(BLEEPWallet),
+                    Arc::new(BLEEPGovernance),
+                    Arc::new(QuantumSecure),
+                    Arc::new(SmartContractOptimizer),
+                    Arc::new(InteroperabilityModule),
+                    Arc::new(BLEEPAnalytics),
+                    Arc::new(ComplianceModule),
+                    Arc::new(AdaptiveSharding),
+                    Arc::new(EnergyMonitor),
+                );
                 let req = AIRequest {
                     user_id: "cli-user".to_string(),
                     query:   prompt.clone(),
@@ -273,7 +295,7 @@ async fn run(cmd: Commands) -> Result<()> {
                         title:              proposal.chars().take(60).collect::<String>(),
                         description:        proposal.clone(),
                         state:              ProposalState::Draft,
-                        voting_window:      VotingWindow { start_epoch: 0, end_epoch: 10 },
+                        voting_window:      VotingWindow { start_epoch: 0, end_epoch: 10, min_duration: 10 },
                         execution_epoch:    11,
                         approval_threshold: 67,
                         votes:              GovMap::new(),
@@ -298,7 +320,8 @@ async fn run(cmd: Commands) -> Result<()> {
                         vote_epoch:   0,
                         signature:    vec![],
                     };
-                    engine.cast_vote(vote, 0)
+                    let proposal_id_str = proposal_id.to_string();
+                    engine.cast_vote(&proposal_id_str, vote, 0)
                         .map_err(|e| anyhow!("Vote failed: {}", e))?;
                     println!(
                         "✅ Voted {} on proposal {}",
@@ -821,6 +844,7 @@ async fn get_account_state(rpc: &str, address: &str) -> Result<(String, u64, Str
         balance:    String,
         nonce:      u64,
         state_root: String,
+        #[allow(dead_code)]
         block_height: u64,
     }
     let url  = format!("{}/rpc/state/{}", rpc, address);
@@ -919,4 +943,5 @@ async fn post_slashing_evidence(rpc: &str, evidence_json: &str) -> Result<String
         .text()
         .await?;
     Ok(resp)
-            }
+}
+

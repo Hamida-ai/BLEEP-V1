@@ -136,6 +136,7 @@ pub struct BLEEPAdaptiveConsensus {
     consensus_mode:     ConsensusMode,
     network_reliability: f64,
     validators:         HashMap<String, Validator>,
+    #[allow(dead_code)]
     pow_difficulty:     usize,
     networking:         Arc<NetworkingModule>,
     #[allow(dead_code)]
@@ -258,17 +259,11 @@ impl BLEEPAdaptiveConsensus {
         }
     }
 
-    fn run_consensus(&self, block: &Block, state: &mut BlockchainState) -> bool {
+    fn run_consensus(&mut self, block: &Block, state: &mut BlockchainState) -> bool {
         match self.consensus_mode {
             ConsensusMode::PoS  => self.pos_algorithm(block, state),
             ConsensusMode::PBFT => self.pbft_algorithm(block, state),
-            ConsensusMode::PoW  => {
-                // PoW requires &mut self for difficulty adjustment.
-                // Caller (finalize_block) owns &mut self; delegate through a
-                // separate mutable call in finalize_block.
-                // Here we return false so finalize_block's mutable path fires.
-                false
-            }
+            ConsensusMode::PoW  => self.pow_algorithm(block),
         }
     }
 
@@ -298,6 +293,7 @@ impl BLEEPAdaptiveConsensus {
     ///
     /// Fix: `block_commitment = SHA-256(bincode(block))` computed once.
     /// Each iteration: `SHA-256(block_commitment || nonce_le8)` with a fresh hasher.
+    #[allow(dead_code)]
     fn pow_algorithm(&mut self, block: &Block) -> bool {
         let block_bytes = match bincode::serialize(block) {
             Ok(b)  => b,
@@ -321,6 +317,7 @@ impl BLEEPAdaptiveConsensus {
         false
     }
 
+    #[allow(dead_code)]
     fn adjust_pow_difficulty(&mut self) {
         if self.networking.get_network_hashrate() > 500 {
             self.pow_difficulty += 1;

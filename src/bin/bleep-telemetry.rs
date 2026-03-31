@@ -21,6 +21,7 @@ fn run_telemetry_engine() -> Result<(), Box<dyn Error>> {
     // Create telemetry collector instance
     let collector = TelemetryCollector::new();
     info!("Telemetry collector initialized: {}", collector.name());
+    info!("Telemetry enabled: {}", collector.is_enabled());
     
     // Start monitoring consensus and network metrics
     info!("Monitoring active: consensus metrics, network latency, validator participation");
@@ -40,5 +41,9 @@ impl TelemetryCollector {
     
     fn name(&self) -> &'static str {
         "BLEEPTelemetry"
+    }
+
+    fn is_enabled(&self) -> bool {
+        self.enabled
     }
 }

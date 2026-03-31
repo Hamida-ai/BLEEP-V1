@@ -10,6 +10,7 @@ use std::collections::HashMap;
 /// Metric counter for collecting numeric values
 #[derive(Debug, Clone)]
 pub struct MetricCounter {
+    #[allow(dead_code)]
     name: String,
     value: Arc<Mutex<u64>>,
 }
@@ -21,6 +22,10 @@ impl MetricCounter {
             name: name.to_string(),
             value: Arc::new(Mutex::new(0)),
         }
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
     }
     
     /// Increment the counter
@@ -46,6 +51,7 @@ impl MetricCounter {
 /// Metric gauge for tracking current values
 #[derive(Debug, Clone)]
 pub struct MetricGauge {
+    #[allow(dead_code)]
     name: String,
     value: Arc<Mutex<i64>>,
 }
@@ -57,6 +63,10 @@ impl MetricGauge {
             name: name.to_string(),
             value: Arc::new(Mutex::new(0)),
         }
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
     }
     
     /// Set the gauge value
