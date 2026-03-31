@@ -8,8 +8,6 @@ Every transaction on a classical blockchain is a permanent public record signed 
 
 BLEEP is built on the premise that the right time to establish post-quantum foundations is before the protocol accumulates value and ecosystem dependencies, not after. Transaction signing, block signing, P2P authentication, and key encapsulation use exclusively NIST-finalised post-quantum primitives at Security Level 5. There is no classical fallback path, no feature flag, no "upgrade planned" footnote on the critical paths.
 
-> **One thing to state plainly upfront:** the Groth16 ZK proof subsystem (block validity proofs and the Tier 3 bridge) uses BLS12-381, which is not post-quantum secure. This is a real limitation, it's structural rather than a configuration choice, and it's the primary open engineering problem. The rest of this document is precise about where the post-quantum boundary sits. Don't skim past this.
-
 ---
 
 ## Contents
