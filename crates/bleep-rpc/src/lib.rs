@@ -41,6 +41,8 @@ use bleep_state::state_manager::StateManager;
 use bleep_state::state_merkle::MerkleProof;
 use bleep_consensus::validator_identity::{ValidatorIdentity, ValidatorRegistry};
 use bleep_consensus::slashing_engine::{SlashingEngine, SlashingEvidence};
+use bleep_consensus::block_producer::BlockProducer;
+use bleep_consensus::performance_bench::BenchmarkResult;
 use bleep_economics::BleepEconomicsRuntime;
 use bleep_economics::oracle_bridge::{PriceUpdate, OracleSource};
 use bleep_interop::core::{BleepConnectOrchestrator};
@@ -79,6 +81,9 @@ pub struct RpcState {
     pub jwt_rotation_count: Arc<std::sync::atomic::AtomicU64>,
     /// Audit log export enabled flag.
     pub audit_export_enabled: bool,
+    /// Live BlockProducer — attach at node startup so GET /rpc/benchmark/latest
+    /// returns real wall-clock throughput rather than static literals.
+    pub block_producer: Option<Arc<BlockProducer>>,
 }
 
 impl RpcState {
@@ -107,6 +112,7 @@ impl RpcState {
             faucet_balance:    Arc::new(std::sync::atomic::AtomicU64::new(Self::FAUCET_INITIAL_BALANCE)),
             jwt_rotation_count: Arc::new(std::sync::atomic::AtomicU64::new(0)),
             audit_export_enabled: true,
+            block_producer: None,
         }
     }
 
@@ -143,6 +149,13 @@ impl RpcState {
     /// Attach the live `PATRegistry` for Sprint 7 PAT endpoints.
     pub fn with_pat_registry(mut self, reg: Arc<Mutex<PATRegistry>>) -> Self {
         self.pat_registry = Some(reg);
+        self
+    }
+
+    /// Attach the live `BlockProducer` so GET /rpc/benchmark/latest returns
+    /// real wall-clock throughput from the production block loop.
+    pub fn with_block_producer(mut self, producer: Arc<BlockProducer>) -> Self {
+        self.block_producer = Some(producer);
         self
     }
 
@@ -612,7 +625,15 @@ pub fn rpc_routes_with_state(
                     let mut engine = engine_arc.lock();
                     let mut reg    = reg_arc.lock();
                     let timestamp  = now_secs();
-                    let current_epoch = 0u64; // TODO: derive from chain height
+                    // Derive epoch from live chain height.
+                    // Testnet: 100 blocks/epoch. Mainnet: 1,000 blocks/epoch.
+                    // The testnet value is used here; mainnet nodes set this via
+                    // genesis config. Using the wrong epoch stamps evidence with
+                    // an incorrect epoch ID, corrupting the slashing audit trail.
+                    const TESTNET_BLOCKS_PER_EPOCH: u64 = 100;
+                    let current_epoch = st.chain_height
+                        .load(std::sync::atomic::Ordering::Relaxed)
+                        / TESTNET_BLOCKS_PER_EPOCH;
                     match engine.process_evidence(evidence, &mut reg, current_epoch, timestamp) {
                         Ok(event) => Box::new(warp::reply::json(&EvidenceResp {
                             accepted:      true,
@@ -2783,7 +2804,12 @@ pub fn layer3_intent_submit_route(
 }
 
 // ── GET /rpc/benchmark/latest ────────────────────────────────────────────────
-// Returns the latest performance benchmark result.
+// Returns the live performance benchmark result from the running BlockProducer.
+// All figures are accumulated from real wall-clock block production timings via
+// BlockProducer::benchmark_result(), which calls record_block() on every produced
+// block with actual Instant measurements. If the node was just started and no
+// blocks have been produced yet, the endpoint returns current accumulator state
+// (zeroes) rather than fabricated constants.
 
 pub fn benchmark_result_route(
     state: Arc<RpcState>,
@@ -2793,38 +2819,46 @@ pub fn benchmark_result_route(
         .and(warp::get())
         .map(move || {
             let height = st.chain_height.load(std::sync::atomic::Ordering::Relaxed);
-            let json = serde_json::json!({
-                "chain_height":                  height,
-                "benchmark_version":             "sprint9-v1",
-                "duration_secs":                 3_600,
-                "num_shards":                    10,
-                "target_tps":                    10_000,
-                "avg_tps":                       10_921,
-                "peak_tps":                      13_200,
-                "min_tps":                       9_840,
-                "target_met":                    true,
-                "total_txs":                     39_315_600,
-                "total_blocks":                  120_000,
-                "avg_block_time_ms":             3_000,
-                "avg_proof_time_ms":             847,
-                "blocks_at_max_capacity_pct":    82.3,
-                "tps_samples_60s": [
-                    10_241, 10_580, 10_921, 11_203, 10_847,
-                    11_102, 10_633, 10_912, 11_050, 10_780,
-                    10_921, 11_203, 12_100, 13_200, 11_903,
-                    10_512, 10_801, 10_921, 9_840,  10_233,
-                    10_921, 11_100, 10_950, 10_821, 10_640,
-                    10_780, 10_921, 11_050, 10_633, 10_921,
-                    10_800, 10_970, 11_100, 10_920, 10_750,
-                    10_630, 10_890, 10_921, 10_800, 10_970,
-                    11_100, 10_920, 10_750, 10_630, 10_890,
-                    10_921, 10_800, 10_970, 11_100, 10_921,
-                    10_921, 10_921, 10_921, 10_921, 10_921,
-                    10_921, 10_921, 10_921, 10_921, 10_921,
-                ],
-                "status": "PASS"
-            });
-            warp::reply::json(&json)
+
+            match st.block_producer.as_ref() {
+                Some(producer) => {
+                    let r = producer.benchmark_result();
+                    let json = serde_json::json!({
+                        "chain_height":               height,
+                        "benchmark_version":          "live-v1",
+                        "source":                     "BlockProducer::benchmark_result()",
+                        "duration_secs":              r.duration_secs,
+                        "num_shards":                 r.num_shards,
+                        "target_tps":                 r.target_tps,
+                        "avg_tps":                    r.avg_tps,
+                        "peak_tps":                   r.peak_tps,
+                        "min_tps":                    r.min_tps,
+                        "target_met":                 r.target_met,
+                        "total_txs":                  r.total_txs,
+                        "total_blocks":               r.total_blocks,
+                        "avg_block_time_ms":          r.avg_block_time_ms,
+                        "avg_proof_time_ms":          r.avg_proof_time_ms,
+                        "blocks_at_max_capacity_pct": r.blocks_at_max_capacity_pct,
+                        "tps_samples_60s":            r.tps_samples,
+                        "status": if r.target_met { "PASS" } else { "ACCUMULATING" }
+                    });
+                    Box::new(warp::reply::json(&json)) as Box<dyn warp::Reply>
+                }
+                None => {
+                    // BlockProducer not attached — node is in RPC-only mode.
+                    // Return an explicit not-ready response rather than fabricated data.
+                    let json = serde_json::json!({
+                        "chain_height":  height,
+                        "source":        "no BlockProducer attached",
+                        "status":        "NOT_READY",
+                        "note":          "Attach a BlockProducer via RpcState::with_block_producer() to serve live benchmark data."
+                    });
+                    Box::new(warp::reply::with_status(
+                        warp::reply::json(&json),
+                        warp::http::StatusCode::SERVICE_UNAVAILABLE,
+                    )) as Box<dyn warp::Reply>
+                }
+            }
         })
 }
 
