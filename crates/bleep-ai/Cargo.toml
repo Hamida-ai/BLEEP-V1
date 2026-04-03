@@ -57,16 +57,14 @@ linfa         = "0.7.1"
 linfa-clustering = "0.7.1"
 ndarray       = "0.15.6"
 
-# NOTE: Removed for MVP build:
-#   onnxruntime-ng — needs ONNX Runtime C library; used only in decision_engine.rs
-#                    and machine_learning.rs which are NOT exposed in lib.rs
-#   web3           — heavy dep; AI module doesn't need it directly
-#   ethers         — same
-#   linfa-nn       — brings BLAS dep
+# ONNX inference (pure-Rust tract, enabled under the `onnx` feature flag).
+# No system library or C runtime required. Activated for validator nodes
+# running DeterministicInferenceEngine in production.
+tract-onnx    = { version = "0.21", optional = true }
 
 [features]
 default = []
-onnx = []    # future: re-enable onnxruntime-ng under this flag
+onnx = ["tract-onnx"]
 
 [dev-dependencies]
 tokio = { version = "1.37", features = ["full"] }
