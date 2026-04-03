@@ -1,20 +1,17 @@
-//! # bleep-rpc — Sprint 7
+//! # bleep-rpc
 //!
 //! Provides `rpc_routes_with_state()` used by `main.rs`, and re-exports
 //! `RpcState` so the node can update live counters.
 //!
-//! ## Sprint 5 additions
 //! - `GET /rpc/state/{address}` — live balance + nonce from `StateManager`
 //! - `GET /rpc/proof/{address}` — Sparse Merkle Trie inclusion/exclusion proof
 //!
-//! ## Sprint 6 additions
 //! - `POST /rpc/validator/stake`           — register as validator / increase stake
 //! - `POST /rpc/validator/unstake`         — initiate graceful exit
 //! - `GET  /rpc/validator/list`            — list active validators
 //! - `GET  /rpc/validator/status/{id}`     — validator status + slashing history
 //! - `POST /rpc/validator/evidence`        — submit slashing evidence (auto-execute)
 //!
-//! ## Sprint 7 additions
 //! - `GET  /rpc/economics/supply`          — circulating supply, minted, burned
 //! - `GET  /rpc/economics/epoch/{epoch}`   — epoch output: emissions, burns, base fee
 //! - `GET  /rpc/economics/fee`             — current base fee
