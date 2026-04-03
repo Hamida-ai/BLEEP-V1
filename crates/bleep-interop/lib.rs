@@ -108,6 +108,136 @@ pub mod interoperability {
             _intent: &bleep_connect_types::InstantIntent,
             _proof: &[u8],
         ) -> bleep_connect_types::BleepConnectResult<bool> {
+            // Polkadot/Substrate chain verification requires a live RPC call to
+            // the configured parachain endpoint to check execution finality.
+            // This path is NOT implemented for testnet — calls to PolkadotAdapter
+            // should only occur when the `polkadot` feature is enabled and a real
+            // substrate-rpc endpoint is configured.
+            //
+            // Returning Ok(true) unconditionally here would silently approve any
+            // Polkadot-sourced intent without verification.  Returning an explicit
+            // error forces the caller to handle the unimplemented case rather than
+            // trusting a false positive.
+            Err(bleep_connect_types::BleepConnectError::InternalError(
+                "PolkadotAdapter::verify_execution is not implemented for testnet. \
+                 Enable the `polkadot` feature and configure a substrate-rpc endpoint \
+                 before routing intents through this adapter.".to_string()
+            ))
+        }
+        fn get_finality_blocks(&self) -> u64 { 2 }
+        fn chain_id(&self) -> ChainId { ChainId::Polkadot }
+        fn native_decimals(&self) -> u8 { 10 }
+    }
+
+    // ── BLEEPInteroperabilityModule ───────────────────────────────────────
+    //
+    // Façade used by `bleep-governance` and other crates.
+    // Internally wraps AdapterRegistry.
+
+    pub struct BLEEPInteroperabilityModule {
+        adapters: HashMap<String, Box<dyn ChainAdapter + Send + Sync>>,
+    }
+
+    impl BLEEPInteroperabilityModule {
+        pub fn new() -> Self {
+            Self { adapters: HashMap::new() }
+        }
+
+        /// Register a chain adapter by name.
+        pub fn register_adapter(
+            &mut self,
+            name: String,
+            adapter: Box<dyn ChainAdapter + Send + Sync>,
+        ) {
+            self.adapters.insert(name, adapter);
+        }
+
+        /// Returns the list of registered chain names.
+        pub fn registered_chains(&self) -> Vec<&str> {
+            self.adapters.keys().map(|s| s.as_str()).collect()
+        }
+
+        /// Encode a transfer intent for the named chain.
+        pub fn encode_for_chain(
+            &self,
+            chain: &str,
+            intent: &InstantIntent,
+        ) -> BleepConnectResult<Vec<u8>> {
+            self.adapters
+                .get(chain)
+                .ok_or_else(|| BleepConnectError::InvalidChainId(chain.to_string()))
+                .and_then(|a| a.encode_transfer(intent))
+        }
+
+        /// Convenience: deploy-style stub (used by legacy callers in bleep-ai).
+        pub fn deploy_to_ethereum(&self, _code: &str) -> Result<String, String> {
+            Ok("0xETHADDRESS".to_string())
+        }
+        pub fn deploy_to_polkadot(&self, _code: &str) -> Result<String, String> {
+            Ok("0xDOTADDRESS".to_string())
+        }
+        pub fn deploy_to_cosmos(&self, _code: &str) -> Result<String, String> {
+            Ok("0xCOSMOSADDRESS".to_string())
+        }
+        pub fn deploy_to_solana(&self, _code: &str) -> Result<String, String> {
+            Ok("0xSOLANAADDRESS".to_string())
+        }
+
+        /// Adapt logging data for a specific blockchain (stub for governance logging)
+        pub async fn adapt(&self, _chain: &str, data: &[u8]) -> Result<Vec<u8>, String> {
+            // Stub: returns the hashed data for logging purposes
+            use sha2::{Sha256, Digest};
+            let mut hasher = Sha256::new();
+            hasher.update(data);
+            Ok(hasher.finalize().to_vec())
+        }
+    }
+
+    impl Default for BLEEPInteroperabilityModule {
+        fn default() -> Self { Self::new() }
+    }
+
+    // ── start_interop_services: called by main node startup ───────────────
+    pub fn start_interop_services() -> Result<(), Box<dyn std::error::Error>> {
+        log::info!("BLEEP Connect interoperability layer starting…");
+        let mut module = BLEEPInteroperabilityModule::new();
+        module.register_adapter("ethereum".into(), Box::new(EthereumAdapter::new(ChainId::Ethereum)));
+        module.register_adapter("binance".into(),  Box::new(BinanceAdapter));
+        module.register_adapter("cosmos".into(),   Box::new(CosmosAdapter::new(ChainId::Cosmos)));
+        module.register_adapter("polkadot".into(), Box::new(PolkadotAdapter));
+        module.register_adapter("solana".into(),   Box::new(SolanaAdapter));
+        log::info!("Registered {} chain adapters.", module.registered_chains().len());
+        Ok(())
+    }
+
+    pub fn start_bleep_connect() -> Result<(), Box<dyn std::error::Error>> {
+        log::info!("BLEEP Connect commitment chain layer initialising…");
+        Ok(())
+    }
+}
+
+// ── Hardening-phase modules ────────────────────────────────────────────────────
+pub mod layer3_bridge;
+
+pub use layer3_bridge::{
+    Layer3Bridge, BridgeIntentL3, L3State, ZkBridgeProof,
+    L3BatchProver, Chain,
+    L3_PROOF_SIZE_BYTES, L3_BATCH_SIZE, L3_MAX_LATENCY_SECS,
+};
+
+pub mod nullifier_store;
+pub use nullifier_store::{GlobalNullifierSet, NullifierError};        ) -> bleep_connect_types::BleepConnectResult<Vec<u8>> {
+            // Encode as SCALE-like bytes (simplified for MVP)
+            let mut out = Vec::new();
+            out.extend_from_slice(&intent.source_amount.to_be_bytes());
+            out.extend_from_slice(intent.recipient.address.as_bytes());
+            Ok(out)
+        }
+        fn verify_execution(
+            &self,
+            _intent: &bleep_connect_types::InstantIntent,
+            _proof: &[u8],
+        ) -> bleep_connect_types::BleepConnectResult<bool> {
             Ok(true) // Stub: real impl queries Polkadot RPC
         }
         fn get_finality_blocks(&self) -> u64 { 2 }
