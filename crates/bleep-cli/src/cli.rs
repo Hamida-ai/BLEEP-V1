@@ -194,8 +194,14 @@ async fn run(cmd: Commands) -> Result<()> {
                                 .unwrap_or_default();
                             let sk_plain = w.unlock(&password)
                                 .map_err(|e| anyhow!("Wallet unlock failed — set BLEEP_WALLET_PASSWORD if encrypted: {}", e))?;
-                            sign_tx_payload(&payload, &sk_plain)
-                                .map_err(|e| anyhow!("SPHINCS+ signing failed: {}", e))?
+                            let detached_sig = sign_tx_payload(&payload, &sk_plain)
+                                .map_err(|e| anyhow!("SPHINCS+ signing failed: {}", e))?;
+                            
+                            // Wire format: pk_bytes(32) || sphincs_detached_sig
+                            let mut full_sig = Vec::with_capacity(w.falcon_keys.len() + detached_sig.len());
+                            full_sig.extend_from_slice(&w.falcon_keys);
+                            full_sig.extend_from_slice(&detached_sig);
+                            full_sig
                         }
                         Some(_) => {
                             return Err(anyhow!("Wallet found but cannot sign — run `bleep wallet create` to generate a signing key"));
@@ -211,7 +217,7 @@ async fn run(cmd: Commands) -> Result<()> {
                     receiver:  to.clone(),
                     amount,
                     timestamp: ts,
-                    signature: sig, // Sprint 4: real SPHINCS+ signature
+                    signature: sig, // Wire format: pk(32) || SPHINCS+ detached sig
                 };
 
                 // POST to RPC

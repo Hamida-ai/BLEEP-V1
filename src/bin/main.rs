@@ -398,12 +398,25 @@ async fn run() -> Result<(), Box<dyn Error>> {
     scheduler.register_built_in_tasks();
     let (interval_handle, block_sched_handle) = scheduler.start();
 
+    // Build live RpcState — wires the live StateManager for /rpc/state and
+    // /rpc/proof, and shares the same atomic counters with the relay task so
+    // block/tx counts are up-to-date in /rpc/health and /rpc/telemetry.
+    let rpc_state = RpcState::new()
+        .with_state_manager(Arc::clone(&state))
+        .with_validator_registry(Arc::clone(&validator_registry))
+        .with_slashing_engine(Arc::clone(&slashing_engine))
+        .with_economics_runtime(Arc::clone(&economics_runtime))
+        .with_connect_orchestrator(Arc::clone(&connect_orchestrator))
+        .with_pat_registry(Arc::clone(&pat_registry))
+        .with_transaction_pool(Arc::clone(&tx_pool));
+
     // Relay FinalizedBlock events into Scheduler + metrics + economics
     let scheduler_relay  = Arc::clone(&scheduler);
     let blocks_relay     = blocks_produced.clone();
     let txs_relay        = txs_processed.clone();
     let gas_relay        = gas_used_gauge.clone();
     let economics_relay  = Arc::clone(&economics_runtime);
+    let rpc_height_relay = Arc::clone(&rpc_state.chain_height);
 
     // Track last epoch to fire economics only once per epoch boundary
     let mut last_economics_epoch: u64 = 0;
@@ -417,6 +430,7 @@ async fn run() -> Result<(), Box<dyn Error>> {
                     blocks_relay.increment();
                     for _ in 0..fb.tx_count { txs_relay.increment(); }
                     gas_relay.set(fb.gas_used as i64);
+                    rpc_height_relay.store(fb.height, std::sync::atomic::Ordering::Relaxed);
 
                     // Accumulate fee revenue (gas_used * base_fee approximation)
                     epoch_fee_revenue = epoch_fee_revenue.saturating_add(fb.gas_used as u128 * 1_000);
@@ -595,17 +609,6 @@ async fn run() -> Result<(), Box<dyn Error>> {
 
     // ── Step 13: RPC server ───────────────────────────────────────────────────
     info!("🔌 [16/16] Starting JSON-RPC server on 0.0.0.0:8545…");
-
-    // Build live RpcState — wires the live StateManager for /rpc/state and
-    // /rpc/proof, and shares the same atomic counters with the relay task so
-    // block/tx counts are up-to-date in /rpc/health and /rpc/telemetry.
-    let rpc_state = RpcState::new()
-        .with_state_manager(Arc::clone(&state))
-        .with_validator_registry(Arc::clone(&validator_registry))
-        .with_slashing_engine(Arc::clone(&slashing_engine))
-        .with_economics_runtime(Arc::clone(&economics_runtime))
-        .with_connect_orchestrator(Arc::clone(&connect_orchestrator))
-        .with_pat_registry(Arc::clone(&pat_registry));
 
     // Share atomic counters with the relay task (blocks/txs/height)
     let rpc_blocks  = Arc::clone(&rpc_state.blocks_produced);

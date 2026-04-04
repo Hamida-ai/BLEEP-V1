@@ -117,6 +117,12 @@ impl TransactionPool {
         //
         // Hash the canonical payload (same bytes that were signed).
         // This catches exact replays (same sender/receiver/amount/timestamp).
+        let payload = bleep_crypto::tx_signer::tx_payload(
+            &transaction.sender,
+            &transaction.receiver,
+            transaction.amount,
+            transaction.timestamp,
+        );
         let tx_hash: [u8; 32] = Sha256::digest(&payload).into();
 
         {

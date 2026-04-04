@@ -39,6 +39,7 @@ use bleep_state::state_merkle::MerkleProof;
 use bleep_consensus::validator_identity::{ValidatorIdentity, ValidatorRegistry};
 use bleep_consensus::slashing_engine::{SlashingEngine, SlashingEvidence};
 use bleep_consensus::block_producer::BlockProducer;
+use bleep_core::transaction_pool::TransactionPool;
 use bleep_economics::BleepEconomicsRuntime;
 use bleep_economics::oracle_bridge::{PriceUpdate, OracleSource};
 use bleep_interop::core::{BleepConnectOrchestrator};
@@ -80,6 +81,8 @@ pub struct RpcState {
     /// Live BlockProducer — attach at node startup so GET /rpc/benchmark/latest
     /// returns real wall-clock throughput rather than static literals.
     pub block_producer: Option<Arc<BlockProducer>>,
+    /// Live TransactionPool — attach at node startup so POST /rpc/tx can enqueue transactions.
+    pub transaction_pool: Option<Arc<TransactionPool>>,
 }
 
 impl RpcState {
@@ -109,6 +112,7 @@ impl RpcState {
             jwt_rotation_count: Arc::new(std::sync::atomic::AtomicU64::new(0)),
             audit_export_enabled: true,
             block_producer: None,
+            transaction_pool: None,
         }
     }
 
@@ -155,6 +159,12 @@ impl RpcState {
         self
     }
 
+    /// Attach the live `TransactionPool` so POST /rpc/tx can enqueue transactions.
+    pub fn with_transaction_pool(mut self, pool: Arc<TransactionPool>) -> Self {
+        self.transaction_pool = Some(pool);
+        self
+    }
+
     pub fn uptime_secs(&self) -> u64 {
         now_secs().saturating_sub(self.start_time)
     }
@@ -198,8 +208,26 @@ struct TelemetryResp {
 #[derive(Serialize)]
 struct JsonReply { result: String }
 
+#[derive(Deserialize)]
+struct TxReq {
+    sender: String,
+    receiver: String,
+    amount: u64,
+    timestamp: u64,
+    signature: Vec<u8>,
+}
+
 #[derive(Serialize)]
 struct TxResp { tx_id: String, status: &'static str }
+
+#[derive(Deserialize)]
+struct MintReq {
+    address: String,
+    amount: u64,
+}
+
+#[derive(Serialize)]
+struct MintResp { address: String, new_balance: String, status: String }
 
 #[derive(Serialize)]
 struct BlockResp { height: u64, hash: String, tx_count: usize, epoch: u64 }
@@ -357,16 +385,90 @@ pub fn rpc_routes_with_state(
     // POST /rpc/tx
     let tx_submit = warp::path!("rpc" / "tx")
         .and(warp::post())
-        .and(warp::body::json::<serde_json::Value>())
-        .map(|body: serde_json::Value| {
-            let sender   = body.get("sender").and_then(|v| v.as_str()).unwrap_or("unknown");
-            let receiver = body.get("receiver").and_then(|v| v.as_str()).unwrap_or("unknown");
-            let amount   = body.get("amount").and_then(|v| v.as_u64()).unwrap_or(0);
-            let ts       = body.get("timestamp").and_then(|v| v.as_u64()).unwrap_or(0);
-            warp::reply::json(&TxResp {
-                tx_id:  format!("{}:{}:{}:{}", sender, receiver, amount, ts),
-                status: "queued",
-            })
+        .and(warp::body::json::<TxReq>())
+        .and(with_rpc_state(rpc.clone()))
+        .and_then(|req: TxReq, st: RpcState| async move {
+            // Check if TransactionPool is attached
+            let pool = match st.transaction_pool {
+                Some(p) => p,
+                None => {
+                    let resp = warp::reply::json(&TxResp {
+                        tx_id: "error".to_string(),
+                        status: "TransactionPool not attached to RPC state",
+                    });
+                    return Ok::<_, warp::Rejection>(resp);
+                }
+            };
+
+            // Create ZKTransaction from request
+            let tx = bleep_core::transaction::ZKTransaction {
+                sender: req.sender.clone(),
+                receiver: req.receiver.clone(),
+                amount: req.amount,
+                timestamp: req.timestamp,
+                signature: req.signature,
+            };
+
+            // Try to add transaction to pool
+            let admitted = pool.add_transaction(tx).await;
+
+            if admitted {
+                let tx_id = format!("{}:{}:{}:{}", req.sender, req.receiver, req.amount, req.timestamp);
+                let resp = warp::reply::json(&TxResp {
+                    tx_id,
+                    status: "accepted",
+                });
+                Ok(resp)
+            } else {
+                let resp = warp::reply::json(&TxResp {
+                    tx_id: "rejected".to_string(),
+                    status: "validation_failed",
+                });
+                Ok(resp)
+            }
+        });
+
+    // POST /rpc/mint — Temporary endpoint for testing (mint tokens to address)
+    let mint = warp::path!("rpc" / "mint")
+        .and(warp::post())
+        .and(warp::body::json::<MintReq>())
+        .and(with_rpc_state(rpc.clone()))
+        .and_then(|req: MintReq, st: RpcState| async move {
+            // Check if StateManager is attached
+            let state_mgr = match st.state_mgr {
+                Some(sm) => sm,
+                None => {
+                    let resp = warp::reply::json(&MintResp {
+                        address: req.address.clone(),
+                        new_balance: "0".to_string(),
+                        status: "StateManager not attached to RPC state".to_string(),
+                    });
+                    return Ok::<_, warp::Rejection>(resp);
+                }
+            };
+
+            // Mint tokens (convert u64 to u128)
+            let amount_u128 = req.amount as u128;
+            let mint_result = state_mgr.lock().mint(&req.address, amount_u128);
+
+            match mint_result {
+                Ok(new_balance) => {
+                    let resp = warp::reply::json(&MintResp {
+                        address: req.address,
+                        new_balance: new_balance.to_string(),
+                        status: "minted".to_string(),
+                    });
+                    Ok(resp)
+                }
+                Err(err) => {
+                    let resp = warp::reply::json(&MintResp {
+                        address: req.address,
+                        new_balance: "0".to_string(),
+                        status: err,
+                    });
+                    Ok(resp)
+                }
+            }
         });
 
     // GET /rpc/tx/history
@@ -657,6 +759,7 @@ pub fn rpc_routes_with_state(
         .or(wallet)
         .or(ai)
         .or(tx_submit)
+        .or(mint)
         .or(tx_history)
         .or(block_latest)
         .or(block_by_id)
