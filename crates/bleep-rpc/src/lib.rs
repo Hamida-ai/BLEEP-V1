@@ -39,7 +39,6 @@ use bleep_state::state_merkle::MerkleProof;
 use bleep_consensus::validator_identity::{ValidatorIdentity, ValidatorRegistry};
 use bleep_consensus::slashing_engine::{SlashingEngine, SlashingEvidence};
 use bleep_consensus::block_producer::BlockProducer;
-use bleep_consensus::performance_bench::BenchmarkResult;
 use bleep_economics::BleepEconomicsRuntime;
 use bleep_economics::oracle_bridge::{PriceUpdate, OracleSource};
 use bleep_interop::core::{BleepConnectOrchestrator};
