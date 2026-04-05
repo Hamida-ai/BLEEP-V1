@@ -31,13 +31,15 @@ use sha3::{Digest, Sha3_256};
 use chrono::Utc;
 
 // bleep_crypto::tx_signer used by InboundBlockHandler in main.rs (not directly in block.rs)
+use bleep_crypto::pq_crypto::SignatureScheme;
 use pqcrypto_sphincsplus::sphincsshake256fsimple;
 use pqcrypto_traits::sign::{SecretKey as _, DetachedSignature as _};
 
 /// Byte length of a SPHINCS+-SHAKE-256-simple public key.
-pub const SPHINCS_PK_LEN: usize = 32;
+/// pqcrypto_sphincsplus::sphincsshake256fsimple generates 64-byte public keys.
+pub const SPHINCS_PK_LEN: usize = 64;
 /// Byte length of a SPHINCS+-SHAKE-256-simple detached signature.
-pub const SPHINCS_SIG_LEN: usize = 7856;
+pub const SPHINCS_SIG_LEN: usize = 49856;
 /// Total validator_signature length: pk || sig.
 pub const VALIDATOR_SIG_LEN: usize = SPHINCS_PK_LEN + SPHINCS_SIG_LEN;
 
@@ -170,40 +172,46 @@ impl Block {
 
     // ── Signing (Sprint 6: SPHINCS+-SHAKE-256) ────────────────────────────────
 
-    /// Sign this block with a real SPHINCS+ secret key.
+    /// Sign this block with a real SPHINCS+ secret key and public key.
     ///
     /// `sphincs_sk_bytes` must be raw SPHINCS+-SHAKE-256-simple secret key bytes
     /// (as returned by `generate_tx_keypair()` or `sphincsshake256fsimple::keypair()`).
+    /// `sphincs_pk_bytes` must be raw SPHINCS+-SHAKE-256-simple public key bytes (64 bytes).
     ///
-    /// On success, sets `self.validator_signature = pk_bytes(32) || sig(7856)`.
+    /// On success, sets `self.validator_signature = pk_bytes(64) || sig(49856)`.
     /// Then auto-generates the 64-byte Fiat-Shamir ZKP commitment.
-    pub fn sign_block(&mut self, sphincs_sk_bytes: &[u8]) -> Result<(), String> {
+    pub fn sign_block(&mut self, seed_bytes: &[u8]) -> Result<(), String> {
+        // For backward compatibility: derive keypair from seed
+        // In production, BlockProducer should call sign_block_with_pk instead
+        let (pk, sk) = SignatureScheme::keygen_from_seed(seed_bytes)
+            .map_err(|e| format!("SPHINCS+ keygen_from_seed failed: {:?}", e))?;
+        self.sign_block_with_pk(sk.as_bytes(), pk.as_bytes())
+    }
+
+    /// Sign this block with explicit secret and public keys (production-grade).
+    ///
+    /// `sphincs_sk_bytes` must be raw SPHINCS+-SHAKE-256-simple secret key bytes.
+    /// `sphincs_pk_bytes` must be the corresponding 64-byte public key.
+    ///
+    /// On success, sets `self.validator_signature = pk_bytes(64) || sig(49856)`.
+    pub fn sign_block_with_pk(&mut self, sphincs_sk_bytes: &[u8], sphincs_pk_bytes: &[u8]) -> Result<(), String> {
+        if sphincs_pk_bytes.len() != SPHINCS_PK_LEN {
+            return Err(format!("Public key must be {} bytes, got {}", SPHINCS_PK_LEN, sphincs_pk_bytes.len()));
+        }
+
         let sk = sphincsshake256fsimple::SecretKey::from_bytes(sphincs_sk_bytes)
             .map_err(|e| format!("Invalid SPHINCS+ secret key ({} bytes): {:?}",
                                  sphincs_sk_bytes.len(), e))?;
 
         // Sign the block hash with SPHINCS+
-        // Note: pqcrypto does not provide pk_from_sk; we derive the validator pk fingerprint
-        // below via sha3_256(sk_bytes[..32]), which matches derive_block_keypair().
         let block_hash_bytes = self.compute_hash_bytes();
         let sig = sphincsshake256fsimple::detached_sign(&block_hash_bytes, &sk);
         let sig_bytes = sig.as_bytes();
 
-        // Extract the public key from secret key bytes via re-keygen from seed.
-        // SPHINCS+ pqcrypto does not expose pk_from_sk; we use the sk bytes
-        // directly as the signing material. The pk is stored in the first
-        // SPHINCS_PK_LEN bytes of the combined (pk||sk) blob if provided,
-        // or we generate it via sha3 fallback for wire compatibility.
-        //
-        // CANONICAL: validator_pk_bytes = sha3_256(sk_bytes[..32])
-        // This matches derive_block_keypair() and verify_signature().
-        let mut ph = Sha3_256::new();
-        ph.update(&sphincs_sk_bytes[..32.min(sphincs_sk_bytes.len())]);
-        let pk_hash: [u8; 32] = ph.finalize().into();
-
+        // Build signature: pk(64) || sig(49856)
         let mut vsig = Vec::with_capacity(VALIDATOR_SIG_LEN);
-        vsig.extend_from_slice(&pk_hash);    // [0..32]  validator pk fingerprint
-        vsig.extend_from_slice(sig_bytes);   // [32..]   SPHINCS+ detached sig
+        vsig.extend_from_slice(sphincs_pk_bytes);  // [0..64]   validator public key
+        vsig.extend_from_slice(sig_bytes);         // [64..]    SPHINCS+ detached sig
         self.validator_signature = vsig;
 
         self.generate_zkp();
