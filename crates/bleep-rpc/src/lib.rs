@@ -86,8 +86,8 @@ pub struct RpcState {
 }
 
 impl RpcState {
-    /// Faucet drip amount: 1,000 BLEEP = 100_000_000_000 microBLEEP (8 decimals).
-    pub const FAUCET_DRIP_AMOUNT: u64 = 100_000_000_000;
+    /// Faucet drip amount: 10 BLEEP = 1_000_000_000 microBLEEP (8 decimals).
+    pub const FAUCET_DRIP_AMOUNT: u64 = 1_000_000_000;
     /// Faucet cooldown: 24 hours in seconds.
     pub const FAUCET_COOLDOWN_SECS: u64 = 86_400;
     /// Initial testnet faucet balance: 100,000 BLEEP.
@@ -2086,10 +2086,10 @@ fn faucet_drip(
             Box::new(warp::reply::with_status(
                 warp::reply::json(&FaucetDripResp {
                     address:       address.clone(),
-                    amount_bleep:  1_000,
+                    amount_bleep:  10,
                     amount_micro:  RpcState::FAUCET_DRIP_AMOUNT,
                     cooldown_secs: RpcState::FAUCET_COOLDOWN_SECS,
-                    message:       format!("1,000 test BLEEP sent to {}. Valid on bleep-testnet-1.", address),
+                    message:       format!("10 test BLEEP sent to {}. Valid on bleep-testnet-1.", address),
                 }),
                 warp::http::StatusCode::OK,
             )) as Box<dyn warp::Reply + Send>
@@ -2109,7 +2109,7 @@ fn faucet_status(
             warp::reply::json(&FaucetStatusResp {
                 balance_bleep:     balance_micro / 100_000_000,
                 balance_micro,
-                drip_amount_bleep: 1_000,
+                drip_amount_bleep: 10,
                 cooldown_secs:     RpcState::FAUCET_COOLDOWN_SECS,
                 total_drips,
             })

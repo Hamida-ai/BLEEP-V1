@@ -36,6 +36,17 @@ pub struct AccountState {
     pub code_hash: Option<[u8; 32]>,
 }
 
+impl AccountState {
+    /// Default account state with 10 BLEEP initial balance for testnet
+    pub fn testnet_default() -> Self {
+        Self {
+            balance: 1_000_000_000, // 10 BLEEP in microBLEEP
+            nonce: 0,
+            code_hash: None,
+        }
+    }
+}
+
 // ── In-memory write-back cache entry ─────────────────────────────────────────
 
 #[derive(Debug, Clone)]
@@ -315,7 +326,7 @@ impl StateManager {
         let key = account_key(address);
         match self.db.get(&key) {
             Ok(Some(v)) => serde_json::from_slice::<AccountState>(&v).unwrap_or_default(),
-            _ => AccountState::default(),
+            _ => AccountState::testnet_default(),
         }
     }
 

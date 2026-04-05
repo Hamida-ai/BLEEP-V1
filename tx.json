@@ -1,0 +1,10 @@
+{
+  "sender": "BLEEP1a3f7b2c9d4e8f1a0b5c6d7e9f2a3b4c5d6e7f8",
+  "receiver": "BLEEP1f4d2c8e1b3a6d7e9c0f1a2b3c4d5e6f7a8b9c0",
+  "amount": 100,
+  "timestamp": 1700000000,
+  "signature": [
+    10, 23, 45, 255, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11,
+    ...
+  ]
+}

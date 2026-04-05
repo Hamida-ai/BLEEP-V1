@@ -22,7 +22,7 @@ use std::sync::Arc;
 use bleep_cli::{
     Cli, Commands, WalletCommand, TxCommand, AiCommand,
     GovernanceCommand, StateCommand, PatCommand, BlockCommand,
-    ValidatorCommand, OracleCommand, EconomicsCommand,
+    ValidatorCommand, OracleCommand, EconomicsCommand, FaucetCommand,
 };
 
 // Real crate imports
@@ -97,6 +97,20 @@ async fn run(cmd: Commands) -> Result<()> {
                     println!("   Type:    Quantum-secure (SPHINCS+-SHAKE-256)");
                     println!("   Signing: ✅ ready (SK encrypted with AES-256-GCM)");
                     println!("   ⚠️  Back up your key material in a safe location.");
+
+                    // Automatically request faucet funds for the new wallet
+                    let addr = wallet.address();
+                    match http_client.post(format!("{}/faucet/{}", rpc, addr)).send().await {
+                        Ok(r) if r.status().is_success() => {
+                            println!("💰 Faucet: 10 BLEEP credited to new wallet");
+                        }
+                        Ok(r) => {
+                            println!("⚠️  Faucet unavailable (HTTP {}), but wallet created successfully", r.status());
+                        }
+                        Err(_) => {
+                            println!("⚠️  Faucet unavailable (RPC unreachable), but wallet created successfully");
+                        }
+                    }
                 }
                 WalletCommand::Balance => {
                     let wallets = manager.list_wallets();
@@ -691,6 +705,50 @@ async fn run(cmd: Commands) -> Result<()> {
                     Ok(r) if r.status() == 404 => println!("Epoch {} not found (node hasn't processed it yet)", epoch),
                     Ok(r) => println!("❌ Epoch query failed: HTTP {}", r.status()),
                     Err(e) => println!("❌ RPC unreachable: {}", e),
+                }
+            }
+        },
+
+        // ── Faucet ────────────────────────────────────────────────────────
+        Commands::Faucet { action } => match action {
+            FaucetCommand::Request { address } => {
+                match http_client.post(format!("{}/faucet/{}", rpc, address)).send().await {
+                    Ok(r) if r.status().is_success() => {
+                        let body: serde_json::Value = r.json().await.unwrap_or_default();
+                        if let Some(msg) = body.get("message").and_then(|v| v.as_str()) {
+                            println!("✅ {}", msg);
+                        } else {
+                            println!("✅ Faucet request successful");
+                        }
+                    }
+                    Ok(r) => {
+                        let status = r.status();
+                        let body: serde_json::Value = r.json().await.unwrap_or_default();
+                        if let Some(err) = body.get("error").and_then(|v| v.as_str()) {
+                            println!("❌ Faucet request failed: {}", err);
+                        } else {
+                            println!("❌ Faucet request failed: HTTP {}", status);
+                        }
+                    }
+                    Err(e) => println!("❌ RPC unreachable ({}). Is the node running?", e),
+                }
+            }
+            FaucetCommand::Status => {
+                match http_client.get(format!("{}/faucet/status", rpc)).send().await {
+                    Ok(r) if r.status().is_success() => {
+                        let body: serde_json::Value = r.json().await.unwrap_or_default();
+                        println!("🚰 Faucet Status:");
+                        let balance = body.get("balance_bleep").and_then(|v| v.as_u64()).unwrap_or(0);
+                        let drip = body.get("drip_amount_bleep").and_then(|v| v.as_u64()).unwrap_or(0);
+                        let cooldown = body.get("cooldown_secs").and_then(|v| v.as_u64()).unwrap_or(0);
+                        let drips = body.get("total_drips").and_then(|v| v.as_u64()).unwrap_or(0);
+                        println!("  Balance     : {} BLEEP", balance);
+                        println!("  Drip amount : {} BLEEP", drip);
+                        println!("  Cooldown    : {} seconds", cooldown);
+                        println!("  Total drips : {}", drips);
+                    }
+                    Ok(r) => println!("❌ Faucet status unavailable: HTTP {}", r.status()),
+                    Err(e) => println!("❌ RPC unreachable ({}). Is the node running?", e),
                 }
             }
         },

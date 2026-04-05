@@ -91,6 +91,12 @@ pub enum Commands {
         #[command(subcommand)]
         task: EconomicsCommand,
     },
+
+    /// Request testnet faucet funds
+    Faucet {
+        #[command(subcommand)]
+        action: FaucetCommand,
+    },
 }
 
 // ── Wallet ────────────────────────────────────────────────────────────────────
@@ -375,6 +381,19 @@ pub enum EconomicsCommand {
         /// Epoch number to query
         epoch: u64,
     },
+}
+
+// ── Faucet ────────────────────────────────────────────────────────────────────
+
+#[derive(Subcommand)]
+pub enum FaucetCommand {
+    /// Request faucet funds for an address
+    Request {
+        /// Address to fund
+        address: String,
+    },
+    /// Check faucet status
+    Status,
 }
 
 // ── Block ─────────────────────────────────────────────────────────────────────

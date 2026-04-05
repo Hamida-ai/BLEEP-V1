@@ -75,9 +75,30 @@ Expected response fields:
 
 The transfer endpoint is `POST /rpc/tx` and accepts a signed `ZKTransaction` JSON payload.
 
-### Raw transaction format
+### Strongly recommended: use the built-in CLI sign-and-send flow
 
-The JSON payload must include:
+If you already created a wallet with `bleep-cli`, the simplest and most reliable way to transfer tokens is:
+
+```bash
+cargo run -p bleep-cli -- tx send --to BLEEP1f4d2c8e1b3a6d7e9c0f1a2b3c4d5e6f7a8b9c0 --amount 100
+```
+
+This command automatically:
+
+- loads your wallet from `~/.bleep/wallets.json`
+- signs the transaction with your SPHINCS+ secret key
+- posts the signed transaction to `http://127.0.0.1:8545/rpc/tx`
+
+If your wallet is encrypted with a password, set it before running the command:
+
+```bash
+export BLEEP_WALLET_PASSWORD="your-wallet-password"
+cargo run -p bleep-cli -- tx send --to <recipient> --amount 100
+```
+
+### Raw transaction format (advanced)
+
+If you need to submit a transaction manually, the JSON payload must include:
 
 - `sender` — sender BLEEP address
 - `receiver` — destination BLEEP address

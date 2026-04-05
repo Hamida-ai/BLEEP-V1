@@ -105,11 +105,16 @@
   },
   "testnet_specific": {
     "faucet_enabled": true,
+    "faucet_drip_amount_bleep": 10,
+    "faucet_drip_amount_micro": 1000000000,
+    "faucet_cooldown_hours": 24,
     "testnet_token_supply": 50000000,
     "ai_monitoring": true,
     "debug_logging": true,
     "token_expiry": true,
     "ai_bug_detection": true,
-    "incentivized_bug_bounty": true
+    "incentivized_bug_bounty": true,
+    "new_wallet_initial_balance_bleep": 10,
+    "new_wallet_initial_balance_micro": 1000000000
   }
 }
