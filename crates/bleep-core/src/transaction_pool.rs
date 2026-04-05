@@ -5,12 +5,13 @@ use std::collections::{HashSet, VecDeque};
 use tokio::sync::Mutex;
 use std::sync::Arc;
 use sha2::{Digest, Sha256};
+use hex;
 
-/// Minimum signature length: 32-byte pk + at least 1 byte of sig material.
-const MIN_SIG_LEN: usize = 33;
+/// Minimum signature length: 64-byte pk + at least 100 bytes of sig material.
+const MIN_SIG_LEN: usize = 164;
 
-/// Expected full signature length: 32-byte pk + 49856-byte SPHINCS+ detached sig.
-const SPHINCS_PK_LEN: usize = 32;
+/// Expected SPHINCS+ public key length for sphincsshake256fsimple: 64 bytes
+const SPHINCS_PK_LEN: usize = 64;
 
 // ── TransactionPool ───────────────────────────────────────────────────────────
 
@@ -80,23 +81,41 @@ impl TransactionPool {
         }
 
         // ── Step 3: Signature length check ────────────────────────────────────
-        if transaction.signature.len() < MIN_SIG_LEN {
+        // SPHINCS+-SHAKE256-simple: 32-byte PK + ~2144-byte signature minimum
+        if transaction.signature.len() < 32 + 100 {  // At least 32 bytes for PK + some sig
             log::error!(
-                "[TxPool] Rejected: signature too short ({} bytes, need ≥ {}) from {}",
-                transaction.signature.len(), MIN_SIG_LEN, transaction.sender
+                "[TxPool] Rejected: signature too short ({} bytes, need ≥ 132) from {}",
+                transaction.signature.len(), transaction.sender
             );
             return false;
         }
 
         // ── Step 4: S-07 — SPHINCS+ cryptographic verification ───────────────
         //
-        // Wire format: signature = pk_bytes(32) || sphincs_detached_sig(49856)
+        // Wire format: signature = pk_bytes(64) || sphincs_detached_sig(49856)
         // Canonical payload: SHA3-256(sender || receiver || amount_le8 || timestamp_le8)
         //
+        // SPHINCS+ public keys for sphincsshake256fsimple are 64 bytes.
         // We split the signature blob into (pk, sig) and verify using the same
         // tx_payload() function used at signing time.
-        let pk_bytes  = &transaction.signature[..SPHINCS_PK_LEN];
+        
+        if transaction.signature.len() < MIN_SIG_LEN {
+            log::error!(
+                "[TxPool] Rejected: signature too short for SPHINCS+ key (need ≥{} bytes, got {})",
+                MIN_SIG_LEN, transaction.signature.len()
+            );
+            return false;
+        }
+
+        let pk_bytes  = &transaction.signature[..SPHINCS_PK_LEN];  // SPHINCS+ PK is 64 bytes
         let sig_bytes = &transaction.signature[SPHINCS_PK_LEN..];
+
+        eprintln!("[DEBUG TxPool] Total signature length: {} bytes", transaction.signature.len());
+        eprintln!("[DEBUG TxPool] PK bytes length: {} bytes", pk_bytes.len());
+        eprintln!("[DEBUG TxPool] Sig bytes length: {} bytes", sig_bytes.len());
+        eprintln!("[DEBUG TxPool] PK (hex): {}", hex::encode(&pk_bytes[..pk_bytes.len().min(32)]));
+        eprintln!("[DEBUG TxPool] Payload: sender='{}' receiver='{}' amount={} timestamp={}", 
+            transaction.sender, transaction.receiver, transaction.amount, transaction.timestamp);
 
         let payload = bleep_crypto::tx_signer::tx_payload(
             &transaction.sender,
@@ -105,11 +124,15 @@ impl TransactionPool {
             transaction.timestamp,
         );
 
+        eprintln!("[DEBUG TxPool] Payload hash (32 bytes): {}", hex::encode(&payload));
+
         if !bleep_crypto::tx_signer::verify_tx_signature(&payload, sig_bytes, pk_bytes) {
             log::error!(
                 "[TxPool] S-07: SPHINCS+ verification FAILED — tx from {} to {} amount {} rejected",
                 transaction.sender, transaction.receiver, transaction.amount
             );
+            eprintln!("[DEBUG TxPool] Verification failed for: {} -> {} amount {}", 
+                transaction.sender, transaction.receiver, transaction.amount);
             return false;
         }
 
@@ -203,8 +226,16 @@ mod tests {
         let payload  = tx_payload(sender, receiver, amount, timestamp);
         let sig      = sign_tx_payload(&payload, &sk).expect("sign");
         // Wire format: pk(32) || sphincs_sig
-        let mut full_sig = Vec::with_capacity(pk.len() + sig.len());
-        full_sig.extend_from_slice(&pk);
+        // SPHINCS+ public keys are 32 bytes. Extract exactly 32 bytes.
+        let pk_32 = if pk.len() >= 32 {
+            pk[..32].to_vec()
+        } else {
+            let mut padded = pk.clone();
+            padded.resize(32, 0);
+            padded
+        };
+        let mut full_sig = Vec::with_capacity(32 + sig.len());
+        full_sig.extend_from_slice(&pk_32);
         full_sig.extend_from_slice(&sig);
         ZKTransaction {
             sender:    sender.to_string(),

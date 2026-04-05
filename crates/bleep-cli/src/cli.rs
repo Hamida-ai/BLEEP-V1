@@ -211,7 +211,15 @@ async fn run(cmd: Commands) -> Result<()> {
                             let detached_sig = sign_tx_payload(&payload, &sk_plain)
                                 .map_err(|e| anyhow!("SPHINCS+ signing failed: {}", e))?;
                             
-                            // Wire format: pk_bytes(32) || sphincs_detached_sig
+                            // Wire format: pk_bytes(64) || sphincs_detached_sig(49856)
+                            // SPHINCS+ public keys for sphincsshake256fsimple are 64 bytes
+                            eprintln!("[DEBUG] Wallet falcon_keys size: {} bytes", w.falcon_keys.len());
+                            eprintln!("[DEBUG] Signature size: {} bytes", detached_sig.len());
+                            
+                            if w.falcon_keys.len() != 64 {
+                                eprintln!("[WARN] Expected 64-byte SPHINCS+ public key, got {} bytes", w.falcon_keys.len());
+                            }
+                            
                             let mut full_sig = Vec::with_capacity(w.falcon_keys.len() + detached_sig.len());
                             full_sig.extend_from_slice(&w.falcon_keys);
                             full_sig.extend_from_slice(&detached_sig);
@@ -231,8 +239,16 @@ async fn run(cmd: Commands) -> Result<()> {
                     receiver:  to.clone(),
                     amount,
                     timestamp: ts,
-                    signature: sig, // Wire format: pk(32) || SPHINCS+ detached sig
+                    signature: sig.clone(), // Wire format: pk(64) || SPHINCS+ detached sig
                 };
+
+                eprintln!("[DEBUG CLI] Final transaction:");
+                eprintln!("[DEBUG CLI]   Sender: {}", tx.sender);
+                eprintln!("[DEBUG CLI]   Receiver: {}", tx.receiver);
+                eprintln!("[DEBUG CLI]   Amount: {}", tx.amount);
+                eprintln!("[DEBUG CLI]   Timestamp: {}", tx.timestamp);
+                eprintln!("[DEBUG CLI]   Signature size: {} bytes", tx.signature.len());
+                eprintln!("[DEBUG CLI]   PK (first 32 bytes hex): {}", hex::encode(&tx.signature[..tx.signature.len().min(32)]));
 
                 // POST to RPC
                 match post_transaction(&rpc, &tx).await {
