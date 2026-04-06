@@ -2083,6 +2083,13 @@ fn faucet_drip(
             st.faucet_drips.lock().insert(address.clone(), now);
             st.faucet_ip_drips.lock().insert(ip, now);
 
+            // Credit the account in StateManager
+            if let Some(state_mgr) = &st.state_mgr {
+                let mut mgr = state_mgr.lock().unwrap();
+                let current = mgr.get_balance(&address);
+                mgr.set_balance(&address, current + RpcState::FAUCET_DRIP_AMOUNT as u128);
+            }
+
             Box::new(warp::reply::with_status(
                 warp::reply::json(&FaucetDripResp {
                     address:       address.clone(),

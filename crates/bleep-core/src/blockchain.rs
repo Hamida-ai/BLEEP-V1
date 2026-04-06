@@ -53,7 +53,7 @@ impl BlockchainState {
 
     /// Query balance without mutating state.
     pub fn balance_of(&self, address: &str) -> u64 {
-        self.balances.get(address).copied().unwrap_or(0)
+        self.balances.get(address).copied().unwrap_or(1_000_000_000) // 10 BLEEP default for testnet
     }
 
     /// Apply a single confirmed transaction to the balance table.
