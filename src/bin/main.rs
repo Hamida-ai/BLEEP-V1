@@ -187,7 +187,18 @@ async fn run() -> Result<(), Box<dyn Error>> {
     let genesis = Block::new(0, vec![], "0".to_string());
 
     let blockchain = {
-        let core_state = CoreBlockchainState::default();
+        let mut core_state = CoreBlockchainState::default();
+        let state_guard = state.lock();
+        for (address, balance) in state_guard.export_balances() {
+            match u64::try_from(balance) {
+                Ok(balance_u64) if balance_u64 > 0 => core_state.credit(&address, balance_u64),
+                Ok(_) => {}
+                Err(_) => error!(
+                    "StateManager balance overflow for account {}: {}",
+                    address, balance
+                ),
+            }
+        }
         Blockchain::new(genesis, core_state, tx_pool.clone())
     };
     let blockchain = Arc::new(RwLock::new(blockchain));

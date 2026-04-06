@@ -283,6 +283,39 @@ impl StateManager {
         self.cache.values().map(|e| e.state.balance).sum()
     }
 
+    /// Export account balances from persistent storage and in-memory cache.
+    ///
+    /// This is used to seed legacy `bleep-core` balances when the node boots
+    /// with a live `StateManager`.
+    pub fn export_balances(&self) -> HashMap<String, u128> {
+        let mut balances = HashMap::new();
+        let prefix = PREFIX_ACCOUNT;
+        let iter = self.db.prefix_iterator(prefix);
+
+        for item in iter {
+            if let Ok((k, v)) = item {
+                if !k.starts_with(prefix) {
+                    break;
+                }
+                if let Ok(addr) = std::str::from_utf8(&k[prefix.len()..]) {
+                    if let Ok(acct) = serde_json::from_slice::<AccountState>(&v) {
+                        if acct.balance > 0 {
+                            balances.insert(addr.to_string(), acct.balance);
+                        }
+                    }
+                }
+            }
+        }
+
+        for (addr, entry) in &self.cache {
+            if entry.state.balance > 0 {
+                balances.insert(addr.clone(), entry.state.balance);
+            }
+        }
+
+        balances
+    }
+
     // ── Trie query helpers ────────────────────────────────────────────────────
 
     /// Load all accounts from RocksDB into the trie (called at startup if needed).
@@ -326,7 +359,7 @@ impl StateManager {
         let key = account_key(address);
         match self.db.get(&key) {
             Ok(Some(v)) => serde_json::from_slice::<AccountState>(&v).unwrap_or_default(),
-            _ => AccountState::testnet_default(),
+            _ => AccountState::default(),
         }
     }
 
@@ -400,6 +433,13 @@ mod tests {
         assert_eq!(m.get_nonce("bob"), 0);
         assert_eq!(m.increment_nonce("bob"), 1);
         assert_eq!(m.increment_nonce("bob"), 2);
+    }
+
+    #[test]
+    fn missing_account_has_zero_balance() {
+        let mut m = fresh();
+        assert_eq!(m.get_balance("new_user"), 0);
+        assert!(!m.apply_transfer("new_user", "receiver", 1));
     }
 
     #[test]
