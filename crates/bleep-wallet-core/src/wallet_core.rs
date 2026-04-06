@@ -5,7 +5,7 @@
 //!
 //! ## Key layout
 //! ```text
-//!   public_key  — SPHINCS+ public key bytes  (32 bytes)
+//!   public_key  — SPHINCS+ public key bytes  (64 bytes)
 //!   private_key — SPHINCS+ secret key bytes  (64 bytes, Zeroized on drop)
 //! ```
 //!

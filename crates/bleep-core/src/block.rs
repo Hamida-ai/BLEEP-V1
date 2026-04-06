@@ -14,7 +14,7 @@
 //!   [PK_LEN .. PK_LEN + SIG_LEN) SPHINCS+ detached signature over block_hash_bytes
 //! ```
 //!
-//! `PK_LEN`  = 32 bytes  (SPHINCS+-SHAKE-256-simple)
+//! `PK_LEN`  = 64 bytes  (SPHINCS+-SHAKE-256-simple)
 //! `SIG_LEN` = 7,856 bytes (SPHINCS+-SHAKE-256-simple detached sig)
 //! Total `validator_signature` = 7,888 bytes
 //!

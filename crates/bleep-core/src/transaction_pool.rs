@@ -81,11 +81,11 @@ impl TransactionPool {
         }
 
         // ── Step 3: Signature length check ────────────────────────────────────
-        // SPHINCS+-SHAKE256-simple: 32-byte PK + ~2144-byte signature minimum
-        if transaction.signature.len() < 32 + 100 {  // At least 32 bytes for PK + some sig
+        // SPHINCS+-SHAKE256-simple: 64-byte PK + ~2144-byte signature minimum
+        if transaction.signature.len() < SPHINCS_PK_LEN + 100 {  // At least 64 bytes for PK + some sig
             log::error!(
-                "[TxPool] Rejected: signature too short ({} bytes, need ≥ 132) from {}",
-                transaction.signature.len(), transaction.sender
+                "[TxPool] Rejected: signature too short ({} bytes, need ≥ {}) from {}",
+                transaction.signature.len(), SPHINCS_PK_LEN + 100, transaction.sender
             );
             return false;
         }
@@ -225,17 +225,10 @@ mod tests {
         let (pk, sk) = generate_tx_keypair();
         let payload  = tx_payload(sender, receiver, amount, timestamp);
         let sig      = sign_tx_payload(&payload, &sk).expect("sign");
-        // Wire format: pk(32) || sphincs_sig
-        // SPHINCS+ public keys are 32 bytes. Extract exactly 32 bytes.
-        let pk_32 = if pk.len() >= 32 {
-            pk[..32].to_vec()
-        } else {
-            let mut padded = pk.clone();
-            padded.resize(32, 0);
-            padded
-        };
-        let mut full_sig = Vec::with_capacity(32 + sig.len());
-        full_sig.extend_from_slice(&pk_32);
+        // Wire format: pk(64) || sphincs_sig
+        // SPHINCS+ public keys are 64 bytes for sphincsshake256fsimple.
+        let mut full_sig = Vec::with_capacity(pk.len() + sig.len());
+        full_sig.extend_from_slice(&pk);
         full_sig.extend_from_slice(&sig);
         ZKTransaction {
             sender:    sender.to_string(),

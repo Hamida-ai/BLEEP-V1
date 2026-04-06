@@ -310,7 +310,7 @@ impl DigitalSignature {
     pub fn message_hash(&self) -> &[u8; 32] { &self.message_hash }
 }
 
-/// SPHINCS+-SHAKE-256f-simple public key (32 bytes, NIST Level 5).
+/// SPHINCS+-SHAKE-256f-simple public key (64 bytes, NIST Level 5).
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct PublicKey {
     bytes: Vec<u8>,
@@ -318,7 +318,7 @@ pub struct PublicKey {
 
 impl PublicKey {
     /// SPHINCS+-SHAKE-256f-simple public key length.
-    pub const LEN: usize = 32;
+    pub const LEN: usize = 64;
 
     pub fn from_bytes(bytes: &[u8]) -> CryptoResult<Self> {
         if bytes.len() != Self::LEN {

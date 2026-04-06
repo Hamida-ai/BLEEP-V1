@@ -7,7 +7,7 @@
 //!
 //! ## Key layout
 //! ```text
-//!   Public key  (SK in wallet): raw SPHINCS+ public key bytes (~32 bytes)
+//!   Public key  (SK in wallet): raw SPHINCS+ public key bytes (64 bytes)
 //!   Secret key (SK, not stored on disk): raw SPHINCS+ secret key bytes
 //! ```
 //!

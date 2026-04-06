@@ -81,9 +81,9 @@ pub struct ProducerConfig {
     pub validator_id:        String,
     /// Full SPHINCS+-SHAKE-256f-simple secret key bytes (64 bytes).
     /// Stored as Vec<u8> because SPHINCS+ SK is 64 bytes, not 32.
-    /// Passed directly to `block.sign_block()`.
+    /// Passed directly to `block.sign_block_with_pk()`.
     pub validator_sk:        Vec<u8>,
-    /// Full SPHINCS+-SHAKE-256f-simple public key bytes (32 bytes).
+    /// Full SPHINCS+-SHAKE-256f-simple public key bytes (64 bytes).
     /// Stored as Vec<u8> for uniformity; passed to `blockchain.add_block()`.
     pub validator_pk:        Vec<u8>,
     pub protocol_version:    u32,
@@ -122,7 +122,7 @@ impl BlockProducer {
     /// Build a new block producer with a real SPHINCS+-SHAKE-256f-simple keypair.
     ///
     /// `sphincs_sk_bytes` — full SPHINCS+ secret key bytes (64 bytes, from `generate_tx_keypair()`).
-    /// `sphincs_pk_bytes` — full SPHINCS+ public key bytes (32 bytes).
+    /// `sphincs_pk_bytes` — full SPHINCS+ public key bytes (64 bytes).
     ///
     /// Returns `(producer, receiver)`. Subscribe the receiver in `main.rs` for
     /// both the scheduler relay and the `GossipBridge`.
@@ -362,9 +362,12 @@ impl BlockProducer {
             hex::encode(&state_root),      // shard_state_root = full state root
         );
 
-        // ── 7: Sign block with real SPHINCS+-SHAKE-256f-simple secret key ──────
-        if let Err(e) = block.sign_block(&self.config.validator_sk) {
-            warn!("[BlockProducer] sign_block failed: {} — stamping validator_id", e);
+        // ── 7: Sign block with real SPHINCS+-SHAKE-256f-simple secret/public key ──
+        if let Err(e) = block.sign_block_with_pk(
+            &self.config.validator_sk,
+            &self.config.validator_pk,
+        ) {
+            warn!("[BlockProducer] sign_block_with_pk failed: {} — stamping validator_id", e);
             block.validator_signature = self.config.validator_id.as_bytes().to_vec();
         }
 
