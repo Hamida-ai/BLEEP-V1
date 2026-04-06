@@ -111,6 +111,8 @@ pub enum WalletCommand {
     Import { phrase: String },
     /// Export wallet addresses
     Export,
+    /// Delete a wallet by address
+    Delete { address: String },
 }
 
 // ── Transactions ──────────────────────────────────────────────────────────────

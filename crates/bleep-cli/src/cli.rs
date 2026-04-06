@@ -169,6 +169,14 @@ async fn run(cmd: Commands) -> Result<()> {
                         println!("Address: {}", w.address());
                     }
                 }
+                WalletCommand::Delete { address } => {
+                    if manager.remove_wallet(&address)
+                        .map_err(|e| anyhow!("Delete failed: {}", e))? {
+                        println!("✅ Wallet {} deleted", address);
+                    } else {
+                        println!("⚠️  Wallet {} not found", address);
+                    }
+                }
             }
         }
 
