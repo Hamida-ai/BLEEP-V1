@@ -380,13 +380,11 @@ impl BlockProducer {
         };
 
         if !accepted {
-            warn!(
-                "[BlockProducer] Block {} rejected — fallback force-insert (check key derivation)",
+            error!(
+                "[BlockProducer] Block {} rejected — validation failed, not adding to chain",
                 next_height
             );
-            let mut chain = self.blockchain.write()
-                .map_err(|e| format!("blockchain write lock (fallback): {}", e))?;
-            chain.chain.push_back(block.clone());
+            return Err(format!("Block {} validation failed", next_height));
         }
 
 
