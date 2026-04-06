@@ -2085,7 +2085,7 @@ fn faucet_drip(
 
             // Credit the account in StateManager
             if let Some(state_mgr) = &st.state_mgr {
-                let mut mgr = state_mgr.lock().unwrap();
+                let mut mgr = state_mgr.lock();
                 let current = mgr.get_balance(&address);
                 mgr.set_balance(&address, current + RpcState::FAUCET_DRIP_AMOUNT as u128);
             }
