@@ -580,6 +580,15 @@ mod tests {
     }
 }
 
+// ── Post-Quantum Cryptography Module ──────────────────────────────────────────
+// Transparent post-quantum proof system replacing Groth16.
+// Uses SHA3-256 commitments and SPHINCS+ signatures (already in bleep-crypto).
+pub mod pq_proofs;
+
+pub use pq_proofs::{
+    PostQuantumProof, BlockValidityProof, L3TransferProof, ExecutionProof, MerklePath,
+};
+
 // ── Hardening-phase modules ────────────────────────────────────────────────────
 pub mod mpc_ceremony;
 

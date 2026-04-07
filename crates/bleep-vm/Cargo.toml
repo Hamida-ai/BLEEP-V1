@@ -61,6 +61,8 @@ ark-serialize  = "0.4"
 ark-relations  = "0.4"
 ark-r1cs-std   = "0.4"
 ark-snark      = "0.4"
+winterfell     = "0.13.1"
+winter-air     = "0.13.1"
 
 # ── Data Structures ───────────────────────────────────────────────────────────
 dashmap      = "5.5"
