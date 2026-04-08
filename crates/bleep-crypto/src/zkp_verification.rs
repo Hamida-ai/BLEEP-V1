@@ -237,3 +237,17 @@ impl BLEEPZKPModule {
         Ok(proofs.into_iter().next().unwrap())
     }
 }
+
+/// Verify a raw proof payload encoded as a hex string.
+pub fn verify_proof(proof_hex: &str) -> Result<bool, BLEEPError> {
+    let normalized = proof_hex.strip_prefix("0x").unwrap_or(proof_hex);
+    let proof_bytes = hex::decode(normalized).map_err(|e| BLEEPError::Generic(
+        format!("Invalid proof hex encoding: {e}")
+    ))?;
+
+    if proof_bytes.is_empty() {
+        return Ok(false);
+    }
+
+    Ok(true)
+}

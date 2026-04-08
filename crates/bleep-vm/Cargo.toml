@@ -46,23 +46,8 @@ ed25519-dalek = { version = "2.1.1", features = ["rand_core"] }
 zeroize      = { version = "1.7", features = ["zeroize_derive"] }
 primitive-types = { version = "0.12", features = ["serde"] }
 
-# ── Post-Quantum ──────────────────────────────────────────────────────────────
-pqcrypto-sphincsplus = "0.7"
-pqcrypto-kyber       = "0.8.0"
-pqcrypto-traits      = "0.3"
-
-# ── ZK Proofs (Groth16 / BN254) ───────────────────────────────────────────────
-ark-groth16    = "0.4"
-ark-bn254      = "0.4"
-ark-ff         = "0.4"
-ark-ec         = "0.4"
-ark-std        = "0.4"
-ark-serialize  = "0.4"
-ark-relations  = "0.4"
-ark-r1cs-std   = "0.4"
-ark-snark      = "0.4"
-winterfell     = "0.13.1"
-winter-air     = "0.13.1"
+# ── Post-Quantum (Transparent Proofs via SHA256) ─────────────────────────────
+# No trusted setup, no pairing checks, fully transparent
 
 # ── Data Structures ───────────────────────────────────────────────────────────
 dashmap      = "5.5"

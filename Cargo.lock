@@ -453,17 +453,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ark-bn254"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a22f4561524cd949590d78d7d4c5df8f592430d221f7f3c9497bbafd8972120f"
-dependencies = [
- "ark-ec",
- "ark-ff",
- "ark-std",
-]
-
-[[package]]
 name = "ark-crypto-primitives"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1258,6 +1247,7 @@ dependencies = [
  "bleep-connect-commitment-chain",
  "bleep-connect-crypto",
  "bleep-connect-types",
+ "bleep-crypto",
  "dashmap 5.5.3",
  "hex",
  "serde",
@@ -1752,15 +1742,6 @@ version = "0.5.0"
 dependencies = [
  "aes-gcm",
  "anyhow",
- "ark-bn254",
- "ark-ec",
- "ark-ff",
- "ark-groth16",
- "ark-r1cs-std",
- "ark-relations",
- "ark-serialize",
- "ark-snark",
- "ark-std",
  "async-trait",
  "base64 0.22.1",
  "bincode",
@@ -1778,9 +1759,6 @@ dependencies = [
  "metrics",
  "once_cell",
  "parking_lot",
- "pqcrypto-kyber 0.8.1",
- "pqcrypto-sphincsplus",
- "pqcrypto-traits",
  "primitive-types",
  "rand 0.8.5",
  "rand_core 0.6.4",
@@ -1801,8 +1779,6 @@ dependencies = [
  "wasm-encoder 0.38.1",
  "wasmer",
  "wasmparser 0.118.2",
- "winter-air",
- "winterfell",
  "zeroize",
 ]
 
