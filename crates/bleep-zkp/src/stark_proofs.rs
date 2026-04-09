@@ -2,16 +2,13 @@
 //! 
 //! Posts-quantum secure proofs using Winterfell STARK library with hash-based transparency.
 //! Zero trusted setup required. Suitable for block validity proofs and cross-chain transfers.
-
-use winterfell::{
-    math::{fields::f128::BaseElement, FieldElement, StarkField, ToElements},
+use tracing::info;use winterfell::{
+    math::{fields::f128::BaseElement, FieldElement},
     Air, AirContext, Assertion, EvaluationFrame, FieldExtension, ProofOptions,
     TraceInfo, TransitionConstraintDegree, Prover, TraceTable, BatchingMethod,
 };
-use std::marker::PhantomData;
 use ark_serialize::{CanonicalSerialize, CanonicalDeserialize};
 use serde::{Serialize, Deserialize};
-use tracing::{debug, info};
 
 // =================================================================================================
 // STARK PROOF TYPES
@@ -105,7 +102,7 @@ impl BlockValidityAir {
             BatchingMethod::Linear,
         );
         
-        let mut air = Self {
+        let air = Self {
             block_index,
             epoch_id,
             tx_count,
@@ -206,7 +203,7 @@ impl Air for BlockValidityAir {
         let current = frame.current();
         let next = frame.next();
         
-        let x0 = current[0];
+        let _x0 = current[0];
         let x1 = current[1];
         let x0_next = next[0];
         
@@ -225,17 +222,16 @@ impl Air for BlockValidityAir {
 
 /// Prover for block validity STARK proofs
 pub struct BlockValidityProver {
-    air: BlockValidityAir,
     options: ProofOptions,
 }
 
 impl BlockValidityProver {
-    /// Create a new prover with the given air
-    pub fn new(air: BlockValidityAir) -> Self {
+    /// Create a new prover with default STARK proof options
+    pub fn new() -> Self {
         let options = ProofOptions::new(
             32, 8, 0, FieldExtension::Quadratic, 4, 31, BatchingMethod::Linear, BatchingMethod::Linear,
         );
-        Self { air, options }
+        Self { options }
     }
 
     /// Generate a production STARK proof for a block
@@ -248,7 +244,7 @@ impl BlockValidityProver {
         block_hash: [u8; 32],
         sk_seed: [u8; 32],
     ) -> Result<StarkProof, String> {
-        let air = BlockValidityAir::for_proving(
+        let _air = BlockValidityAir::for_proving(
             block_index,
             epoch_id,
             tx_count,
@@ -257,8 +253,6 @@ impl BlockValidityProver {
             block_hash,
             sk_seed,
         );
-
-        let prover = Self::new(air);
 
         let mut trace = TraceTable::new(2, 8);
         trace.fill(
@@ -381,7 +375,7 @@ impl BlockValidityVerifier {
             validator_pk_bytes,
         );
 
-        let stark_proof = proof.proof_bytes.clone(); // dummy
+        let _stark_proof = proof.proof_bytes.clone(); // dummy
         // let stark_proof = ark_serialize::CanonicalDeserialize::deserialize_compressed(proof.proof_bytes.as_slice())
         //     .map_err(|e| format!("Proof deserialization failed: {e:?}"))?;
 

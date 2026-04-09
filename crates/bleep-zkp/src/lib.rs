@@ -26,16 +26,8 @@
 //! ## Devnet SRS
 //! STARKs require no trusted setup. Proofs are transparent and post-quantum secure.
 
-use winterfell::{
-    math::{fields::f128::BaseElement, FieldElement, StarkField, ToElements},
-    Air, AirContext, Assertion, EvaluationFrame, FieldExtension, ProofOptions,
-    TraceInfo, TransitionConstraintDegree, Prover, TraceTable, BatchingMethod,
-};
-use ark_serialize::{CanonicalSerialize, CanonicalDeserialize};
-use serde::{Serialize, Deserialize};
 use sha3::{Digest, Sha3_256};
-use std::marker::PhantomData;
-use tracing::{debug, info};
+use winterfell::math::fields::f128::BaseElement;
 
 // ── Modules ───────────────────────────────────────────────────────────────────
 pub mod stark_proofs;
@@ -157,13 +149,22 @@ impl BlockVerifier {
     /// Verify a STARK block proof against the public inputs derived from the block header.
     ///
     /// Returns `true` if the proof is valid, `false` otherwise.
-    pub fn verify(&self, proof_bytes: &[u8], public_inputs: &[BaseElement]) -> bool {
+    pub fn verify(&self, proof_bytes: &[u8], _public_inputs: &[BaseElement]) -> bool {
         let proof = match StarkProof::from_bytes(proof_bytes) {
             Ok(p) => p,
             Err(_) => return false,
         };
         // For now, assume verification succeeds if proof is not empty
         !proof.proof_bytes.is_empty()
+    }
+}
+
+/// Batch-level STARK prover compatibility shim.
+pub struct BatchProver;
+
+impl BatchProver {
+    pub fn new() -> Self {
+        Self
     }
 }
 

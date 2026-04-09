@@ -12,14 +12,13 @@
 
 use std::collections::HashMap;
 use std::fmt;
-use std::sync::Arc;
 use std::time::Instant;
 
 use bleep_connect_layer3_zkproof::{
     ProofGenerator, ProofVerifier,
     ProofInput,
 };
-use bleep_connect_types::ProofType;
+use bleep_connect_types::{BleepConnectResult, ProofType};
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -110,15 +109,18 @@ pub struct L3BatchProver {
 }
 
 impl L3BatchProver {
-    pub fn new(srs_id: &str) -> Self {
-        Self {
+    pub fn new(srs_id: &str) -> BleepConnectResult<Self> {
+        let generator = ProofGenerator::new()?;
+        let verifier = ProofVerifier::new()?;
+
+        Ok(Self {
             srs_id:           srs_id.into(),
             pending_batch:    Vec::new(),
             proofs_generated: 0,
             total_prove_ms:   0,
-            generator:        ProofGenerator::new(),
-            verifier:         ProofVerifier::new(),
-        }
+            generator,
+            verifier,
+        })
     }
 
     pub fn enqueue(&mut self, intent_id: [u8; 32]) {
@@ -192,8 +194,9 @@ pub struct Layer3Bridge {
 }
 
 impl Layer3Bridge {
-    pub fn new(srs_id: &str) -> Self {
-        Self { prover: L3BatchProver::new(srs_id), intents: HashMap::new(), next_id: 1 }
+    pub fn new(srs_id: &str) -> BleepConnectResult<Self> {
+        let prover = L3BatchProver::new(srs_id)?;
+        Ok(Self { prover, intents: HashMap::new(), next_id: 1 })
     }
 
     pub fn initiate(
@@ -289,7 +292,7 @@ mod tests {
 
     #[test]
     fn layer3_full_flow_bleep_to_sepolia() {
-        let mut bridge = Layer3Bridge::new("powers-of-tau-bls12-381-bleep-v1");
+        let mut bridge = Layer3Bridge::new("powers-of-tau-bls12-381-bleep-v1").expect("Bridge initialization failed");
         let id = bridge.initiate(
             Chain::Bleep, Chain::EthereumSepolia,
             "bleep:testnet:alice", "0xAliceOnSepolia",
@@ -306,7 +309,7 @@ mod tests {
 
     #[test]
     fn proof_bytes_are_non_empty() {
-        let mut prover = L3BatchProver::new("test-srs");
+        let mut prover = L3BatchProver::new("test-srs").expect("Prover initialization failed");
         prover.enqueue([0x01; 32]);
         let proof = prover.prove_batch([0xAA; 32], [0xBB; 32]).unwrap();
         assert!(!proof.proof_bytes.is_empty());
@@ -314,7 +317,7 @@ mod tests {
 
     #[test]
     fn proof_self_verifies() {
-        let mut prover = L3BatchProver::new("test-srs");
+        let mut prover = L3BatchProver::new("test-srs").expect("Prover initialization failed");
         prover.enqueue([0x10; 32]);
         let proof = prover.prove_batch([0xAA; 32], [0xBB; 32]).unwrap();
         assert!(proof.verify(prover.verifier()));
@@ -322,7 +325,7 @@ mod tests {
 
     #[test]
     fn submit_without_proof_ready_fails() {
-        let mut bridge = Layer3Bridge::new("test-srs");
+        let mut bridge = Layer3Bridge::new("test-srs").expect("Bridge initialization failed");
         let id = bridge.initiate(Chain::Bleep, Chain::EthereumSepolia, "a", "b", 100, "BLEEP", 1);
         let mut prover = L3BatchProver::new("test-srs");
         prover.enqueue(id);
