@@ -335,7 +335,7 @@ impl PublicKey {
     pub fn to_vec(&self) -> Vec<u8> { self.bytes.clone() }
 }
 
-/// SPHINCS+-SHAKE-256f-simple secret key (64 bytes).
+/// SPHINCS+-SHAKE-256f-simple secret key (128 bytes).
 ///
 /// Wrapped in `zeroize` to ensure the key material is zeroed on drop,
 /// defending against cold-boot and core-dump key recovery (SA-L3 fix).
@@ -347,7 +347,7 @@ pub struct SecretKey {
 
 impl SecretKey {
     /// SPHINCS+-SHAKE-256f-simple secret key length.
-    pub const LEN: usize = 64;
+    pub const LEN: usize = 128;
 
     pub fn from_bytes(bytes: &[u8]) -> CryptoResult<Self> {
         if bytes.len() != Self::LEN {

@@ -133,7 +133,7 @@ async fn run() -> Result<(), Box<dyn Error>> {
     let _qs = QuantumSecure::keygen();
 
     // Generate real SPHINCS+-SHAKE-256f-simple keypair for block signing.
-    // generate_tx_keypair() returns (pk_bytes: 32B, sk_bytes: 64B).
+    // generate_tx_keypair() returns (pk_bytes: 64B, sk_bytes: 128B).
     let (sphincs_pk, sphincs_sk) = generate_tx_keypair();
 
     // Generate real Kyber-1024 keypair for validator KEM binding.

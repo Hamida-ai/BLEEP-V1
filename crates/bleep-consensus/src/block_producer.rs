@@ -79,8 +79,8 @@ pub struct ProducerConfig {
     pub block_interval_secs: u64,
     pub max_txs_per_block:   usize,
     pub validator_id:        String,
-    /// Full SPHINCS+-SHAKE-256f-simple secret key bytes (64 bytes).
-    /// Stored as Vec<u8> because SPHINCS+ SK is 64 bytes, not 32.
+    /// Full SPHINCS+-SHAKE-256f-simple secret key bytes (128 bytes).
+    /// Stored as Vec<u8> because SPHINCS+ SK is 128 bytes, not 32.
     /// Passed directly to `block.sign_block_with_pk()`.
     pub validator_sk:        Vec<u8>,
     /// Full SPHINCS+-SHAKE-256f-simple public key bytes (64 bytes).
@@ -95,8 +95,8 @@ impl Default for ProducerConfig {
             block_interval_secs: 3,
             max_txs_per_block:   MAX_TXS_PER_BLOCK,
             validator_id:        "genesis-validator".to_string(),
-            validator_sk:        vec![0u8; 64],
-            validator_pk:        vec![0u8; 32],
+            validator_sk:        vec![0u8; 128],
+            validator_pk:        vec![0u8; 64],
             protocol_version:    PROTOCOL_VERSION,
         }
     }
@@ -121,7 +121,7 @@ pub struct BlockProducer {
 impl BlockProducer {
     /// Build a new block producer with a real SPHINCS+-SHAKE-256f-simple keypair.
     ///
-    /// `sphincs_sk_bytes` — full SPHINCS+ secret key bytes (64 bytes, from `generate_tx_keypair()`).
+    /// `sphincs_sk_bytes` — full SPHINCS+ secret key bytes (128 bytes, from `generate_tx_keypair()`).
     /// `sphincs_pk_bytes` — full SPHINCS+ public key bytes (64 bytes).
     ///
     /// Returns `(producer, receiver)`. Subscribe the receiver in `main.rs` for
