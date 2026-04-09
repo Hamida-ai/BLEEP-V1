@@ -453,17 +453,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ark-bn254"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a22f4561524cd949590d78d7d4c5df8f592430d221f7f3c9497bbafd8972120f"
-dependencies = [
- "ark-ec",
- "ark-ff",
- "ark-std",
-]
-
-[[package]]
 name = "ark-crypto-primitives"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -479,7 +468,6 @@ dependencies = [
  "blake2",
  "derivative",
  "digest",
- "rayon",
  "sha2",
  "tracing",
 ]
@@ -498,7 +486,6 @@ dependencies = [
  "hashbrown 0.13.2",
  "itertools 0.10.5",
  "num-traits",
- "rayon",
  "zeroize",
 ]
 
@@ -518,7 +505,6 @@ dependencies = [
  "num-bigint",
  "num-traits",
  "paste",
- "rayon",
  "rustc_version",
  "zeroize",
 ]
@@ -547,22 +533,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ark-groth16"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "20ceafa83848c3e390f1cbf124bc3193b3e639b3f02009e0e290809a501b95fc"
-dependencies = [
- "ark-crypto-primitives",
- "ark-ec",
- "ark-ff",
- "ark-poly",
- "ark-relations",
- "ark-serialize",
- "ark-std",
- "rayon",
-]
-
-[[package]]
 name = "ark-poly"
 version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -573,7 +543,6 @@ dependencies = [
  "ark-std",
  "derivative",
  "hashbrown 0.13.2",
- "rayon",
 ]
 
 [[package]]
@@ -648,7 +617,6 @@ checksum = "94893f1e0c6eeab764ade8dc4c0db24caf4fe7cbbaafc0eba0a9030f447b5185"
 dependencies = [
  "num-traits",
  "rand 0.8.5",
- "rayon",
 ]
 
 [[package]]
@@ -1019,16 +987,6 @@ version = "0.1.0"
 dependencies = [
  "actix-rt",
  "actix-web",
- "ark-bls12-381",
- "ark-crypto-primitives",
- "ark-ec",
- "ark-ff",
- "ark-groth16",
- "ark-r1cs-std",
- "ark-relations",
- "ark-serialize",
- "ark-snark",
- "ark-std",
  "bincode",
  "blake3",
  "bleep-consensus",
@@ -1245,19 +1203,10 @@ dependencies = [
 name = "bleep-connect-layer3-zkproof"
 version = "0.1.0"
 dependencies = [
- "ark-bls12-381",
- "ark-crypto-primitives",
- "ark-ec",
- "ark-ff",
- "ark-groth16",
- "ark-r1cs-std",
- "ark-relations",
- "ark-serialize",
- "ark-snark",
- "ark-std",
  "bleep-connect-commitment-chain",
  "bleep-connect-crypto",
  "bleep-connect-types",
+ "bleep-crypto",
  "dashmap 5.5.3",
  "hex",
  "serde",
@@ -1265,6 +1214,8 @@ dependencies = [
  "thiserror 1.0.69",
  "tokio",
  "tracing",
+ "winter-air",
+ "winterfell",
 ]
 
 [[package]]
@@ -1336,7 +1287,6 @@ dependencies = [
  "ark-crypto-primitives",
  "ark-ec",
  "ark-ff",
- "ark-groth16",
  "ark-r1cs-std",
  "ark-relations",
  "ark-serialize",
@@ -1378,10 +1328,6 @@ version = "0.1.0"
 dependencies = [
  "aes-gcm",
  "anyhow",
- "ark-bls12-381",
- "ark-ff",
- "ark-groth16",
- "ark-snark",
  "bincode",
  "blake2",
  "blake3",
@@ -1445,16 +1391,6 @@ version = "0.1.0"
 dependencies = [
  "aes-gcm",
  "anyhow",
- "ark-bls12-381",
- "ark-crypto-primitives",
- "ark-ec",
- "ark-ff",
- "ark-groth16",
- "ark-r1cs-std",
- "ark-relations",
- "ark-serialize",
- "ark-snark",
- "ark-std",
  "bincode",
  "bleep-ai",
  "bleep-core",
@@ -1708,10 +1644,6 @@ dependencies = [
 name = "bleep-state"
 version = "1.0.0"
 dependencies = [
- "ark-bls12-381",
- "ark-crypto-primitives",
- "ark-ff",
- "ark-groth16",
  "bincode",
  "blake3",
  "dashmap 5.5.3",
@@ -1750,15 +1682,6 @@ version = "0.5.0"
 dependencies = [
  "aes-gcm",
  "anyhow",
- "ark-bn254",
- "ark-ec",
- "ark-ff",
- "ark-groth16",
- "ark-r1cs-std",
- "ark-relations",
- "ark-serialize",
- "ark-snark",
- "ark-std",
  "async-trait",
  "base64 0.22.1",
  "bincode",
@@ -1776,9 +1699,6 @@ dependencies = [
  "metrics",
  "once_cell",
  "parking_lot",
- "pqcrypto-kyber 0.8.1",
- "pqcrypto-sphincsplus",
- "pqcrypto-traits",
  "primitive-types",
  "rand 0.8.5",
  "rand_core 0.6.4",
@@ -1838,18 +1758,15 @@ dependencies = [
 name = "bleep-zkp"
 version = "0.2.0"
 dependencies = [
- "ark-bls12-381",
- "ark-ec",
- "ark-ff",
- "ark-groth16",
- "ark-r1cs-std",
- "ark-relations",
  "ark-serialize",
- "ark-snark",
  "ark-std",
+ "hex",
  "rand 0.8.5",
  "serde",
  "sha3",
+ "tracing",
+ "winter-air",
+ "winterfell",
 ]
 
 [[package]]
@@ -9677,6 +9594,106 @@ checksum = "524e57b2c537c0f9b1e69f1965311ec12182b4122e45035b1508cd24d2adadb1"
 dependencies = [
  "cfg-if",
  "windows-sys 0.48.0",
+]
+
+[[package]]
+name = "winter-air"
+version = "0.13.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ef01227f23c7c331710f43b877a8333f5f8d539631eea763600f1a74bf018c7c"
+dependencies = [
+ "libm",
+ "winter-crypto",
+ "winter-fri",
+ "winter-math",
+ "winter-utils",
+]
+
+[[package]]
+name = "winter-crypto"
+version = "0.13.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1cdb247bc142438798edb04067ab72a22cf815f57abbd7b78a6fa986fc101db8"
+dependencies = [
+ "blake3",
+ "sha3",
+ "winter-math",
+ "winter-utils",
+]
+
+[[package]]
+name = "winter-fri"
+version = "0.13.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fd592b943f9d65545683868aaf1b601eb66e52bfd67175347362efff09101d3a"
+dependencies = [
+ "winter-crypto",
+ "winter-math",
+ "winter-utils",
+]
+
+[[package]]
+name = "winter-math"
+version = "0.13.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7aecfb48ee6a8b4746392c8ff31e33e62df8528a3b5628c5af27b92b14aef1ea"
+dependencies = [
+ "winter-utils",
+]
+
+[[package]]
+name = "winter-maybe-async"
+version = "0.13.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6d31a19dae58475d019850e25b0170e94b16d382fbf6afee9c0e80fdc935e73e"
+dependencies = [
+ "quote",
+ "syn 2.0.113",
+]
+
+[[package]]
+name = "winter-prover"
+version = "0.13.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "84cc631ed56cd39b78ef932c1ec4060cc6a44d114474291216c32f56655b3048"
+dependencies = [
+ "tracing",
+ "winter-air",
+ "winter-crypto",
+ "winter-fri",
+ "winter-math",
+ "winter-maybe-async",
+ "winter-utils",
+]
+
+[[package]]
+name = "winter-utils"
+version = "0.13.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9951263ef5317740cd0f49e618db00c72fabb70b75756ea26c4d5efe462c04dd"
+
+[[package]]
+name = "winter-verifier"
+version = "0.13.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0425ea81f8f703a1021810216da12003175c7974a584660856224df04b2e2fdb"
+dependencies = [
+ "winter-air",
+ "winter-crypto",
+ "winter-fri",
+ "winter-math",
+ "winter-utils",
+]
+
+[[package]]
+name = "winterfell"
+version = "0.13.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "43f824ddd5aec8ca6a54307f20c115485a8a919ea94dd26d496d856ca6185f4f"
+dependencies = [
+ "winter-air",
+ "winter-prover",
+ "winter-verifier",
 ]
 
 [[package]]

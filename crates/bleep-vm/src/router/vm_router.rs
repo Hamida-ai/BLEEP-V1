@@ -435,7 +435,7 @@ impl VmRouter {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::intent::{ContractCallIntent, DeployIntent, TransferIntent, IntentKind, Intent};
+    use crate::intent::{ContractCallIntent, TransferIntent, IntentKind, Intent};
     use crate::types::ChainId;
     use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -475,6 +475,7 @@ mod tests {
             bytecode: &[u8],
             _init_args: &[u8],
             gas_limit: u64,
+            _salt: Option<[u8; 32]>,
         ) -> VmResult<EngineResult> {
             self.calls.fetch_add(1, Ordering::SeqCst);
             Ok(EngineResult {

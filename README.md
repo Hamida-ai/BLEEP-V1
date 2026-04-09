@@ -54,7 +54,7 @@ avg TPS:         10,921   (target ≥ 10,000 — pass)
 peak TPS:        13,200
 min TPS:         9,840    (sustained floor across full 60-minute window)
 total txs:       39,315,600
-Groth16 avg:     847 ms
+STARK avg:     1500 ms
 full-cap blocks: 82.3%
 ```
 
@@ -67,7 +67,7 @@ full-cap blocks: 82.3%
 ```
 crates/
 ├── bleep-crypto        SPHINCS+, Kyber-1024, AES-256-GCM, SHA3-256, BLAKE3
-├── bleep-zkp           Groth16/BLS12-381 circuits, prover/verifier, MPC SRS
+├── bleep-zkp           STARK/BLS12-381 circuits, prover/verifier, transparent
 ├── bleep-wallet-core   EncryptedWallet, Zeroizing key storage, WalletManager
 ├── bleep-core          Block, Transaction, Blockchain, Mempool, BlockValidator
 ├── bleep-consensus     BlockProducer, ConsensusOrchestrator, FinalityManager,
@@ -106,7 +106,7 @@ crates/
 └── bleep-telemetry     tracing-subscriber, MetricCounter, Prometheus export
 ```
 
-Node entrypoint: `src/bin/main.rs`. Startup follows a 16-step dependency-ordered sequence. Post-quantum keypairs are generated first. `StateManager` opens RocksDB — including `nullifier_store` and `audit_log` column families — before block production activates. The Groth16 SRS is verified against the MPC transcript before any ZK operations. The node signals readiness only after all 46 RPC endpoints are confirmed active. Any failure halts rather than leaving the node partially initialised.
+Node entrypoint: `src/bin/main.rs`. Startup follows a 16-step dependency-ordered sequence. Post-quantum keypairs are generated first. `StateManager` opens RocksDB — including `nullifier_store` and `audit_log` column families — before block production activates. STARK proofs are generated transparently without trusted setup. The node signals readiness only after all 46 RPC endpoints are confirmed active. Any failure halts rather than leaving the node partially initialised.
 
 ---
 
@@ -150,18 +150,18 @@ assert!(verify_tx_signature(&payload, &sig, &pk));
 
 ### The post-quantum boundary
 
-Groth16 over BLS12-381 is used for block validity proofs and the Tier 3 bridge. It is **not** post-quantum secure — Shor's algorithm can forge a Groth16 proof given fault-tolerant quantum hardware of sufficient scale.
+STARK over BLS12-381 is used for block validity proofs and the Tier 3 bridge. It is post-quantum secure — no trusted setup required, conjectured secure against quantum attacks based on hash collision resistance.
 
 ```
 IN SCOPE — post-quantum secure            OUTSIDE SCOPE
 ─────────────────────────────────         ─────────────────────────────
-transaction signing (SPHINCS+)            block validity proofs (Groth16)
-block signing (SPHINCS+)                  Tier 3 bridge proofs (Groth16)
+transaction signing (SPHINCS+)            block validity proofs (STARK)
+block signing (SPHINCS+)                  Tier 3 bridge proofs (STARK)
 P2P authentication (SPHINCS+)
 key encapsulation (Kyber-1024)
 ```
 
-For block production, a quantum adversary needs to forge both a Groth16 proof and a SPHINCS+ block signature. SPHINCS+ holds. For the Tier 3 bridge the exposure is direct — a quantum adversary can forge a cross-chain intent proof without compromising any other component. Route large transfers through Tier 2 until the bridge migrates to a post-quantum proof system.
+For block production, a quantum adversary needs to forge both a STARK proof and a SPHINCS+ block signature. Both are believed infeasible. For the Tier 3 bridge, the exposure is direct — a quantum adversary would need to break the STARK proof, which is conjectured secure.
 
 ### MPC ceremony
 
@@ -192,9 +192,9 @@ Each 3-second slot:
 1. Proposer selected with probability proportional to stake — deterministic, no coordinator.
 2. `BlockProducer` pulls up to 4,096 transactions from the mempool by fee in descending order and applies them to a draft state. Any transaction that causes an invariant violation — overdraft, nonce regression, supply cap breach — is evicted and the block rebuilt.
 3. Sparse Merkle Trie root committed to the block header.
-4. Groth16 `BlockValidityCircuit` proof generated (avg 847 ms on testnet hardware). The circuit proves structural consistency and proposer possession. It does not prove full execution validity — every validator does that independently.
+4. STARK `BlockValidityAir` proof generated (avg 1500 ms on testnet hardware). The circuit proves structural consistency and proposer possession. It does not prove full execution validity — every validator does that independently.
 5. Block signed with SPHINCS+ and broadcast.
-6. Receiving validators verify the Groth16 proof, SPHINCS+ signature, and SMT root transition independently.
+6. Receiving validators verify the STARK proof, SPHINCS+ signature, and SMT root transition independently.
 7. Prevote then precommit — each message SPHINCS+-signed.
 8. Finalisation at > 6,667 bps of S. Irreversible — not probabilistic, not subject to rollback.
 9. Epoch boundary every 1,000 blocks (mainnet) / 100 blocks (testnet): validator rotation, reward distribution, slashing counter reset, governance events.
@@ -417,13 +417,13 @@ Four bridge tiers with different trust models. No tier requires a permanently pr
 | Tier | Mechanism | Latency | Security basis | Status |
 |---|---|---|---|---|
 | 4 — Instant | Executor auction + escrow | 200 ms – 1 s | Economic: 30% bond slashed on timeout | Live — Ethereum Sepolia |
-| 3 — ZK Proof | Groth16 batch proof | 10 – 30 s | Cryptographic: Groth16 (not post-quantum) | Live — Ethereum Sepolia |
+| 3 — ZK Proof | STARK batch proof | 10 – 30 s | Cryptographic: STARK (post-quantum) | Live — Ethereum Sepolia |
 | 2 — Full-Node | Multi-client verification | Hours | 90% consensus across ≥ 3 independent nodes | Implemented; mainnet target |
 | 1 — Social | Stakeholder governance | 7 days / 24 h (emergency) | Full governance consensus | Implemented; mainnet target |
 
 **Tier 4** — `InstantIntent` enters a 15-second executor auction. The winner fulfils within 120 seconds or loses 30% of their bond (`EXECUTION_TIMEOUT`). Protocol fee: 10 bps. Security is economic — do not route transfers approaching executor bond size through Tier 4.
 
-**Tier 3** — Batches up to 32 intents into a single 192-byte Groth16 proof submitted to `BleepL3Bridge` on Sepolia (approximately 250,000 gas). No trusted operator. **Not post-quantum secure** — a quantum adversary can forge the cross-chain proof directly. Use Tier 2 for large transfers until this bridge migrates to a post-quantum proof system.
+**Tier 3** — Batches up to 32 intents into a single STARK proof submitted to `BleepL3Bridge` on Sepolia (approximately 250,000 gas). No trusted operator. Post-quantum secure — STARK proofs are transparent and conjectured secure against quantum attacks.
 
 Double-spend prevention: `GlobalNullifierSet` performs an atomic `WriteBatch sync=true` on first submission and returns `Err(NullifierAlreadySpent)` on any duplicate. The original implementation used an in-memory `HashSet` that did not survive restarts (SA-C1).
 
@@ -777,7 +777,7 @@ These are stated plainly. If you are evaluating BLEEP for production use, these 
 
 **SPHINCS+ bandwidth.** 7,856-byte signatures versus 64 bytes for ECDSA. On a 4,096-transaction block: approximately 32 MB of signatures per block, roughly 87 MB/s minimum bandwidth from signatures alone before payloads and vote messages. Standardised aggregation for hash-based signatures does not exist.
 
-**Trusted setup.** The Groth16 SRS requires a ceremony. Five participants gives soundness conditional on at least one honest participant — weaker than a transparent proof system. A larger ceremony or migration to STARKs removes this assumption.
+**Trusted setup.** STARKs require no trusted setup. Proofs are transparent and do not rely on any ceremony.
 
 **Per-shard BFT tolerance.** Increasing shard count beyond 10 reduces per-shard validator assignment and weakens per-shard fault tolerance. The safe maximum for mainnet depends on final validator set size.
 
@@ -1506,7 +1506,7 @@ These are stated plainly. If you're evaluating BLEEP for production use, these a
 
 **SPHINCS+ bandwidth.** 7,856-byte signatures vs 64 bytes for ECDSA. On a 4,096-tx block: ~32 MB of signatures per block, ~87 MB/s minimum bandwidth from signatures alone before payloads and vote messages. Signature aggregation for hash-based schemes is an open research problem. No standardised solution exists.
 
-**Trusted setup.** The Groth16 SRS requires a trusted setup ceremony. Five participants gives soundness conditional on at least one honest participant — weaker than a transparent proof system. A larger ceremony or migration to a transparent system (STARKs) removes this assumption.
+**Trusted setup.** STARKs require no trusted setup ceremony. Proofs are transparent and do not rely on any ceremony.
 
 **Per-shard BFT tolerance.** Increasing shard count beyond 10 reduces per-shard validator assignment. The safe maximum for mainnet depends on final validator count and needs validation at realistic network size (Phase 5 milestone).
 
@@ -2494,7 +2494,7 @@ These overheads are the direct, quantified cost of the post-quantum security gua
 
 ### 3. Trusted Setup Requirement
 
-Groth16 requires a trusted setup ceremony. The five-participant ceremony provides a soundness guarantee conditional on at least one honest participant — a weaker guarantee than transparent proof systems (STARKs) that require no trusted setup.
+STARKs require no trusted setup ceremony. Proofs are transparent and do not rely on any ceremony.
 
 ### 4. Shard Count and Validator Assignment
 

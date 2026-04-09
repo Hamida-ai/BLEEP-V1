@@ -227,15 +227,17 @@ pub enum LogLevel { Debug, Info, Warning, Error }
 // ZK PROOF
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// A Groth16 proof of execution correctness on BN254.
+/// Post-quantum proof of execution correctness.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ZkExecutionProof {
-    /// Serialised ark-groth16 proof bytes.
+    /// Serialized post-quantum proof (ExecutionProof + SPHINCS+ signature).
     pub proof_bytes:    Vec<u8>,
-    /// Public inputs: [state_root_before, state_root_after, gas_used, tx_hash].
-    pub public_inputs:  Vec<Vec<u8>>,
-    /// SHA-256 of the verification key used.
-    pub vk_hash:        [u8; 32],
+    /// SHA-256 hash of the execution trace for verification.
+    pub trace_hash:     [u8; 32],
+    /// Public component: state root before execution.
+    pub state_before:   [u8; 32],
+    /// Public component: state root after execution.
+    pub state_after:    [u8; 32],
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

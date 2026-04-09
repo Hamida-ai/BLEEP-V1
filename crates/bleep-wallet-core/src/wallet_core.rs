@@ -6,7 +6,7 @@
 //! ## Key layout
 //! ```text
 //!   public_key  — SPHINCS+ public key bytes  (64 bytes)
-//!   private_key — SPHINCS+ secret key bytes  (64 bytes, Zeroized on drop)
+//!   private_key — SPHINCS+ secret key bytes  (128 bytes, Zeroized on drop)
 //! ```
 //!
 //! All signing goes through `bleep_crypto::tx_signer::sign_tx_payload`, which

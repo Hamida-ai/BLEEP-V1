@@ -483,7 +483,7 @@ pub enum FailureReason {
 pub struct ZKProof {
     pub proof_id: [u8; 32],
     pub proof_type: ProofType,
-    pub groth16_bytes: Vec<u8>,
+    pub proof_bytes: Vec<u8>,
     pub public_inputs: Vec<Vec<u8>>,
     pub intent_id: [u8; 32],
     pub generated_at: u64,

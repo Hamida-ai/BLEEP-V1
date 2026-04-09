@@ -24,11 +24,6 @@ hex          = "0.4.3"
 pqcrypto     = "0.18.1"
 pqcrypto-kyber = "0.8.0"
 
-# ZKP — ark 0.4 consistent with workspace
-ark-groth16           = "0.4.0"
-ark-bls12-381         = "0.4.0"
-ark-ff                = "0.4.0"
-ark-crypto-primitives = "0.4.0"
 
 # Persistent storage
 rocksdb      = "0.21.0"

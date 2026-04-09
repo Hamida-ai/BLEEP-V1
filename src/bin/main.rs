@@ -133,7 +133,7 @@ async fn run() -> Result<(), Box<dyn Error>> {
     let _qs = QuantumSecure::keygen();
 
     // Generate real SPHINCS+-SHAKE-256f-simple keypair for block signing.
-    // generate_tx_keypair() returns (pk_bytes: 32B, sk_bytes: 64B).
+    // generate_tx_keypair() returns (pk_bytes: 64B, sk_bytes: 128B).
     let (sphincs_pk, sphincs_sk) = generate_tx_keypair();
 
     // Generate real Kyber-1024 keypair for validator KEM binding.
@@ -258,18 +258,16 @@ async fn run() -> Result<(), Box<dyn Error>> {
         }
     }
 
-    // ── Step 6c: Groth16 devnet SRS ───────────────────────────────────────────
-    info!("🔐 [6c/16] Generating Groth16 devnet SRS (block circuit)…");
-    info!("   MPC ceremony COMPLETE — 5-participant SRS. See /rpc/ceremony/status.");
-    let (_block_proving_key, _block_verifying_key) = tokio::task::spawn_blocking(|| {
-        bleep_zkp::devnet_setup()
-    }).await?;
-    info!("  ✅ Groth16 block circuit SRS ready.");
+    // ── Step 6c: STARK initialization ─────────────────────────────────────────
+    info!("🔐 [6c/16] Initializing STARK prover/verifier (no trusted setup required)…");
+    info!("   STARKs are transparent — no MPC ceremony needed.");
+    let _block_prover = bleep_zkp::BlockProver::new();
+    let _block_verifier = bleep_zkp::BlockVerifier::new();
+    info!("  ✅ STARK block circuit ready.");
 
-    let (_batch_pk, _batch_vk) = tokio::task::spawn_blocking(|| {
-        bleep_zkp::devnet_batch_setup()
-    }).await?;
-    info!("  ✅ Groth16 batch tx circuit SRS ready.");
+    let _batch_prover = bleep_zkp::BatchProver::new();
+    let _batch_verifier = bleep_zkp::BlockVerifier::new(); // reuse for batch
+    info!("  ✅ STARK batch tx circuit ready.");
 
     // ── Step 6d: BleepEconomicsRuntime ────────────────────────────────────────
     info!("💰 [6d/16] Initialising BleepEconomicsRuntime (tokenomics + fee market + oracle)…");
