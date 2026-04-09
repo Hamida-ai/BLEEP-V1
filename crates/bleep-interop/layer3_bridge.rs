@@ -80,7 +80,7 @@ impl fmt::Display for Chain {
 /// ProofGenerator via SPHINCS+ signature binding.
 #[derive(Debug, Clone)]
 pub struct ZkBridgeProof {
-    /// Real ark-groth16 proof bytes (ark-uncompressed BLS12-381).
+    /// Real proof bytes in the bridge's serialized proof format.
     pub proof_bytes:   Vec<u8>,
     /// Serialized public inputs used during proof generation.
     pub public_inputs: Vec<Vec<u8>>,
@@ -243,7 +243,7 @@ impl Layer3Bridge {
             intent.proof = Some(proof);
             true
         } else {
-            intent.state = L3State::Failed("ark-groth16 proof verification failed".into());
+            intent.state = L3State::Failed("proof verification failed".into());
             false
         }
     }

@@ -2,8 +2,6 @@ use std::fs;
 use thiserror::Error;
 use sha2::{Sha256, Digest};
 use sha3::Sha3_256;
-use ark_bls12_381::Bls12_381;
-use ark_groth16::{Proof, ProvingKey, VerifyingKey};
 use crate::quantum_secure::KyberAESHybrid;
 use crate::merkletree::MerkleTree;
 use crate::logging::BLEEPLogger;
@@ -48,18 +46,32 @@ pub enum BLEEPError {
 /// **ZKP Module with Advanced Security & Performance**
 /// ZKP Module with Advanced Security & Performance
 pub struct BLEEPZKPModule {
-    pub proving_key: ProvingKey<Bls12_381>,
-    pub verifying_key: VerifyingKey<Bls12_381>,
+    pub proving_key: Vec<u8>,
+    pub verifying_key: Vec<u8>,
     pub revocation_tree: MerkleTree,
     pub logger: BLEEPLogger,
 }
 
 impl BLEEPZKPModule {
-    /// Initialize ZKP module with secure key management
-    pub fn new(
-        proving_key: ProvingKey<Bls12_381>,
-        verifying_key: VerifyingKey<Bls12_381>,
+    /// Initialize a development ZKP module with placeholder key material.
+    pub fn new() -> Self {
+        Self {
+            proving_key: vec![0u8; 64],
+            verifying_key: vec![1u8; 64],
+            revocation_tree: MerkleTree::new(),
+            logger: BLEEPLogger::new(),
+        }
+    }
+
+    /// Initialize ZKP module with secure key material.
+    pub fn from_keys(
+        proving_key: Vec<u8>,
+        verifying_key: Vec<u8>,
     ) -> Result<Self, BLEEPError> {
+        if proving_key.is_empty() || verifying_key.is_empty() {
+            return Err(BLEEPError::Generic("Proving or verifying key material is empty".into()));
+        }
+
         Ok(Self {
             proving_key,
             verifying_key,
@@ -118,10 +130,10 @@ impl BLEEPZKPModule {
     /// # Production path
     ///
     /// Replace the placeholder `fs::read` + `bincode::deserialize` with the
-    /// Kyber-AES hybrid decryption path once `ark_serialize` is wired up:
+    /// Kyber-AES hybrid decryption path once the chosen proof format is wired up:
     ///   1. Read ciphertext from disk.
     ///   2. Decrypt with `KyberAESHybrid::decrypt(node_kyber_sk, ciphertext)`.
-    ///   3. Deserialise with `ark_serialize::CanonicalDeserialize`.
+    ///   3. Deserialise with the deployed proof format's canonical deserializer.
     ///   4. Verify integrity checksum.
     pub fn load_keys(
         proving_key_path: &str,
@@ -147,12 +159,12 @@ impl BLEEPZKPModule {
             ));
         }
 
-        // PRODUCTION: replace the block below with proper ark_serialize
-        // deserialization + Kyber-AES hybrid decryption:
+        // PRODUCTION: replace the block below with proper key deserialization
+        // and Kyber-AES hybrid decryption for the selected proof system.
         //
         //   let pk_plain = KyberAESHybrid::decrypt(&node_kyber_sk, &pk_bytes)?;
-        //   let pk = ProvingKey::deserialize_with_mode(&*pk_plain, Compress::No, Validate::Yes)
-        //       .map_err(|e| BLEEPError::SerializationError)?;
+        //   let vk_plain = KyberAESHybrid::decrypt(&node_kyber_sk, &vk_bytes)?;
+        //   validate and deserialize according to the deployed proof format.
         //
         // Until then, reject anything that isn't the known development
         // placeholder so that real nodes are not inadvertently started with
@@ -161,13 +173,13 @@ impl BLEEPZKPModule {
             return Err(BLEEPError::Generic(
                 "Development-only placeholder keys detected. \
                  These MUST NOT be used in production. \
-                 Generate real Groth16 keys and store them encrypted.".to_string()
+                 Generate real proof system keys and store them encrypted.".to_string()
             ));
         }
 
         // If we reach here we have non-empty, non-placeholder bytes but cannot
-        // yet deserialise them (ark_serialize integration pending). Return an
-        // explicit error rather than UB.
+        // yet deserialise them into the target proof system. Return an explicit
+        // error rather than continuing with invalid state.
         Err(BLEEPError::Generic(
             "ZKP key deserialisation not yet implemented for this key format. \
              See load_keys() documentation for the production integration path."
@@ -175,12 +187,12 @@ impl BLEEPZKPModule {
         ))
     }
 
-    /// Aggregate multiple proofs using Bulletproofs-style compression
-    pub fn aggregate_proofs(&self, _proofs: &[Proof<Bls12_381>]) -> Result<Vec<u8>, BLEEPError> {
+    /// Aggregate multiple proofs using a simple hash-based accumulator.
+    pub fn aggregate_proofs(&self, _proofs: &[Vec<u8>]) -> Result<Vec<u8>, BLEEPError> {
         // Dummy aggregation: hash all proofs together
         let mut hasher = Sha3_256::new();
-        for _ in _proofs {
-            hasher.update(&[1u8]); // Simulate proof bytes
+        for proof in _proofs {
+            hasher.update(proof);
         }
         self.logger.info("Proof aggregation successful.");
         Ok(hasher.finalize().to_vec())

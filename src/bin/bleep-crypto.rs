@@ -22,7 +22,7 @@ fn run_crypto_engine() -> Result<(), Box<dyn Error>> {
     init_kyber()?;
     info!("✅ Falcon and Kyber initialized.");
 
-    // Step 2: Initialize zero-knowledge proof system (Groth16, etc.)
+    // Step 2: Initialize zero-knowledge proof system (transparent/PQ proof engine)
     init_zkp_systems()?;
     info!("✅ zk-SNARK engine initialized.");
 

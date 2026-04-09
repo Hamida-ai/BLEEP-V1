@@ -468,7 +468,6 @@ dependencies = [
  "blake2",
  "derivative",
  "digest",
- "rayon",
  "sha2",
  "tracing",
 ]
@@ -487,7 +486,6 @@ dependencies = [
  "hashbrown 0.13.2",
  "itertools 0.10.5",
  "num-traits",
- "rayon",
  "zeroize",
 ]
 
@@ -507,7 +505,6 @@ dependencies = [
  "num-bigint",
  "num-traits",
  "paste",
- "rayon",
  "rustc_version",
  "zeroize",
 ]
@@ -536,22 +533,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ark-groth16"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "20ceafa83848c3e390f1cbf124bc3193b3e639b3f02009e0e290809a501b95fc"
-dependencies = [
- "ark-crypto-primitives",
- "ark-ec",
- "ark-ff",
- "ark-poly",
- "ark-relations",
- "ark-serialize",
- "ark-std",
- "rayon",
-]
-
-[[package]]
 name = "ark-poly"
 version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -562,7 +543,6 @@ dependencies = [
  "ark-std",
  "derivative",
  "hashbrown 0.13.2",
- "rayon",
 ]
 
 [[package]]
@@ -637,7 +617,6 @@ checksum = "94893f1e0c6eeab764ade8dc4c0db24caf4fe7cbbaafc0eba0a9030f447b5185"
 dependencies = [
  "num-traits",
  "rand 0.8.5",
- "rayon",
 ]
 
 [[package]]
@@ -1008,16 +987,6 @@ version = "0.1.0"
 dependencies = [
  "actix-rt",
  "actix-web",
- "ark-bls12-381",
- "ark-crypto-primitives",
- "ark-ec",
- "ark-ff",
- "ark-groth16",
- "ark-r1cs-std",
- "ark-relations",
- "ark-serialize",
- "ark-snark",
- "ark-std",
  "bincode",
  "blake3",
  "bleep-consensus",
@@ -1234,16 +1203,6 @@ dependencies = [
 name = "bleep-connect-layer3-zkproof"
 version = "0.1.0"
 dependencies = [
- "ark-bls12-381",
- "ark-crypto-primitives",
- "ark-ec",
- "ark-ff",
- "ark-groth16",
- "ark-r1cs-std",
- "ark-relations",
- "ark-serialize",
- "ark-snark",
- "ark-std",
  "bleep-connect-commitment-chain",
  "bleep-connect-crypto",
  "bleep-connect-types",
@@ -1328,7 +1287,6 @@ dependencies = [
  "ark-crypto-primitives",
  "ark-ec",
  "ark-ff",
- "ark-groth16",
  "ark-r1cs-std",
  "ark-relations",
  "ark-serialize",
@@ -1370,10 +1328,6 @@ version = "0.1.0"
 dependencies = [
  "aes-gcm",
  "anyhow",
- "ark-bls12-381",
- "ark-ff",
- "ark-groth16",
- "ark-snark",
  "bincode",
  "blake2",
  "blake3",
@@ -1437,16 +1391,6 @@ version = "0.1.0"
 dependencies = [
  "aes-gcm",
  "anyhow",
- "ark-bls12-381",
- "ark-crypto-primitives",
- "ark-ec",
- "ark-ff",
- "ark-groth16",
- "ark-r1cs-std",
- "ark-relations",
- "ark-serialize",
- "ark-snark",
- "ark-std",
  "bincode",
  "bleep-ai",
  "bleep-core",
@@ -1700,10 +1644,6 @@ dependencies = [
 name = "bleep-state"
 version = "1.0.0"
 dependencies = [
- "ark-bls12-381",
- "ark-crypto-primitives",
- "ark-ff",
- "ark-groth16",
  "bincode",
  "blake3",
  "dashmap 5.5.3",
@@ -1818,14 +1758,7 @@ dependencies = [
 name = "bleep-zkp"
 version = "0.2.0"
 dependencies = [
- "ark-bls12-381",
- "ark-ec",
- "ark-ff",
- "ark-groth16",
- "ark-r1cs-std",
- "ark-relations",
  "ark-serialize",
- "ark-snark",
  "ark-std",
  "hex",
  "rand 0.8.5",

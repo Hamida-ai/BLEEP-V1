@@ -91,12 +91,16 @@ mod tests {
     // 🔹 Test ZKP Proof Generation
     #[test]
     fn test_zkp_proof_generation() {
-        let proving_key = ProvingKey::<Bls12_381>::default();
-        let verifying_key = VerifyingKey::<Bls12_381>::default();
-        let zkp_module = BLEEPZKPModule::new(proving_key, verifying_key).expect("ZKP module initialization failed");
+        let proving_key = vec![0u8; 64];
+        let verifying_key = vec![1u8; 64];
+        let zkp_module = BLEEPZKPModule::from_keys(proving_key, verifying_key).expect("ZKP module initialization failed");
 
-        let circuits: Vec<DummyCircuit<Fr>> = vec![DummyCircuit::default(); 5];
-        let proofs = zkp_module.generate_batch_proofs(circuits);
+        let transactions: Vec<Vec<u8>> = vec![
+            vec![0u8; 16],
+            vec![1u8; 16],
+            vec![2u8; 16],
+        ];
+        let proofs = zkp_module.generate_batch_proofs(transactions);
 
         assert!(proofs.is_ok(), "ZKP proof generation failed");
     }
