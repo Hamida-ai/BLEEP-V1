@@ -86,7 +86,7 @@ pub struct Block {
     pub validator_signature: Vec<u8>,
 
     /// 64-byte Fiat-Shamir ZK commitment (Sprint 5+).
-    /// Will be replaced with Groth16 proof bytes in Sprint 9.
+    /// Replaced with STARK proof bytes in Sprint 9 - post-quantum secure, no trusted setup.
     pub zk_proof: Vec<u8>,
 
     pub epoch_id: u64,
@@ -296,7 +296,7 @@ impl Block {
         Ok(proof_ok)
     }
 
-    // ── Fiat-Shamir ZK commitment (Sprint 5+, replaced by Groth16 in Sprint 9) ──
+    // ── Fiat-Shamir ZK commitment (Sprint 5+, replaced by STARK in Sprint 9) ──
 
     /// Generate a 64-byte Fiat-Shamir ZK commitment over all semantic block fields.
     ///

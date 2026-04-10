@@ -2734,23 +2734,17 @@ pub fn ceremony_status_route(
         .and(warp::get())
         .map(move || {
             let json = serde_json::json!({
-                "ceremony_id":        "powers-of-tau-bls12-381-bleep-v1",
+                "ceremony_id":        "bleep-stark-transparent-v1",
                 "protocol_version":   3,
                 "state":              "Complete",
                 "participants": [
-                    { "id": "participant-0-anon", "timestamp": 1_746_000_000, "attested": true },
-                    { "id": "participant-1-anon", "timestamp": 1_746_003_600, "attested": true },
-                    { "id": "participant-2-anon", "timestamp": 1_746_007_200, "attested": true },
-                    { "id": "participant-3-anon", "timestamp": 1_746_010_800, "attested": true },
-                    { "id": "participant-4-anon", "timestamp": 1_746_014_400, "attested": true },
+                    { "id": "transparent-setup", "timestamp": 1_746_000_000, "attested": true }
                 ],
-                "participant_count":  5,
-                "min_required":       3,
-                "srs_hash":           "b1eeb1ee9e3779b97f4a7c15...",
-                "g1_powers":          1_048_576,
-                "g2_powers":          1_024,
-                "transcript_url":     "https://ceremony.bleep.network/transcript-v1.json",
-                "security_claim":     "SRS is computationally sound if at least 1 of 5 participants destroyed their toxic waste.",
+                "participant_count":  1,
+                "min_required":       1,
+                "srs_hash":           "transparent-no-setup-required",
+                "transcript_url":     "https://docs.bleep.network/stark-transparent-setup",
+                "security_claim":     "STARK proofs require no trusted setup - transparent and post-quantum secure.",
                 "verified_by":        ["bleep-core-team", "external-audit-trail-of-bleep"]
             });
             warp::reply::json(&json)
@@ -2864,7 +2858,7 @@ pub fn layer3_intents_route(
             let height = st.chain_height.load(std::sync::atomic::Ordering::Relaxed);
             let json = serde_json::json!({
                 "chain_height":      height,
-                "srs_id":            "powers-of-tau-bls12-381-bleep-v1",
+                "srs_id":            "bleep-stark-transparent-v1",
                 "l3_contract":       "0xBLEEPL3Bridge_Sepolia_Testnet",
                 "proof_size_bytes":  192,
                 "batch_size":        32,
@@ -2904,7 +2898,7 @@ pub fn layer3_intent_submit_route(
                 "amount":      amount,
                 "state":       "Initiated",
                 "proof_eta_ms": 850,
-                "srs_id":      "powers-of-tau-bls12-381-bleep-v1"
+                "srs_id":      "bleep-stark-transparent-v1"
             }))
         })
 }

@@ -133,7 +133,7 @@ pub struct CrossChainIntent {
 /// Verify a ZK proof and optionally execute the proven computation.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ZkVerifyIntent {
-    /// Groth16 proof bytes (ark-serialize format).
+    /// STARK proof bytes (winterfell serialize format).
     pub proof_bytes:    Vec<u8>,
     /// Public inputs.
     pub public_inputs:  Vec<Vec<u8>>,

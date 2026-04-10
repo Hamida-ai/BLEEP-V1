@@ -1,19 +1,16 @@
-use sha2::{Sha256, Digest};
-// use serde::{Deserialize, Serialize};
-use ark_ff::PrimeField;
-// use ark_ff::{PrimeField, Field};
-use ark_bls12_381::Fr;
+use sha3::{Sha3_256, Digest};
+use serde::{Deserialize, Serialize};
 
-/// Simple merkle tree path for identity verification
-#[derive(Clone, Debug)]
+/// Hash-based Merkle path for identity verification (post-quantum secure)
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct MerklePath {
-    pub leaf: Fr,
-    pub root: Fr,
-    pub auth_path: Vec<(Fr, bool)>,
+    pub leaf: [u8; 32],
+    pub root: [u8; 32],
+    pub auth_path: Vec<([u8; 32], bool)>,
 }
 
 impl MerklePath {
-    pub fn new(leaf: Fr, root: Fr, auth_path: Vec<(Fr, bool)>) -> Self {
+    pub fn new(leaf: [u8; 32], root: [u8; 32], auth_path: Vec<([u8; 32], bool)>) -> Self {
         Self {
             leaf,
             root,
@@ -23,39 +20,36 @@ impl MerklePath {
 
     pub fn verify(&self) -> bool {
         let mut current = self.leaf;
-        
+
         for (sibling, is_right) in &self.auth_path {
-            let mut hasher = Sha256::new();
-            let current_bytes = current.to_string().as_bytes().to_vec();
-            let sibling_bytes = sibling.to_string().as_bytes().to_vec();
+            let mut hasher = Sha3_256::new();
             if *is_right {
-                hasher.update(&current_bytes);
-                hasher.update(&sibling_bytes);
+                hasher.update(sibling);
+                hasher.update(&current);
             } else {
-                hasher.update(&sibling_bytes);
-                hasher.update(&current_bytes);
+                hasher.update(&current);
+                hasher.update(sibling);
             }
-            let hash = hasher.finalize();
-            current = Fr::from_be_bytes_mod_order(&hash[..]);
+            current = hasher.finalize().into();
         }
 
         current == self.root
     }
 }
 
-/// Proof of identity using merkle paths
-#[derive(Debug, Clone)]
+/// Proof of identity using hash-based Merkle paths
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct IdentityProof {
     pub path: MerklePath,
     pub timestamp: u64,
 }
 
 pub struct IdentityVerifier {
-    pub root: Fr,
+    pub root: [u8; 32],
 }
 
 impl IdentityVerifier {
-    pub fn new(root: Fr) -> Self {
+    pub fn new(root: [u8; 32]) -> Self {
         Self { root }
     }
 
