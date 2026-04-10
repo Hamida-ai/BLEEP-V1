@@ -75,7 +75,7 @@ impl IdentityProof {
         self.path.verify()
     }
 }
-}
+
 
 pub struct IdentityVerifier {
     pub root: Fr,
