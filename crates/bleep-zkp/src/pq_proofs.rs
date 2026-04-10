@@ -11,9 +11,9 @@
 
 use sha3::{Digest, Sha3_256};
 use serde::{Deserialize, Serialize};
-use ark_serialize::{CanonicalSerialize, CanonicalDeserialize};
 use tracing::{debug, info, warn};
 use std::collections::BTreeMap;
+use bincode;
 
 // =================================================================================================
 // PROOF TYPES
@@ -24,7 +24,7 @@ use std::collections::BTreeMap;
 /// No trusted setup. Security based on:
 ///   - SHA3-256 hash collision resistance (classical)
 ///   - SPHINCS+-SHAKE-256 signature security (post-quantum)
-#[derive(Clone, Debug, Serialize, Deserialize, CanonicalSerialize, CanonicalDeserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PostQuantumProof {
     /// Root of trace Merkle tree
     pub trace_root: [u8; 32],
@@ -43,7 +43,7 @@ pub struct PostQuantumProof {
     pub prove_time_ms: u64,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, CanonicalSerialize, CanonicalDeserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct MerklePath {
     /// Column index in trace
     pub column: usize,
@@ -58,15 +58,13 @@ pub struct MerklePath {
 impl PostQuantumProof {
     /// Serialize to bytes
     pub fn to_bytes(&self) -> Result<Vec<u8>, String> {
-        let mut bytes = Vec::new();
-        self.serialize_uncompressed(&mut bytes)
-            .map_err(|e| format!("Serialization failed: {e}"))?;
-        Ok(bytes)
+        bincode::serialize(self)
+            .map_err(|e| format!("Serialization failed: {e}"))
     }
 
     /// Deserialize from bytes
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, String> {
-        Self::deserialize_uncompressed(bytes)
+        bincode::deserialize(bytes)
             .map_err(|e| format!("Deserialization failed: {e}"))
     }
 
