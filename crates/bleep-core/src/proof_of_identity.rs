@@ -75,36 +75,3 @@ impl IdentityProof {
         self.path.verify()
     }
 }
-
-
-pub struct IdentityVerifier {
-    pub root: Fr,
-}
-
-impl IdentityVerifier {
-    pub fn new(root: Fr) -> Self {
-        Self { root }
-    }
-
-    pub fn verify_proof(&self, proof: &IdentityProof) -> bool {
-        // Verify that the merkle path leads to our trusted root
-        proof.path.root == self.root && proof.path.verify()
-    }
-}
-
-impl IdentityProof {
-    pub fn new(path: MerklePath) -> Self {
-        Self {
-            path,
-            timestamp: std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_secs(),
-        }
-    }
-
-    pub fn verify(&self) -> bool {
-        // Verify merkle path
-        self.path.verify()
-    }
-}
