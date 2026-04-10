@@ -26,8 +26,14 @@
 //! ## Devnet SRS
 //! STARKs require no trusted setup. Proofs are transparent and post-quantum secure.
 
+use winterfell::{
+    math::{fields::f128::BaseElement, FieldElement},
+    Air, AirContext, Assertion, EvaluationFrame, FieldExtension, ProofOptions,
+    TraceInfo, TransitionConstraintDegree, TraceTable, BatchingMethod,
+};
+use ark_serialize::{CanonicalSerialize, CanonicalDeserialize};
+use serde::{Serialize, Deserialize};
 use sha3::{Digest, Sha3_256};
-use winterfell::math::fields::f128::BaseElement;
 
 // ── Modules ───────────────────────────────────────────────────────────────────
 pub mod stark_proofs;
@@ -156,15 +162,6 @@ impl BlockVerifier {
         };
         // For now, assume verification succeeds if proof is not empty
         !proof.proof_bytes.is_empty()
-    }
-}
-
-/// Batch-level STARK prover compatibility shim.
-pub struct BatchProver;
-
-impl BatchProver {
-    pub fn new() -> Self {
-        Self
     }
 }
 

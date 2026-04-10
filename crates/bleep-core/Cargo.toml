@@ -24,13 +24,11 @@ zeroize = { version = "1.7.0", features = ["zeroize_derive"] }
 # Referenced but implemented in bleep-crypto
 
 # Zero-Knowledge Proofs
-ark-ff = "0.4.0"
-ark-ec = "0.4.0"
-ark-bls12-381 = "0.4.0"
-ark-crypto-primitives = { version = "0.4.0", features = ["crh", "merkle_tree", "r1cs"] }
-ark-r1cs-std = "0.4.0"
-ark-relations = "0.4.0"
-ark-serialize = "0.4.0"
+# STARK-based proofs using winterfell (no trusted setup)
+winterfell = "0.13.1"
+
+# State management (for hash-based Merkle trees)
+bleep-state = { path = "../bleep-state" }
 
 # Async & Concurrency
 tokio = { version = "1.36", features = ["full"] }

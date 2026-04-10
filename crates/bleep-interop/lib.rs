@@ -15,7 +15,7 @@
 //! bleep-connect-adapters         — per-chain encode/verify adapters (ETH, SOL, …)
 //! bleep-connect-executor         — executor node: monitors pool, bids, executes
 //! bleep-connect-layer4-instant   — optimistic intent layer (200ms–1s, 99.9% of transfers)
-//! bleep-connect-layer3-zkproof   — Groth16 ZK proofs + batch aggregation
+//! bleep-connect-layer3-zkproof   — STARK proofs + batch aggregation (post-quantum secure)
 //! bleep-connect-layer2-fullnode  — full-node verification for >$100M transfers
 //! bleep-connect-layer1-social    — on-chain social governance for catastrophic events
 //! bleep-connect-core             — top-level orchestrator

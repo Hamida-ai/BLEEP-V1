@@ -13,7 +13,7 @@
 //! │  breaker · Metrics                                              │
 //! ├─────────────────────────────────────────────────────────────────┤
 //! │  Layer 3 — Execution Engines (isolated)                         │
-//! │  EvmEngine (revm) | WasmEngine (wasmer) | ZkEngine (groth16)   │
+//! │  EvmEngine (revm) | WasmEngine (wasmer) | ZkEngine (STARK)   │
 //! ├─────────────────────────────────────────────────────────────────┤
 //! │  Layer 4 — Deterministic Execution Sandbox                      │
 //! │  Memory limits · Call stack · Host API filtering                │

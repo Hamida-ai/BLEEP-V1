@@ -2,7 +2,7 @@
 //! Performance Benchmark: ≥10,000 TPS across 10 shards, 1 hour
 //!
 //! Measures end-to-end transaction throughput including state application,
-//! Merkle root computation, block signature, and Groth16 proof generation.
+//! Merkle root computation, block signature, and STARK proof generation.
 
 use std::collections::VecDeque;
 
@@ -32,7 +32,7 @@ pub struct BenchBlock {
     pub txs:           usize,
     pub state_root:    [u8; 32],
     pub block_time_ms: u64,   // wall time from proposal to signed
-    pub proof_time_ms: u64,   // Groth16 prove time
+    pub proof_time_ms: u64,   // STARK prove time
 }
 
 // ── TpsWindow ─────────────────────────────────────────────────────────────────
